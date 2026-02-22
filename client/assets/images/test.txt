@@ -1,0 +1,4 @@
+Image assets will go here
+- logos/
+- backgrounds/
+- illustrations/

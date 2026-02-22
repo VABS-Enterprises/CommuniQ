@@ -1,0 +1,3 @@
+Animation assets will go here
+- lottie files (.json)
+- rive files (.riv)
