@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/spacing.dart';
+import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
 
 // ─── Data Models ───────────────────────────────────────────────────────────────
 
@@ -65,10 +66,12 @@ class FeedbackConfig {
 
 class RoleplayFeedbackScreen extends StatefulWidget {
   final FeedbackConfig config;
+  final bool isOnboarding;
 
   const RoleplayFeedbackScreen({
     super.key,
     required this.config,
+    this.isOnboarding = false,
   });
 
   @override
@@ -508,8 +511,17 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
           child: ElevatedButton(
             onPressed: () {
               HapticFeedback.lightImpact();
-              Navigator.pop(context);
-              Navigator.pop(context); // back to setup
+              if (widget.isOnboarding) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const GoalConfirmationScreen()),
+                  (_) => false,
+                );
+              } else {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -518,9 +530,10 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                   borderRadius: BorderRadius.circular(14)),
               elevation: 0,
             ),
-            child: const Text(
-              'Practice Again',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            child: Text(
+              widget.isOnboarding ? 'Continue' : 'Practice Again',
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
         ),
@@ -541,7 +554,8 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
             ),
             child: const Text(
               'Try New Scenario',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              style:
+                  TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ),
         ),
