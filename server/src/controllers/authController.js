@@ -1,5 +1,7 @@
 const { deleteFirebaseUser } = require('../services/authService');
-const { createUser, deleteUserData } = require('../services/firestoreService');
+const { createUser, getUserById, deleteUserData } = require('../services/firestoreService');
+
+const MAX_NAME_LENGTH = 100;
 
 /*
  * POST /auth/register
@@ -21,8 +23,18 @@ async function register(req, res) {
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return res.status(400).json({ error: 'name is required' });
   }
+  // Security4: cap name length to prevent storing massive payloads
+  if (name.trim().length > MAX_NAME_LENGTH) {
+    return res.status(400).json({ error: `name must be at most ${MAX_NAME_LENGTH} characters` });
+  }
 
   try {
+    // Robustness3: prevent silently overwriting an existing user document on network retries
+    const existing = await getUserById(uid);
+    if (existing) {
+      return res.status(409).json({ error: 'User already registered' });
+    }
+
     const user = await createUser(uid, { email, name: name.trim() });
     return res.status(201).json({ user });
   } catch (err) {
