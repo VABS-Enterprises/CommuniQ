@@ -1,6 +1,6 @@
 const { db } = require('../config/firebase');
 const { FieldValue } = require('firebase-admin/firestore');
-const { createUserDoc } = require('../models/userModel');
+const { createUserDoc, createGoogleUserDoc } = require('../models/userModel');
 const { createSessionDoc } = require('../models/sessionModel');
 const { createEvaluationDoc } = require('../models/evaluationModel');
 const { stripSystemPrompt } = require('../models/scenarioModel');
@@ -10,6 +10,29 @@ const { stripSystemPrompt } = require('../models/scenarioModel');
 async function createUser(uid, data) {
   const userDoc = createUserDoc(uid, data);
   await db.collection('users').doc(uid).set(userDoc);
+  return userDoc;
+}
+
+/**
+ * Used for Google Sign-In.
+ * If the user exists → only update lastLoginAt.
+ * If new → create a full Firestore doc with defaults.
+ * Returns the full user document in both cases.
+ */
+async function upsertGoogleUser(uid, { email, name, photoURL }) {
+  const ref = db.collection('users').doc(uid);
+  const snap = await ref.get();
+
+  if (snap.exists) {
+    // Returning user — just refresh lastLoginAt
+    await ref.update({ lastLoginAt: FieldValue.serverTimestamp() });
+    const updated = await ref.get();
+    return updated.data();
+  }
+
+  // New Google user — create full doc
+  const userDoc = createGoogleUserDoc(uid, { email, name, photoURL });
+  await ref.set(userDoc);
   return userDoc;
 }
 
@@ -173,6 +196,7 @@ async function getWeeklyTopUsersByXp(limit = 50) {
 
 module.exports = {
   createUser,
+  upsertGoogleUser,
   getUserById,
   updateUser,
   deleteUserData,
