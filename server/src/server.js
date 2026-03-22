@@ -1,6 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const morgan = require('morgan');
+const { db } = require('./config/firebase');
+const { version } = require('../package.json');
 
 const authRoutes = require('./routes/auth');
 const sessionRoutes = require('./routes/sessions');
@@ -10,11 +13,35 @@ const userRoutes = require('./routes/user');
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+// Request logging: compact in dev, Apache combined format in production
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// Health check
-app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
+// CORS — open in development, restrict to ALLOWED_ORIGINS in production
+const rawOrigins = process.env.ALLOWED_ORIGINS;
+const allowedOrigins = rawOrigins ? rawOrigins.split(',').map((o) => o.trim()) : null;
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow server-to-server calls and dev tools (no origin header)
+      if (!allowedOrigins || !origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
+  })
+);
+
+app.use(express.json({ limit: '512kb' }));
+
+// Health check — includes Firestore connectivity and version
+app.get('/health', async (req, res) => {
+  try {
+    await db.collection('_health').doc('ping').get();
+    res.status(200).json({ status: 'ok', version, firebase: 'connected' });
+  } catch {
+    res.status(503).json({ status: 'degraded', version, firebase: 'unreachable' });
+  }
+});
 
 // Routes
 app.use('/auth', authRoutes);
@@ -35,8 +62,25 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`CommuniQ backend running on port ${PORT}`);
 });
+
+// Graceful shutdown — finish in-flight requests before exiting
+function shutdown(signal) {
+  console.log(`${signal} received — shutting down gracefully`);
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+  // Force exit if still open after 10s
+  setTimeout(() => {
+    console.error('Graceful shutdown timed out — forcing exit');
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 module.exports = app;

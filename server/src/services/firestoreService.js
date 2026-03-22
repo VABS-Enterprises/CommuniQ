@@ -142,7 +142,10 @@ async function getScenariosForLevel(userLevel) {
     .collection('scenarios')
     .where('requiredLevel', '<=', userLevel)
     .get();
-  return snap.docs.map((doc) => stripSystemPrompt(doc.data()));
+  // Robustness6: deterministic order — level ascending, then difficulty ascending
+  return snap.docs
+    .map((doc) => stripSystemPrompt(doc.data()))
+    .sort((a, b) => a.requiredLevel - b.requiredLevel || a.difficulty - b.difficulty);
 }
 
 async function getScenarioById(scenarioId) {
