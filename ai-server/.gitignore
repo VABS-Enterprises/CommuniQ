@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment / secrets
+.env
+*.env
+*.json
+
+# Test output files
+*.mp3
+*.wav
+*.m4a
+*.webm
+sample_audio.*
+
+# Editor
+.vscode/
+.idea/
