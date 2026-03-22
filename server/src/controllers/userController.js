@@ -1,5 +1,17 @@
 const { updateUser, getUserById } = require('../services/firestoreService');
 
+// GET /user/profile
+async function getProfile(req, res) {
+  try {
+    const user = await getUserById(req.uid);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    return res.status(200).json({ user });
+  } catch (err) {
+    console.error('getProfile error:', err.message);
+    return res.status(500).json({ error: 'Could not fetch profile' });
+  }
+}
+
 // PATCH /user/profile
 async function updateProfile(req, res) {
   const userId = req.uid;
@@ -19,4 +31,4 @@ async function updateProfile(req, res) {
   }
 }
 
-module.exports = { updateProfile };
+module.exports = { getProfile, updateProfile };
