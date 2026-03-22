@@ -1,5 +1,7 @@
 const { updateUser, getUserById } = require('../services/firestoreService');
 
+const MAX_NAME_LENGTH = 100;
+
 // GET /user/profile
 async function getProfile(req, res) {
   try {
@@ -19,6 +21,10 @@ async function updateProfile(req, res) {
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return res.status(400).json({ error: 'A valid name is required' });
+  }
+  // Security4: cap name length to prevent storing massive payloads
+  if (name.trim().length > MAX_NAME_LENGTH) {
+    return res.status(400).json({ error: `name must be at most ${MAX_NAME_LENGTH} characters` });
   }
 
   try {
