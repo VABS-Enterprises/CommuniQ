@@ -215,3 +215,22 @@ $RECYCLE.BIN/
 # Backup files
 *.bak
 *.backup
+
+# ── Project-specific ──────────────────────────────────────────────────────────
+
+# Dart analyze scratch output files
+analyze.txt
+analyze_err.txt
+analyze_out.txt
+analyze_utf8.txt
+
+# Windows desktop target (disabled — app is Android-only)
+windows_disabled/
+
+# Dart/Flutter lock file (keep pubspec.lock for reproducible builds, but
+# ignore transient generated lock files in other locations)
+# pubspec.lock  ← intentionally NOT ignored (best practice for apps)
+
+# Local Android signing & SDK paths (already covered above, re-affirmed)
+android/local.properties
+android/key.properties
