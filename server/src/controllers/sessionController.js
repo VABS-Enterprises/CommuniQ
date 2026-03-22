@@ -18,6 +18,8 @@ const {
 const { sendTurnToFastApi, evaluateSession } = require('../services/fastApiService');
 const { computeXpAward, computeLevel, computeStreak, computeNewBadges } = require('../services/xpService');
 
+const MAX_TURNS_PER_SESSION = 50;
+
 // POST /sessions/start
 async function startSession(req, res) {
   const { scenarioId } = req.body;
@@ -57,6 +59,17 @@ async function processTurn(req, res) {
     return res.status(400).json({ error: 'sessionId and audioFile are required' });
   }
 
+  // Bug2 fix: safely parse conversationHistory, reject malformed JSON early
+  let history = [];
+  if (conversationHistory) {
+    try {
+      history = JSON.parse(conversationHistory);
+      if (!Array.isArray(history)) throw new Error('conversationHistory must be an array');
+    } catch {
+      return res.status(400).json({ error: 'conversationHistory must be valid JSON array' });
+    }
+  }
+
   try {
     const session = await getSessionById(sessionId);
     if (!session) return res.status(404).json({ error: 'Session not found' });
@@ -65,8 +78,13 @@ async function processTurn(req, res) {
       return res.status(400).json({ error: 'Session is not in progress' });
     }
 
+    // Robustness5: enforce turn limit
+    const currentTurnCount = (session.turns || []).length;
+    if (currentTurnCount >= MAX_TURNS_PER_SESSION * 2) {
+      return res.status(400).json({ error: `Session has reached the maximum of ${MAX_TURNS_PER_SESSION} turns` });
+    }
+
     const scenario = await getScenarioById(session.scenarioId);
-    const history = conversationHistory ? JSON.parse(conversationHistory) : [];
 
     const fastApiResult = await sendTurnToFastApi(
       audioFile.buffer,
@@ -84,10 +102,13 @@ async function processTurn(req, res) {
       createTurnDoc('ai', aiReply)
     );
 
-    return res.status(200).json({ userTranscript, aiReply, aiAudioBase64 });
+    // Feature6: return turnCount so Flutter knows how many turns have happened
+    const turnCount = Math.floor(currentTurnCount / 2) + 1;
+    return res.status(200).json({ userTranscript, aiReply, aiAudioBase64, turnCount });
   } catch (err) {
     console.error('processTurn error:', err.message);
-    return res.status(500).json({ error: 'Failed to process turn' });
+    const status = err.statusCode || 500;
+    return res.status(status).json({ error: err.message || 'Failed to process turn' });
   }
 }
 
@@ -108,20 +129,32 @@ async function endSession(req, res) {
       return res.status(400).json({ error: 'Session is not in progress' });
     }
 
-    const scenario = await getScenarioById(session.scenarioId);
+    // Bug4 fix: reject empty sessions before calling FastAPI
+    if (!session.turns || session.turns.length === 0) {
+      await abandonSessionInDb(sessionId);
+      return res.status(400).json({ error: 'No turns recorded — session abandoned' });
+    }
+
     const startedAt = session.startedAt?.toDate ? session.startedAt.toDate() : new Date(session.startedAt);
     const durationSeconds = Math.round((Date.now() - startedAt.getTime()) / 1000);
 
     // Build full transcript string
-    const rawTranscript = (session.turns || [])
+    const rawTranscript = session.turns
       .map((t) => `${t.role === 'user' ? 'User' : 'AI'}: ${t.transcript}`)
       .join('\n');
 
-    // Mark session complete
-    await completeSession(sessionId, durationSeconds);
+    // Robustness4: fetch user and scenario in parallel
+    const [scenario, user] = await Promise.all([
+      getScenarioById(session.scenarioId),
+      getUserById(userId),
+    ]);
 
-    // Call FastAPI for evaluation
+    // Bug3 fix: run evaluation BEFORE marking the session complete.
+    // If FastAPI is down, the session stays in_progress so the user can retry.
     const evaluation = await evaluateSession(sessionId, rawTranscript, scenario.type);
+
+    // Evaluation succeeded — now safe to finalize the session
+    await completeSession(sessionId, durationSeconds);
 
     // Write evaluation report
     const report = await writeEvaluationReport(sessionId, {
@@ -136,11 +169,9 @@ async function endSession(req, res) {
     });
 
     // XP + gamification
-    const user = await getUserById(userId);
     const xpAwarded = computeXpAward(evaluation.scores);
-    const newXp = (user.xp || 0) + xpAwarded;
     const oldLevel = user.level || 1;
-    const newLevel = computeLevel(newXp);
+    const newLevel = computeLevel((user.xp || 0) + xpAwarded);
     const leveledUp = newLevel > oldLevel;
     const newStreak = computeStreak(user.lastActiveDate, user.streak || 0);
     const completedCount = await countCompletedSessions(userId);
@@ -152,8 +183,9 @@ async function endSession(req, res) {
       leveledUp,
     });
 
+    // Robustness2: use FieldValue.increment for atomic XP update (prevents race conditions)
     const userUpdates = {
-      xp: newXp,
+      xp: FieldValue.increment(xpAwarded),
       level: newLevel,
       streak: newStreak,
       lastActiveDate: FieldValue.serverTimestamp(),
@@ -166,7 +198,8 @@ async function endSession(req, res) {
     return res.status(200).json({ report, xpAwarded, newLevel, leveledUp, newBadges, newStreak });
   } catch (err) {
     console.error('endSession error:', err.message);
-    return res.status(500).json({ error: 'Failed to end session' });
+    const status = err.statusCode || 500;
+    return res.status(status).json({ error: err.message || 'Failed to end session' });
   }
 }
 
