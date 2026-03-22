@@ -23,8 +23,18 @@ async function getScenario(req, res) {
   const { scenarioId } = req.params;
 
   try {
-    const scenario = await getScenarioById(scenarioId);
+    // Security2: fetch requesting user to enforce level gate on individual scenarios
+    const [scenario, user] = await Promise.all([
+      getScenarioById(scenarioId),
+      getUserById(req.uid),
+    ]);
+
     if (!scenario) return res.status(404).json({ error: 'Scenario not found' });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (user.level < scenario.requiredLevel) {
+      return res.status(403).json({ error: `Scenario requires level ${scenario.requiredLevel}` });
+    }
 
     return res.status(200).json({ scenario: stripSystemPrompt(scenario) });
   } catch (err) {
