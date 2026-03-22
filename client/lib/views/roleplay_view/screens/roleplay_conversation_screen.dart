@@ -15,10 +15,12 @@ enum SpeakingState {
 
 class RoleplayConversationScreen extends StatefulWidget {
   final RoleplayConfig config;
+  final bool isOnboarding;
 
   const RoleplayConversationScreen({
     super.key,
     required this.config,
+    this.isOnboarding = false,
   });
 
   @override
@@ -485,6 +487,7 @@ class _RoleplayConversationScreenState extends State<RoleplayConversationScreen>
                       MaterialPageRoute(
                         builder: (_) => RoleplayFeedbackScreen(
                           config: FeedbackConfig.demo,
+                          isOnboarding: widget.isOnboarding,
                         ),
                       ),
                     );

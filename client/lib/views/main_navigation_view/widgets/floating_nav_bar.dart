@@ -20,29 +20,22 @@ class FloatingNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.s24),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      alignment: Alignment.center, // compact pill centered
       child: GlassCard(
-        height: 72,
-        // The GlassCard already manages border radius (to AppRadius.cards instead of navigation), 
-        // border gradient (to glassCardBorder), and background color.
-        // But we need to override color to midnightPurple and radius to navigationRadius.
-        // Since GlassCard uses predetermined values, we will build the custom decoration here.
+        height: 60,
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.background,
+            color: AppColors.surface,
             borderRadius: AppRadius.navigationRadius,
-            border: Border.all(
-              color: AppColors.border,
-              width: 1.0,
-            ),
+            border: Border.all(color: AppColors.border, width: 1.0),
           ),
           child: ClipRRect(
             borderRadius: AppRadius.navigationRadius,
             child: Container(
-              color: AppColors.border, // Glass white (8% opacity) overlaid
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+              color: AppColors.border,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisSize: MainAxisSize.min, // shrink to content
                 children: [
                   _NavBarItem(
                     icon: Icons.home,
@@ -50,13 +43,13 @@ class FloatingNavBar extends StatelessWidget {
                     onTap: () => onTabSelected(0),
                   ),
                   _NavBarItem(
-                    icon: Icons.menu_book, // Learning
+                    icon: Icons.menu_book,
                     isSelected: currentIndex == 1,
                     onTap: () => onTabSelected(1),
-                    iconSize: 32, // Slightly larger icon size for Learning
+                    iconSize: 26,
                   ),
                   _NavBarItem(
-                    icon: Icons.mic, // Roleplay
+                    icon: Icons.mic,
                     isSelected: currentIndex == 2,
                     onTap: () => onTabSelected(2),
                   ),
@@ -85,7 +78,6 @@ class _NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Colors
     final Color iconColor =
         isSelected ? AppColors.primary : AppColors.textMuted;
 
@@ -95,8 +87,8 @@ class _NavBarItem extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
-        padding: const EdgeInsets.all(AppSpacing.s8),
-        // Scale down to 0.97 if selected using transform
+        padding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         transformAlignment: Alignment.center,
         transform: Matrix4.identity()..scale(isSelected ? 0.97 : 1.0),
         child: isSelected
@@ -106,13 +98,8 @@ class _NavBarItem extends StatelessWidget {
                 glowColor: GlowColor.cyan,
                 size: iconSize,
               )
-            : Icon(
-                icon,
-                color: iconColor,
-                size: iconSize,
-              ),
+            : Icon(icon, color: iconColor, size: iconSize),
       ),
     );
   }
 }
-

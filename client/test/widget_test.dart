@@ -13,7 +13,7 @@ import 'package:communiq/main.dart';
 void main() {
   testWidgets('App starts without errors', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const MyApp(showOnboarding: false));
 
     // Verify that the app widget is created
     expect(find.byType(MaterialApp), findsOneWidget);
