@@ -1,18 +1,23 @@
 import json
-import math
 import re
 
 REQUIRED_SCORE_KEYS = {"clarity", "fluency", "confidence", "vocabulary", "grammar"}
 
+# Matches scenarioType_level format e.g. hr_interview_intermediate, sales_advanced
 _RECOMMENDED_NEXT_PATTERN = re.compile(r"^[a-z][a-z0-9_]*_[a-z]+$")
 
 
 def parse_evaluation(raw: str) -> dict:
     """
     Extract and validate the evaluation JSON from raw LLM output.
-    - Strips markdown fences and leading/trailing prose.
-    - Coerces float scores to int (LLMs sometimes return 7.5 instead of 7).
-    - Raises ValueError with a clear message if schema is not met.
+
+    - Strips markdown fences and surrounding prose.
+    - Coerces float scores to int (LLMs sometimes return 72.5 instead of 72).
+    - Validates all required fields and ranges.
+    - Returns a dict with snake_case keys — the endpoint maps them to camelCase
+      before returning to Node.
+
+    Raises ValueError with a clear message if the schema is not met.
     """
     cleaned = _strip_fences(raw.strip())
     cleaned = _extract_json_object(cleaned)
@@ -52,8 +57,8 @@ def _extract_json_object(text: str) -> str:
 
 def _coerce_scores(data: dict) -> None:
     """
-    LLMs sometimes return float scores (e.g. 7.5). Round and convert to int
-    rather than hard-failing, since the intent is clear.
+    LLMs sometimes return float scores (e.g. 72.5) or string numbers ("80").
+    Round and clamp to int in range 0–100 rather than hard-failing.
     """
     scores = data.get("scores")
     if not isinstance(scores, dict):
@@ -61,12 +66,14 @@ def _coerce_scores(data: dict) -> None:
     for key in REQUIRED_SCORE_KEYS:
         val = scores.get(key)
         if isinstance(val, float):
-            scores[key] = max(1, min(10, round(val)))
+            scores[key] = max(0, min(100, round(val)))
         elif isinstance(val, str):
             try:
-                scores[key] = max(1, min(10, round(float(val))))
+                scores[key] = max(0, min(100, round(float(val))))
             except (ValueError, TypeError):
                 pass
+        elif isinstance(val, int):
+            scores[key] = max(0, min(100, val))
 
 
 # ─── Validation ───────────────────────────────────────────────────────────────
@@ -86,9 +93,9 @@ def _validate(data: dict) -> None:
 
     for key in REQUIRED_SCORE_KEYS:
         val = scores[key]
-        if not isinstance(val, int) or not (1 <= val <= 10):
+        if not isinstance(val, int) or not (0 <= val <= 100):
             raise ValueError(
-                f"Score '{key}' must be an integer between 1 and 10, got: {val!r}"
+                f"Score '{key}' must be an integer between 0 and 100, got: {val!r}"
             )
 
     # filler_words
@@ -126,6 +133,6 @@ def _validate(data: dict) -> None:
         raise ValueError("'recommended_next' must be a non-empty string.")
     if not _RECOMMENDED_NEXT_PATTERN.match(rec.strip()):
         raise ValueError(
-            f"'recommended_next' must follow the format 'scenario_level' "
+            f"'recommended_next' must follow the format 'scenarioType_level' "
             f"(e.g. 'hr_interview_intermediate'), got: {rec!r}"
         )

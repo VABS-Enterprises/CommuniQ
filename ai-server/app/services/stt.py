@@ -1,15 +1,11 @@
 import io
-import os
 
 from groq import AsyncGroq
-
-_client: AsyncGroq | None = None
 
 MAX_AUDIO_BYTES = 25 * 1024 * 1024   # 25 MB — Groq's hard limit
 MIN_AUDIO_BYTES = 1024                 # 1 KB  — anything smaller is not real audio
 
-# Whisper prompt nudges transcription toward Indian English patterns and
-# common vocabulary used in interview/GD/sales contexts.
+# Nudges Whisper toward Indian English and common CommuniQ vocabulary.
 _WHISPER_PROMPT = (
     "This is a spoken English conversation between an Indian professional or student "
     "and an AI interviewer. The speaker may use Indian English pronunciation and occasional "
@@ -18,31 +14,24 @@ _WHISPER_PROMPT = (
 )
 
 
-def _get_client() -> AsyncGroq:
-    global _client
-    if _client is None:
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise RuntimeError(
-                "GROQ_API_KEY is not set. Add it to ai-server/.env and restart the server."
-            )
-        _client = AsyncGroq(api_key=api_key)
-    return _client
-
-
-async def transcribe(audio_bytes: bytes, filename: str = "audio.m4a") -> str:
+async def transcribe(
+    audio_bytes: bytes,
+    filename: str = "audio.wav",
+    client: AsyncGroq = None,
+) -> str:
     """
     Transcribe audio bytes to text using Groq Whisper Large V3.
 
     Args:
         audio_bytes: Raw audio file bytes.
-        filename:    Original filename — used to determine audio format (m4a, wav, webm, etc.)
+        filename:    Original filename — used to determine audio format.
+        client:      Shared AsyncGroq instance (injected by the route handler).
 
     Returns:
-        Transcript as a plain string with leading/trailing whitespace stripped.
+        Transcript as a plain string with whitespace stripped.
 
     Raises:
-        ValueError:  If audio is empty, too small, or exceeds the size limit.
+        ValueError:   If audio is empty, too small, or exceeds the size limit.
         RuntimeError: If the Groq API call fails.
     """
     if not audio_bytes:
@@ -60,7 +49,9 @@ async def transcribe(audio_bytes: bytes, filename: str = "audio.m4a") -> str:
             f"Maximum allowed size is {MAX_AUDIO_BYTES // 1024 // 1024} MB."
         )
 
-    client = _get_client()
+    if client is None:
+        raise RuntimeError("Groq client is required for transcription.")
+
     audio_file = (filename, io.BytesIO(audio_bytes), _mime_type(filename))
 
     try:
