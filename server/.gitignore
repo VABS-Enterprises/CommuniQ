@@ -1,4 +1,28 @@
+# Dependencies
 node_modules/
+
+# Environment — never commit real secrets
 .env
-*.log
+.env.*
+!.env.example
+
+# Firebase service account key (contains private key — treat as a secret)
+*service-account*.json
+*serviceAccount*.json
+firebase-adminsdk-*.json
+
+# Uploads — audio files received at runtime
 uploads/
+
+# Logs
+*.log
+logs/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Test scratch files
+test.txt
