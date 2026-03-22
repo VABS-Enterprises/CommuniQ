@@ -1,5 +1,13 @@
 const { auth } = require('../config/firebase');
 
+/**
+ * Verifies the Firebase ID token from the Authorization header.
+ * Attaches decoded claims to req:
+ *   req.uid      — Firebase Auth uid
+ *   req.email    — user's email
+ *   req.name     — display name (available for Google Sign-In tokens)
+ *   req.picture  — profile photo URL (available for Google Sign-In tokens)
+ */
 async function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
 
@@ -13,6 +21,8 @@ async function verifyToken(req, res, next) {
     const decodedToken = await auth.verifyIdToken(idToken);
     req.uid = decodedToken.uid;
     req.email = decodedToken.email;
+    req.name = decodedToken.name || null;       // populated by Google Sign-In
+    req.picture = decodedToken.picture || null; // populated by Google Sign-In
     next();
   } catch (err) {
     console.error('Token verification failed:', err.message);

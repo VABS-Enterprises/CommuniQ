@@ -1,9 +1,15 @@
 const { deleteFirebaseUser } = require('../services/authService');
-const { createUser, deleteUserData } = require('../services/firestoreService');
+const {
+  createUser,
+  upsertGoogleUser,
+  getUserById,
+  deleteUserData,
+} = require('../services/firestoreService');
 
 /*
  * POST /auth/register
  *
+ * For Email/Password sign-up.
  * Flutter's responsibility BEFORE calling this:
  *   FirebaseAuth.instance.createUserWithEmailAndPassword(email, password)
  *   → Flutter gets an ID token and sends it as Authorization: Bearer <token>
@@ -23,11 +29,69 @@ async function register(req, res) {
   }
 
   try {
+    // Prevent duplicate registration
+    const existing = await getUserById(uid);
+    if (existing) {
+      return res.status(409).json({ error: 'User already registered' });
+    }
+
     const user = await createUser(uid, { email, name: name.trim() });
     return res.status(201).json({ user });
   } catch (err) {
     console.error('register error:', err.message);
     return res.status(500).json({ error: 'Registration failed' });
+  }
+}
+
+/*
+ * POST /auth/google
+ *
+ * For Google Sign-In (both new and returning users).
+ * Flutter's responsibility BEFORE calling this:
+ *   GoogleSignIn().signIn() → signInWithCredential() → getIdToken()
+ *   → Sends ID token as Authorization: Bearer <token>
+ *
+ * Node's responsibility HERE:
+ *   - Verify the token (verifyToken middleware → req.uid, req.email, req.name, req.picture)
+ *   - Upsert Firestore doc: create if new, update lastLoginAt if existing
+ *   - Return full user profile
+ *
+ * This single endpoint handles BOTH first login (creates doc) and
+ * subsequent logins (updates lastLoginAt) for Google users.
+ */
+async function googleSignIn(req, res) {
+  const uid = req.uid;
+  const email = req.email;
+  const name = req.name;
+  const photoURL = req.picture;
+
+  try {
+    const user = await upsertGoogleUser(uid, { email, name, photoURL });
+    return res.status(200).json({ user });
+  } catch (err) {
+    console.error('googleSignIn error:', err.message);
+    return res.status(500).json({ error: 'Google sign-in failed' });
+  }
+}
+
+/*
+ * GET /auth/me
+ *
+ * Returns the current authenticated user's Firestore profile.
+ * Flutter calls this on app start to hydrate user state.
+ */
+async function getMe(req, res) {
+  const uid = req.uid;
+
+  try {
+    const user = await getUserById(uid);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found. Please register first.' });
+    }
+    return res.status(200).json({ user });
+  } catch (err) {
+    console.error('getMe error:', err.message);
+    return res.status(500).json({ error: 'Could not fetch user profile' });
   }
 }
 
@@ -51,4 +115,4 @@ async function deleteAccount(req, res) {
   }
 }
 
-module.exports = { register, deleteAccount };
+module.exports = { register, googleSignIn, getMe, deleteAccount };
