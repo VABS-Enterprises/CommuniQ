@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:communiq/core/constants/app_colors.dart';
-import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
+import 'package:communiq/views/auth/screens/signup_screen.dart';
 import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
 
 class GoalConfirmationScreen extends StatefulWidget {
@@ -31,10 +31,9 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isFirstLaunch', false);
     if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
+    Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const MainNavigationView()),
-      (_) => false,
+      MaterialPageRoute(builder: (_) => const SignupScreen()),
     );
   }
 

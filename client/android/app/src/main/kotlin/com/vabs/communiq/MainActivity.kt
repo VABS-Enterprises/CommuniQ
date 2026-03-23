@@ -1,4 +1,4 @@
-package com.example.communiq
+package com.vabs.communiq
 
 import io.flutter.embedding.android.FlutterActivity
 
