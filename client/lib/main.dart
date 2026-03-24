@@ -7,7 +7,6 @@ import 'package:communiq/core/theme/app_theme.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
-import 'package:communiq/views/auth/screens/login_screen.dart';
 import 'package:communiq/views/onboarding/screens/welcome_screen.dart';
 
 /// The server URL used for all API calls — set via --dart-define=SERVER_URL=...
@@ -82,7 +81,7 @@ void main() async {
   debugPrint('🚀 [main] Step 3: Launching app — routing to '
       '${isFirstLaunch ? "WelcomeScreen (onboarding)" : "AuthGuard"}');
   debugPrint('');
-  runApp(MyApp(showOnboarding: isFirstLaunch));
+  runApp(const MyApp());
 }
 
 /// Shown only when Firebase itself fails to initialize (rare, fatal).
@@ -104,7 +103,7 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
       // Firebase init succeeded — re-launch the full app.
       final prefs = await SharedPreferences.getInstance();
       final isFirstLaunch = prefs.getBool('isFirstLaunch') != false;
-      runApp(MyApp(showOnboarding: isFirstLaunch));
+      runApp(const MyApp());
     } catch (_) {
       setState(() => _retrying = false);
     }
@@ -173,8 +172,7 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
 }
 
 class MyApp extends StatelessWidget {
-  final bool showOnboarding;
-  const MyApp({super.key, this.showOnboarding = false});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +180,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'CommuniQ',
       theme: AppTheme.darkTheme,
-      home: AuthGuard(showOnboarding: showOnboarding),
+      home: const AuthGuard(),
     );
   }
 }
@@ -191,8 +189,7 @@ class MyApp extends StatelessWidget {
 /// onboarding (first launch) or the login screen. Authenticated users go
 /// straight to the main app.
 class AuthGuard extends StatefulWidget {
-  final bool showOnboarding;
-  const AuthGuard({super.key, required this.showOnboarding});
+  const AuthGuard({super.key});
 
   @override
   State<AuthGuard> createState() => _AuthGuardState();
@@ -272,13 +269,8 @@ class _AuthGuardState extends State<AuthGuard> {
           return const MainNavigationView();
         }
 
-        debugPrint('[AuthGuard] User not authenticated → '
-            '${widget.showOnboarding ? "WelcomeScreen" : "LoginScreen"}');
-        if (widget.showOnboarding) {
-          return const WelcomeScreen();
-        } else {
-          return const LoginScreen();
-        }
+        debugPrint('[AuthGuard] User not authenticated → WelcomeScreen');
+        return const WelcomeScreen();
       },
     );
   }

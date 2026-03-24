@@ -1,13 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:communiq/core/services/onboarding_service.dart';
 import 'package:communiq/views/home_view/screens/home_view.dart';
 import 'package:communiq/views/home_view/widgets/quick_actions_row.dart';
 import 'package:communiq/views/learning_view/screens/learning_view.dart';
+import 'package:communiq/views/profile_view/screens/profile_view.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_view.dart';
 import '../widgets/floating_nav_bar.dart';
 
-const _kTabNames = ['Home', 'Learning', 'Roleplay'];
+const _kTabNames = ['Home', 'Learning', 'Roleplay', 'Profile'];
 
 class MainNavigationView extends StatefulWidget {
   const MainNavigationView({super.key});
@@ -23,6 +25,9 @@ class _MainNavigationViewState extends State<MainNavigationView> {
   void initState() {
     super.initState();
     debugPrint('🏠 [MainNav] Main navigation loaded — starting on ${_kTabNames[_currentIndex]}');
+    // Flush any onboarding data that was saved locally but not yet synced
+    // (e.g. server was unreachable during sign-up, or this is a retry session).
+    OnboardingService.syncPendingToServer();
   }
 
   void switchTab(int index) {
@@ -35,6 +40,7 @@ class _MainNavigationViewState extends State<MainNavigationView> {
     const HomeView(),
     const LearningView(),
     const RoleplayView(),
+    const ProfileView(),
   ];
 
   @override
@@ -49,24 +55,30 @@ class _MainNavigationViewState extends State<MainNavigationView> {
           switchTab(2);
           return true;
         },
-        child: Scaffold(
-          extendBody: true,
-          body: Stack(
-            children: [
-              IndexedStack(
-                index: _currentIndex,
-                children: _screens,
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: FloatingNavBar(
-                  currentIndex: _currentIndex,
-                  onTabSelected: switchTab,
+        child: NotificationListener<SwitchToProfileTabNotification>(
+          onNotification: (_) {
+            switchTab(3);
+            return true;
+          },
+          child: Scaffold(
+            extendBody: true,
+            body: Stack(
+              children: [
+                IndexedStack(
+                  index: _currentIndex,
+                  children: _screens,
                 ),
-              ),
-            ],
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: FloatingNavBar(
+                    currentIndex: _currentIndex,
+                    onTabSelected: switchTab,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -73,3 +73,7 @@ class SwitchToRoleplayTabNotification extends Notification {}
 /// Dispatched when the user taps the "Learn" quick action.
 /// Caught by [MainNavigationView] to switch to tab index 1.
 class SwitchToLearningTabNotification extends Notification {}
+
+/// Dispatched when the user taps the profile avatar.
+/// Caught by [MainNavigationView] to switch to tab index 3.
+class SwitchToProfileTabNotification extends Notification {}
