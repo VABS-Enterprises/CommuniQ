@@ -10,7 +10,6 @@ DEFAULT_VOICE = "en-IN-NeerjaNeural"
 SUPPORTED_VOICES = {
     "en-IN-NeerjaNeural",   # female, Indian English (default)
     "en-IN-PrabhatNeural",  # male, Indian English
-    "en-IN-AaravNeural",    # male, Indian English (alternate)
     "en-US-JennyNeural",    # female, US English (fallback)
     "en-GB-SoniaNeural",    # female, British English (fallback)
 }
