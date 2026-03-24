@@ -87,11 +87,12 @@ async function appendTurnsToSession(sessionId, userTurn, aiTurn) {
   });
 }
 
-async function completeSession(sessionId, durationSeconds) {
+async function completeSession(sessionId, durationSeconds, overallScore) {
   await db.collection('sessions').doc(sessionId).update({
     status: 'completed',
     endedAt: FieldValue.serverTimestamp(),
     durationSeconds,
+    ...(overallScore != null ? { overallScore } : {}),
   });
 }
 
@@ -112,6 +113,9 @@ async function abandonSession(sessionId) {
 }
 
 async function getUserSessions(userId, limitCount = 20) {
+  // Requires a Firestore composite index: sessions(userId ASC, startedAt DESC).
+  // If you see "requires an index" errors, open the URL in the error message
+  // or run: firebase deploy --only firestore:indexes
   const snap = await db
     .collection('sessions')
     .where('userId', '==', userId)

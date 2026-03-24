@@ -3,16 +3,30 @@ import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 
 class DifficultySection extends StatefulWidget {
-  const DifficultySection({super.key});
+  final String initialDifficulty;
+  final ValueChanged<String>? onChanged;
+
+  const DifficultySection({
+    super.key,
+    this.initialDifficulty = 'Medium',
+    this.onChanged,
+  });
 
   @override
   State<DifficultySection> createState() => _DifficultySectionState();
 }
 
 class _DifficultySectionState extends State<DifficultySection> {
-  int _selectedIndex = 1; // Medium selected by default
+  late int _selectedIndex;
 
   final List<String> _difficulties = ['Easy', 'Medium', 'Hard', 'Nightmare'];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = _difficulties.indexOf(widget.initialDifficulty);
+    if (_selectedIndex == -1) _selectedIndex = 1; // default Medium
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +53,7 @@ class _DifficultySectionState extends State<DifficultySection> {
                   setState(() {
                     _selectedIndex = index;
                   });
+                  widget.onChanged?.call(_difficulties[index]);
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),

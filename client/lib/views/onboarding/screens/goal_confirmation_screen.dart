@@ -30,10 +30,14 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen> {
   Future<void> _finish() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isFirstLaunch', false);
+    // Persist the selected goal so it can be synced to the backend after auth.
+    if (_selected != null) {
+      await prefs.setString('onboardingGoal', _selected!);
+    }
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const SignupScreen()),
+      slideRoute(const SignupScreen()),
     );
   }
 

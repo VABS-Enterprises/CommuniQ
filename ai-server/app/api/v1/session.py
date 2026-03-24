@@ -5,16 +5,17 @@ import logging
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from groq import AsyncGroq
 
+from app.config import settings
 from app.core.prompts import build_evaluator_prompt
 from app.dependencies import get_groq_client
 from app.schemas.session import EvaluateRequest, EvaluateResponse, TurnResponse
 from app.services.evaluator import parse_evaluation
 from app.services.stt import MAX_AUDIO_BYTES, MIN_AUDIO_BYTES, transcribe
-from app.services.tts import DEFAULT_VOICE, synthesize_full, validate_voice
+from app.services.tts import synthesize_full
 
 logger = logging.getLogger("communiq")
 
-LLM_MODEL = "llama-3.1-8b-instant"
+LLM_MODEL = settings.llm_model
 
 router = APIRouter()
 
@@ -121,6 +122,7 @@ async def session_turn(
             stream=False,
             max_tokens=256,
             temperature=0.75,
+            timeout=25,
         )
     except Exception as e:
         logger.error("LLM failed — session=%s: %s", sessionId, e)
@@ -175,7 +177,7 @@ async def session_evaluate(
 
     Returns JSON:
         { scores (0-100), fillerWordCount, fillerWords,
-          strengths, improvements, recommendedNextScenarioId }
+          strengths, improvements, recommendedNextType }
     """
     system_prompt = build_evaluator_prompt(req.scenarioType)
 
@@ -197,6 +199,7 @@ async def session_evaluate(
             stream=False,
             max_tokens=1024,
             temperature=0.2,
+            timeout=50,
         )
     except Exception as e:
         logger.error("Groq evaluation request failed — session=%s: %s", req.sessionId, e)
@@ -226,5 +229,5 @@ async def session_evaluate(
         fillerWords=result["filler_words"],
         strengths=result["strengths"],
         improvements=result["improvements"],
-        recommendedNextScenarioId=result["recommended_next"],
+        recommendedNextType=result["recommended_next"],
     )

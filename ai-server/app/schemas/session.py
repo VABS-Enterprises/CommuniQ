@@ -22,7 +22,7 @@ class EvaluateResponse(BaseModel):
     fillerWords: list[str]
     strengths: list[str]         # exactly 2 items
     improvements: list[str]      # exactly 2 items
-    recommendedNextScenarioId: str
+    recommendedNextType: str
 
 
 class EvaluateRequest(BaseModel):

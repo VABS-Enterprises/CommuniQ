@@ -1,5 +1,5 @@
 const { deleteFirebaseUser } = require('../services/authService');
-const { createUser, getUserById, deleteUserData } = require('../services/firestoreService');
+const { createUser, getUserById, deleteUserData, upsertGoogleUser } = require('../services/firestoreService');
 
 const MAX_NAME_LENGTH = 100;
 
@@ -85,10 +85,28 @@ async function getMe(req, res) {
   const uid = req.uid;
 
   try {
-    const user = await getUserById(uid);
+    let user = await getUserById(uid);
+
     if (!user) {
-      return res.status(404).json({ error: 'User not found. Please register first.' });
+      // Auto-recover: Firebase Auth account exists but Firestore doc is missing.
+      // This happens when the server was down during initial registration/sign-in.
+      // Recreate the doc from the claims embedded in the verified JWT.
+      if (req.name) {
+        // Google user — has display name in token claims
+        user = await upsertGoogleUser(uid, {
+          email: req.email,
+          name: req.name,
+          photoURL: req.picture || null,
+        });
+        console.log(`[auth/me] Auto-recovered Firestore doc for Google user ${uid}`);
+      } else {
+        // Email/password user — use email prefix as fallback name
+        const fallbackName = req.email ? req.email.split('@')[0] : 'User';
+        user = await createUser(uid, { email: req.email, name: fallbackName });
+        console.log(`[auth/me] Auto-recovered Firestore doc for email user ${uid}`);
+      }
     }
+
     return res.status(200).json({ user });
   } catch (err) {
     console.error('getMe error:', err.message);

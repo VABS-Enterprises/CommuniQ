@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/common_widgets/gradient_button.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
-import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
 import 'package:communiq/core/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -25,20 +24,31 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  void _showSuccess(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
+  }
+
   Future<void> _handleGoogleLogin() async {
     setState(() => _isLoading = true);
     try {
       await AuthService.signInWithGoogle();
-      _navigateHome();
+      // AuthGuard's StreamBuilder will rebuild and navigate to MainNavigationView
+      // automatically once Firebase auth state changes — no manual navigation needed.
+    } on CancelledException {
+      // User dismissed the picker — stay on screen, do nothing.
     } catch (e) {
-      _showError(e.toString());
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _handleEmailLogin() async {
-    if (_emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
+    if (_emailController.text.trim().isEmpty ||
+        _passwordController.text.isEmpty) {
       return _showError('Please fill in both fields.');
     }
 
@@ -48,20 +58,42 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text,
       );
-      _navigateHome();
+      // AuthGuard handles navigation automatically.
     } catch (e) {
-      _showError(e.toString());
+      _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _navigateHome() {
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const MainNavigationView()),
-      (_) => false,
-    );
+  Future<void> _handleForgotPassword() async {
+    if (_isLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              const Text('Please wait for the current action to complete.'),
+          backgroundColor: AppColors.surface,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      _showError('Enter your email address first, then tap Forgot Password.');
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.sendPasswordReset(email);
+      _showSuccess('Password reset email sent to $email');
+    } catch (e) {
+      _showError(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -82,7 +114,6 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 20),
-              // Orb / Logo Header
               Center(
                 child: Container(
                   width: 80,
@@ -127,13 +158,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 'Continue your communication journey',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 15,
-                ),
+                    color: AppColors.textSecondary, fontSize: 15),
               ),
               const SizedBox(height: 48),
 
-              // Email Field
               _buildTextField(
                 controller: _emailController,
                 label: 'Email Address',
@@ -142,7 +170,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Password Field
               _buildTextField(
                 controller: _passwordController,
                 label: 'Password',
@@ -150,13 +177,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 obscureText: _obscurePassword,
                 isPassword: true,
               ),
-              
+
               const SizedBox(height: 12),
-              // Forgot Password Link
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: _handleForgotPassword,
                   child: const Text(
                     'Forgot Password?',
                     style: TextStyle(
@@ -166,81 +192,90 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 28),
               _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                : GradientButton(
-                    text: 'Sign In',
-                    onPressed: _handleEmailLogin,
-                  ),
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                          color: AppColors.primary))
+                  : GradientButton(
+                      text: 'Sign In', onPressed: _handleEmailLogin),
 
+              if (!_isLoading) ...[
               const SizedBox(height: 32),
-              // Divider
               Row(
                 children: [
-                  Expanded(child: Divider(color: AppColors.border, thickness: 1)),
+                  Expanded(
+                      child: Divider(color: AppColors.border, thickness: 1)),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'Or continue with',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                    ),
+                    child: Text('Or continue with',
+                        style: TextStyle(
+                            color: AppColors.textMuted, fontSize: 13)),
                   ),
-                  Expanded(child: Divider(color: AppColors.border, thickness: 1)),
+                  Expanded(
+                      child: Divider(color: AppColors.border, thickness: 1)),
                 ],
               ),
               const SizedBox(height: 32),
-
-              // Google Auth Button
-              if (!_isLoading) SizedBox(
-                height: 56,
-                child: OutlinedButton.icon(
-                  onPressed: _handleGoogleLogin,
-                  icon: const Icon(Icons.g_mobiledata_rounded, size: 36, color: AppColors.textPrimary),
-                  label: const Text(
-                    'Continue with Google',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                SizedBox(
+                  height: 56,
+                  child: OutlinedButton.icon(
+                    onPressed: _handleGoogleLogin,
+                    icon: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        'G',
+                        style: TextStyle(
+                          color: Color(0xFF4285F4),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.border, width: 2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                    label: const Text('Continue with Google',
+                        style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: AppColors.border, width: 2),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
                 ),
-              ),
+              ],
 
               const SizedBox(height: 40),
-              // Toggle to Signup
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    'Don\'t have an account? ',
-                    style: TextStyle(color: AppColors.textSecondary),
-                  ),
+                  const Text("Don't have an account? ",
+                      style:
+                          TextStyle(color: AppColors.textSecondary)),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        PageRouteBuilder(
-                          pageBuilder: (_, __, ___) => const SignupScreen(),
-                          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'Sign Up',
-                      style: TextStyle(
-                        color: AppColors.primaryLight,
-                        fontWeight: FontWeight.bold,
+                    onTap: () => Navigator.pushReplacement(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (_, __, ___) =>
+                            const SignupScreen(),
+                        transitionsBuilder:
+                            (_, anim, __, child) =>
+                                FadeTransition(
+                                    opacity: anim, child: child),
                       ),
                     ),
+                    child: const Text('Sign Up',
+                        style: TextStyle(
+                            color: AppColors.primaryLight,
+                            fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -263,14 +298,11 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -278,34 +310,40 @@ class _LoginScreenState extends State<LoginScreen> {
           keyboardType: keyboardType,
           style: const TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: 'Enter your $label'.toLowerCase(),
-            hintStyle: TextStyle(color: AppColors.textMuted.withValues(alpha: 0.5)),
-            prefixIcon: Icon(icon, color: AppColors.textMuted, size: 20),
+            hintText: 'Enter your ${label.toLowerCase()}',
+            hintStyle: TextStyle(
+                color: AppColors.textMuted.withValues(alpha: 0.5)),
+            prefixIcon:
+                Icon(icon, color: AppColors.textMuted, size: 20),
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(
-                      obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      obscureText
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
                       color: AppColors.textMuted,
                       size: 20,
                     ),
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    onPressed: () => setState(
+                        () => _obscurePassword = !_obscurePassword),
                   )
                 : null,
             filled: true,
             fillColor: AppColors.surface,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    const BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    const BorderSide(color: AppColors.border)),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.primary),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    const BorderSide(color: AppColors.primary)),
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 16),
           ),
         ),
       ],

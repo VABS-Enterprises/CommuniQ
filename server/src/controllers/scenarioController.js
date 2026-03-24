@@ -1,4 +1,4 @@
-const { getScenariosForLevel, getScenarioById, getUserById, createScenario } = require('../services/firestoreService');
+const { getScenariosForLevel, getScenarioById, getUserById, createScenario, upsertGoogleUser, createUser } = require('../services/firestoreService');
 const { stripSystemPrompt } = require('../models/scenarioModel');
 const { v4: uuidv4 } = require('uuid');
 
@@ -7,8 +7,22 @@ const VALID_TYPES = ['hr_interview', 'gd', 'sales', 'technical'];
 // GET /scenarios
 async function listScenarios(req, res) {
   try {
-    const user = await getUserById(req.uid);
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    let user = await getUserById(req.uid);
+
+    if (!user) {
+      // Auto-recover missing Firestore doc (same logic as auth/me)
+      if (req.name) {
+        user = await upsertGoogleUser(req.uid, {
+          email: req.email,
+          name: req.name,
+          photoURL: req.picture || null,
+        });
+      } else {
+        const fallbackName = req.email ? req.email.split('@')[0] : 'User';
+        user = await createUser(req.uid, { email: req.email, name: fallbackName });
+      }
+      console.log(`[scenarios] Auto-recovered Firestore doc for user ${req.uid}`);
+    }
 
     const scenarios = await getScenariosForLevel(user.level);
     return res.status(200).json({ scenarios });

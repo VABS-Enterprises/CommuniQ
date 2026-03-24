@@ -3,14 +3,21 @@ import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 
 class AiPersonaSection extends StatefulWidget {
-  const AiPersonaSection({super.key});
+  final String initialPersona;
+  final ValueChanged<String>? onChanged;
+
+  const AiPersonaSection({
+    super.key,
+    this.initialPersona = 'Strict Boss',
+    this.onChanged,
+  });
 
   @override
   State<AiPersonaSection> createState() => _AiPersonaSectionState();
 }
 
 class _AiPersonaSectionState extends State<AiPersonaSection> {
-  int _selectedIndex = 0; // Strict Boss selected by default
+  late int _selectedIndex;
 
   final List<Map<String, dynamic>> _personas = [
     {
@@ -23,7 +30,20 @@ class _AiPersonaSectionState extends State<AiPersonaSection> {
       'label': 'EMOTIONAL',
       'icon': Icons.sentiment_dissatisfied,
     },
+    {
+      'name': 'Friendly Mentor',
+      'label': 'SUPPORTIVE',
+      'icon': Icons.psychology_rounded,
+    },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = _personas.indexWhere(
+        (p) => p['name'] == widget.initialPersona);
+    if (_selectedIndex == -1) _selectedIndex = 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +71,7 @@ class _AiPersonaSectionState extends State<AiPersonaSection> {
                   setState(() {
                     _selectedIndex = index;
                   });
+                  widget.onChanged?.call(_personas[index]['name'] as String);
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -84,11 +105,13 @@ class _AiPersonaSectionState extends State<AiPersonaSection> {
                           shape: BoxShape.circle,
                           color: AppColors.background,
                           border: Border.all(
-                            color: isSelected ? AppColors.primary.withValues(alpha: 0.3) : Colors.transparent,
+                            color: isSelected
+                                ? AppColors.primary.withValues(alpha: 0.3)
+                                : Colors.transparent,
                           ),
                         ),
                         child: Icon(
-                          _personas[index]['icon'],
+                          _personas[index]['icon'] as IconData,
                           color: isSelected ? AppColors.primaryLight : AppColors.textMuted,
                           size: 24,
                         ),
@@ -100,7 +123,7 @@ class _AiPersonaSectionState extends State<AiPersonaSection> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _personas[index]['name'],
+                              _personas[index]['name'] as String,
                               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                     color: AppColors.textPrimary,
                                     fontWeight: FontWeight.bold,
@@ -110,9 +133,11 @@ class _AiPersonaSectionState extends State<AiPersonaSection> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              _personas[index]['label'],
+                              _personas[index]['label'] as String,
                               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: isSelected ? AppColors.primaryLight : AppColors.textMuted,
+                                    color: isSelected
+                                        ? AppColors.primaryLight
+                                        : AppColors.textMuted,
                                     fontSize: 8,
                                     letterSpacing: 1.0,
                                     fontWeight: FontWeight.bold,

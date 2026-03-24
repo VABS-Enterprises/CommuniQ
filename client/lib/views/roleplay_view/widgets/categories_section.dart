@@ -11,7 +11,7 @@ class CategoriesSection extends StatefulWidget {
 }
 
 class _CategoriesSectionState extends State<CategoriesSection> {
-  int _selectedIndex = 0;
+  int _selectedIndex = -1;
 
   final List<Map<String, dynamic>> _categories = [
     {'title': 'Assertiveness', 'icon': Icons.bolt},
@@ -34,13 +34,21 @@ class _CategoriesSectionState extends State<CategoriesSection> {
                     fontWeight: FontWeight.bold,
                   ),
             ),
-            Text(
-              'VIEW ALL',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.primaryLight,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.0,
-                  ),
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const RoleplaySetupScreen(mode: 'custom'),
+                ),
+              ),
+              child: Text(
+                'VIEW ALL',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.primaryLight,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+              ),
             ),
           ],
         ),
@@ -88,7 +96,9 @@ class _CategoriesSectionState extends State<CategoriesSection> {
                         category: _categories[index]['title'],
                       ),
                     ),
-                  );
+                  ).then((_) {
+                    if (mounted) setState(() => _selectedIndex = -1);
+                  });
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),

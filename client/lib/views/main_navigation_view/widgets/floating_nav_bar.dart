@@ -90,7 +90,7 @@ class _NavBarItem extends StatelessWidget {
         padding:
             const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         transformAlignment: Alignment.center,
-        transform: Matrix4.identity()..scale(isSelected ? 0.97 : 1.0),
+        transform: Matrix4.identity()..scale(isSelected ? 1.0 : 0.95),
         child: isSelected
             ? GlowingIcon(
                 icon: icon,

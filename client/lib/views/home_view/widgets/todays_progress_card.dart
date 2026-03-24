@@ -3,12 +3,35 @@ import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/common_widgets/glass_card.dart';
+import 'package:communiq/models/user_profile.dart';
 
 class TodaysProgressCard extends StatelessWidget {
-  const TodaysProgressCard({super.key});
+  /// Pass the loaded profile to show real data. While null the card shows
+  /// skeleton/placeholder values so the layout never jumps.
+  final UserProfile? profile;
+
+  const TodaysProgressCard({super.key, this.profile});
 
   @override
   Widget build(BuildContext context) {
+    final xpProgress = profile?.xpProgress ?? 0.0;
+    final xpProgressPct = '${(xpProgress * 100).round()}%';
+
+    final streakProgress = profile?.streakProgress ?? 0.0;
+    final streakDays = profile?.streak ?? 0;
+    final streakLabel = streakDays == 0
+        ? 'No streak yet'
+        : streakDays == 1
+            ? '1 Day Streak'
+            : '$streakDays Days Streak';
+
+    final xpToNext = profile?.xpToNextLevel ?? 0;
+    final rewardText = profile == null
+        ? '—'
+        : profile!.level >= 5
+            ? 'Max level reached!'
+            : 'Next level: $xpToNext XP away';
+
     return GlassCard(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.s20),
@@ -16,7 +39,7 @@ class TodaysProgressCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Today's Progress",
+            "Your Progress",
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
@@ -33,8 +56,9 @@ class TodaysProgressCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildCircularProgress(context, 'Social Skill', 0.60, '60%'),
-              _buildCircularProgress(context, 'Daily Goal', 0.30, '30%'),
+              _buildCircularProgress(context, 'Level Progress', xpProgress, xpProgressPct),
+              _buildCircularProgress(context, 'Streak Goal', streakProgress,
+                  '${(streakProgress * 100).round()}%'),
             ],
           ),
           const SizedBox(height: AppSpacing.s24),
@@ -46,10 +70,7 @@ class TodaysProgressCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.background,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.border,
-                width: 1,
-              ),
+              border: Border.all(color: AppColors.border, width: 1),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -63,7 +84,7 @@ class TodaysProgressCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.s8),
                     Text(
-                      '10 Day Streak',
+                      streakLabel,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.bold,
@@ -72,14 +93,14 @@ class TodaysProgressCard extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  'Next Reward: 250 XP',
+                  rewardText,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.textMuted,
                       ),
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

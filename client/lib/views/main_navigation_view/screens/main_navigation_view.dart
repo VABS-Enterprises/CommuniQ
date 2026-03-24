@@ -1,8 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:communiq/views/home_view/screens/home_view.dart';
+import 'package:communiq/views/home_view/widgets/quick_actions_row.dart';
+import 'package:communiq/views/learning_view/screens/learning_view.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_view.dart';
 import '../widgets/floating_nav_bar.dart';
+
+const _kTabNames = ['Home', 'Learning', 'Roleplay'];
 
 class MainNavigationView extends StatefulWidget {
   const MainNavigationView({super.key});
@@ -14,36 +19,56 @@ class MainNavigationView extends StatefulWidget {
 class _MainNavigationViewState extends State<MainNavigationView> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
+  @override
+  void initState() {
+    super.initState();
+    debugPrint('🏠 [MainNav] Main navigation loaded — starting on ${_kTabNames[_currentIndex]}');
+  }
+
+  void switchTab(int index) {
+    if (!mounted || index == _currentIndex) return;
+    debugPrint('🏠 [MainNav] Tab switch: ${_kTabNames[_currentIndex]} → ${_kTabNames[index]}');
+    setState(() => _currentIndex = index);
+  }
+
+  late final List<Widget> _screens = [
     const HomeView(),
-    const Center(child: Text('Learning', style: TextStyle(color: Colors.white))),
+    const LearningView(),
     const RoleplayView(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true, // Allows body to go behind the transparent stack / nav bar if needed
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: _currentIndex,
-            children: _screens,
+    return NotificationListener<SwitchToLearningTabNotification>(
+      onNotification: (_) {
+        switchTab(1);
+        return true;
+      },
+      child: NotificationListener<SwitchToRoleplayTabNotification>(
+        onNotification: (_) {
+          switchTab(2);
+          return true;
+        },
+        child: Scaffold(
+          extendBody: true,
+          body: Stack(
+            children: [
+              IndexedStack(
+                index: _currentIndex,
+                children: _screens,
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: FloatingNavBar(
+                  currentIndex: _currentIndex,
+                  onTabSelected: switchTab,
+                ),
+              ),
+            ],
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: FloatingNavBar(
-              currentIndex: _currentIndex,
-              onTabSelected: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

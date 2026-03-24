@@ -11,7 +11,7 @@ const { FieldValue } = require('firebase-admin/firestore');
  * fillerWords                string[]  e.g. ["um", "uh", "basically"]
  * strengths                  string[]  exactly 2 items
  * improvements               string[]  exactly 2 items
- * recommendedNextScenarioId  string
+ * recommendedNextType        string
  * rawTranscript              string    full conversation as plain text
  *
  * Scores shape:
@@ -29,7 +29,7 @@ function createEvaluationDoc(sessionId, {
   fillerWords,
   strengths,
   improvements,
-  recommendedNextScenarioId,
+  recommendedNextType,
   rawTranscript,
 }) {
   return {
@@ -41,7 +41,7 @@ function createEvaluationDoc(sessionId, {
     fillerWords,
     strengths,
     improvements,
-    recommendedNextScenarioId,
+    recommendedNextType,
     rawTranscript,
   };
 }

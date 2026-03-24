@@ -18,11 +18,16 @@ const { FieldValue } = require('firebase-admin/firestore');
  *   timestamp   string   ISO 8601
  */
 
-function createSessionDoc(sessionId, { userId, scenarioId }) {
+function createSessionDoc(sessionId, { userId, scenarioId, scenarioTitle, persona, tone, languageLevel }) {
   return {
     sessionId,
     userId,
     scenarioId,
+    scenarioTitle: scenarioTitle || null,
+    persona: persona || null,
+    tone: tone || null,
+    languageLevel: languageLevel || null,
+    overallScore: null,
     startedAt: FieldValue.serverTimestamp(),
     endedAt: null,
     durationSeconds: null,
