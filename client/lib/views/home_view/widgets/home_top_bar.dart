@@ -4,6 +4,7 @@ import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/models/user_profile.dart';
+import 'package:communiq/views/home_view/widgets/quick_actions_row.dart';
 import 'package:communiq/views/onboarding/screens/welcome_screen.dart';
 
 class HomeTopBar extends StatelessWidget {
@@ -184,7 +185,7 @@ class HomeTopBar extends StatelessWidget {
           ],
         ),
         GestureDetector(
-          onTap: () => _showProfileSheet(context),
+          onTap: () => SwitchToProfileTabNotification().dispatch(context),
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
