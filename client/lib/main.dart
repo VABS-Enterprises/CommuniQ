@@ -10,15 +10,17 @@ import 'package:communiq/views/main_navigation_view/screens/main_navigation_view
 import 'package:communiq/views/onboarding/screens/welcome_screen.dart';
 
 /// The server URL used for all API calls — set via --dart-define=SERVER_URL=...
-/// Default targets Android emulator loopback. For physical devices run:
-///   flutter run --dart-define=SERVER_URL=http://192.168.x.x:3000
+/// Defaults to the deployed Render backend.
+/// For local dev: flutter run --dart-define=SERVER_URL=http://10.0.2.2:3000
 const _kServerUrl = String.fromEnvironment(
   'SERVER_URL',
-  defaultValue: 'http://10.0.2.2:3000',
+  defaultValue: 'https://communiq.onrender.com',
 );
 
 void _printStartupBanner() {
-  final isEmulatorUrl = _kServerUrl.contains('10.0.2.2');
+  final isLocalUrl = _kServerUrl.contains('10.0.2.2') ||
+      _kServerUrl.contains('localhost') ||
+      _kServerUrl.contains('192.168');
   final modeLabel = kDebugMode ? '🛠  DEBUG' : '🚀 PRODUCTION';
 
   debugPrint('');
@@ -27,11 +29,10 @@ void _printStartupBanner() {
   debugPrint('╠══════════════════════════════════════════════╣');
   debugPrint('║  Mode:       $modeLabel');
   debugPrint('║  Server URL: $_kServerUrl');
-  if (isEmulatorUrl) {
-    debugPrint('║  ⚠️  Emulator URL — physical device will FAIL');
-    debugPrint('║  Fix: flutter run --dart-define=SERVER_URL=http://YOUR_LAN_IP:3000');
+  if (isLocalUrl) {
+    debugPrint('║  🛠  Local server — emulator/LAN dev mode');
   } else {
-    debugPrint('║  ✅  LAN URL — physical device OK');
+    debugPrint('║  ✅  Render cloud backend — production ready');
   }
   debugPrint('╚══════════════════════════════════════════════╝');
   debugPrint('');

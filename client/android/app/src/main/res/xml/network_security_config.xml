@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-  <!-- Allow cleartext HTTP to local dev servers only in debug builds -->
+  <!-- Production backend (HTTPS — no special config needed, included for clarity) -->
+  <domain-config cleartextTrafficPermitted="false">
+    <domain includeSubdomains="true">communiq.onrender.com</domain>
+  </domain-config>
+
+  <!-- Allow cleartext HTTP to local dev servers only (emulator + LAN) -->
   <domain-config cleartextTrafficPermitted="true">
     <domain includeSubdomains="false">10.0.2.2</domain>
     <domain includeSubdomains="false">localhost</domain>

@@ -62,8 +62,7 @@ class AuthService {
       // authenticated via Firebase. GET /auth/me auto-creates the Firestore doc
       // on the first home-screen load (same resilience strategy as Google sign-in).
       debugPrint('[Email Auth] Step 2: Calling Node backend ${ApiConstants.authRegister}...');
-      debugPrint('[Email Auth]   ⚠️  If on physical device, ensure server URL is set correctly!');
-      debugPrint('[Email Auth]   Run: flutter run --dart-define=SERVER_URL=http://YOUR_IP:3000');
+      debugPrint('[Email Auth]   Server: ${ApiService.instance.dio.options.baseUrl}');
       try {
         await ApiService.post(ApiConstants.authRegister, body: {
           'name': name,
