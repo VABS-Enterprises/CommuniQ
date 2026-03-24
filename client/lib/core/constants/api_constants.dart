@@ -6,6 +6,9 @@ class ApiConstants {
   static const String authRegister = '/auth/register';
   static const String authGoogle = '/auth/google';
 
+  // Onboarding endpoint
+  static const String onboarding = '/onboarding';
+
   // Session endpoints
   static const String scenarios = '/scenarios';
   static const String sessionsStart = '/sessions/start';

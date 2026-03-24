@@ -1,10 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/views/onboarding/screens/speaking_style_screen.dart';
 import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
 
 class PersonalChallengesScreen extends StatefulWidget {
-  const PersonalChallengesScreen({super.key});
+  const PersonalChallengesScreen({super.key, required this.data});
+
+  final OnboardingData data;
+
   @override
   State<PersonalChallengesScreen> createState() =>
       _PersonalChallengesScreenState();
@@ -76,10 +81,17 @@ class _PersonalChallengesScreenState extends State<PersonalChallengesScreen> {
               OnboardingButton(
                 label: 'Continue',
                 enabled: _selected.isNotEmpty,
-                onPressed: () => Navigator.push(
-                  context,
-                  slideRoute(const SpeakingStyleScreen()),
-                ),
+                onPressed: () {
+                  debugPrint('[Onboarding] Step 2/6 — Challenges selected: ${_selected.toList()}');
+                  Navigator.push(
+                    context,
+                    slideRoute(SpeakingStyleScreen(
+                      data: widget.data.copyWith(
+                        challenges: _selected.toList(),
+                      ),
+                    )),
+                  );
+                },
               ),
               const SizedBox(height: 24),
             ],

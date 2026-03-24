@@ -6,6 +6,7 @@ const { db } = require('./config/firebase');
 const { version } = require('../package.json');
 
 const authRoutes = require('./routes/auth');
+const onboardingRoutes = require('./routes/onboarding');
 const sessionRoutes = require('./routes/sessions');
 const scenarioRoutes = require('./routes/scenarios');
 const leaderboardRoutes = require('./routes/leaderboard');
@@ -47,6 +48,7 @@ app.get('/health', async (req, res) => {
 
 // Routes
 app.use('/auth', authRoutes);
+app.use('/onboarding', onboardingRoutes);
 app.use('/sessions', sessionRoutes);
 app.use('/scenarios', scenarioRoutes);
 app.use('/leaderboard', leaderboardRoutes);

@@ -35,10 +35,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       await AuthService.signInWithGoogle();
-      // AuthGuard's StreamBuilder will rebuild and navigate to MainNavigationView
-      // automatically once Firebase auth state changes — no manual navigation needed.
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } on CancelledException {
-      // User dismissed the picker — stay on screen, do nothing.
+      // User dismissed the picker — stay on screen.
     } catch (e) {
       _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -58,7 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text,
       );
-      // AuthGuard handles navigation automatically.
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } catch (e) {
       _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {

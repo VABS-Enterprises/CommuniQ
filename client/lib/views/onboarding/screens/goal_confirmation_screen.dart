@@ -1,11 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/services/onboarding_service.dart';
+import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
 import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
 
 class GoalConfirmationScreen extends StatefulWidget {
-  const GoalConfirmationScreen({super.key});
+  const GoalConfirmationScreen({super.key, required this.data});
+
+  final OnboardingData data;
+
   @override
   State<GoalConfirmationScreen> createState() =>
       _GoalConfirmationScreenState();
@@ -28,16 +34,21 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen> {
   ];
 
   Future<void> _finish() async {
+    final fullData = widget.data.copyWith(primaryGoal: _selected!);
+
+    debugPrint('[Onboarding] Step 6/6 — Goal selected: "$_selected"');
+    debugPrint('[Onboarding] Onboarding complete — persisting data locally before auth...');
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isFirstLaunch', false);
-    // Persist the selected goal so it can be synced to the backend after auth.
-    if (_selected != null) {
-      await prefs.setString('onboardingGoal', _selected!);
-    }
+    await OnboardingService.saveLocally(fullData);
+
+    debugPrint('[Onboarding] Navigating to SignupScreen to authenticate user');
+
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
-      slideRoute(const SignupScreen()),
+      slideRoute(SignupScreen(onboardingData: fullData)),
     );
   }
 
@@ -88,7 +99,6 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              // "Final step" indicator
               Center(
                 child: Text(
                   '🎉  Final step — you\'re almost in!',

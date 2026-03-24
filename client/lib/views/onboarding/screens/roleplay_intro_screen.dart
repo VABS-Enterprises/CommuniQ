@@ -1,11 +1,18 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/services/onboarding_service.dart';
+import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
 import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
 import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
 
 class RoleplayIntroScreen extends StatefulWidget {
-  const RoleplayIntroScreen({super.key});
+  const RoleplayIntroScreen({super.key, required this.data});
+
+  final OnboardingData data;
+
   @override
   State<RoleplayIntroScreen> createState() => _RoleplayIntroScreenState();
 }
@@ -22,14 +29,28 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.92, end: 1.05)
-        .animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+    _pulseAnim = Tween<double>(begin: 0.92, end: 1.05).animate(
+        CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
     super.dispose();
+  }
+
+  /// User skips goal-selection — save partial data then go to sign-up.
+  Future<void> _skip() async {
+    debugPrint('[Onboarding] Step 5/6 — Skipped goal selection, saving partial data');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isFirstLaunch', false);
+    await OnboardingService.saveLocally(widget.data);
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      slideRoute(SignupScreen(onboardingData: widget.data)),
+      (_) => false,
+    );
   }
 
   @override
@@ -47,7 +68,6 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                 child: buildProgressDots(5),
               ),
               const Spacer(flex: 1),
-              // Pulsing orb
               ScaleTransition(
                 scale: _pulseAnim,
                 child: Container(
@@ -83,29 +103,29 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               const Text(
                 'Create your account to get started',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 15),
+                style:
+                    TextStyle(color: AppColors.textSecondary, fontSize: 15),
               ),
               const SizedBox(height: 28),
               _buildScenarioCard(),
               const Spacer(flex: 2),
               OnboardingButton(
                 label: "Let's Go",
-                onPressed: () => Navigator.push(
-                  context,
-                  slideRoute(const GoalConfirmationScreen()),
-                ),
+                onPressed: () {
+                  debugPrint('[Onboarding] Step 5/6 — Roleplay intro passed, proceeding to goal selection');
+                  Navigator.push(
+                    context,
+                    slideRoute(GoalConfirmationScreen(data: widget.data)),
+                  );
+                },
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () => Navigator.pushAndRemoveUntil(
-                  context,
-                  slideRoute(const SignupScreen()),
-                  (_) => false,
-                ),
+                onPressed: _skip,
                 child: const Text(
                   'Skip for now',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                  style:
+                      TextStyle(color: AppColors.textMuted, fontSize: 14),
                 ),
               ),
               const SizedBox(height: 20),
@@ -148,7 +168,8 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           const SizedBox(height: 14),
           Row(
             children: [
-              _buildChip(Icons.face_retouching_natural_rounded, 'Friendly Listener'),
+              _buildChip(Icons.face_retouching_natural_rounded,
+                  'Friendly Listener'),
               const SizedBox(width: 8),
               _buildChip(Icons.timer_outlined, '2 minutes'),
             ],
@@ -164,8 +185,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border:
-            Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

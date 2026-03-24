@@ -1,10 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/views/onboarding/screens/roleplay_intro_screen.dart';
 import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
 
 class LevelSelectionScreen extends StatefulWidget {
-  const LevelSelectionScreen({super.key});
+  const LevelSelectionScreen({super.key, required this.data});
+
+  final OnboardingData data;
+
   @override
   State<LevelSelectionScreen> createState() => _LevelSelectionScreenState();
 }
@@ -81,8 +86,8 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color:
-                                      AppColors.primary.withValues(alpha: 0.15),
+                                  color: AppColors.primary
+                                      .withValues(alpha: 0.15),
                                   blurRadius: 20,
                                   spreadRadius: 2,
                                 )
@@ -147,10 +152,15 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
               OnboardingButton(
                 label: 'Continue',
                 enabled: _selected != null,
-                onPressed: () => Navigator.push(
-                  context,
-                  slideRoute(const RoleplayIntroScreen()),
-                ),
+                onPressed: () {
+                  debugPrint('[Onboarding] Step 4/6 — Level selected: "$_selected"');
+                  Navigator.push(
+                    context,
+                    slideRoute(RoleplayIntroScreen(
+                      data: widget.data.copyWith(level: _selected!),
+                    )),
+                  );
+                },
               ),
               const SizedBox(height: 24),
             ],

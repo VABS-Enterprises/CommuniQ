@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/views/onboarding/screens/personal_challenges_screen.dart';
 import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
 
 class CommunicationContextScreen extends StatefulWidget {
   const CommunicationContextScreen({super.key});
+
   @override
   State<CommunicationContextScreen> createState() =>
       _CommunicationContextScreenState();
@@ -84,10 +87,15 @@ class _CommunicationContextScreenState
               OnboardingButton(
                 label: 'Continue',
                 enabled: _selected.isNotEmpty,
-                onPressed: () => Navigator.push(
-                  context,
-                  slideRoute(const PersonalChallengesScreen()),
-                ),
+                onPressed: () {
+                  debugPrint('[Onboarding] Step 1/6 — Communication contexts selected: ${_selected.toList()}');
+                  Navigator.push(
+                    context,
+                    slideRoute(PersonalChallengesScreen(
+                      data: OnboardingData(contexts: _selected.toList()),
+                    )),
+                  );
+                },
               ),
               const SizedBox(height: 24),
             ],

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -36,45 +37,61 @@ class AuthService {
   }
 
   /// Registers a new user with email and password, then creates the Firestore
-  /// profile via the Node backend. If the backend call fails the Firebase Auth
-  /// account is deleted so there is no partial state.
+  /// profile via the Node backend.
+  ///
+  /// If the backend call fails (server down, network error, etc.) the Firebase
+  /// Auth account is kept and the user proceeds to the home screen. The server's
+  /// GET /auth/me endpoint has auto-recovery logic that creates the Firestore
+  /// doc on first profile fetch, so no profile is ever permanently lost.
+  ///
+  /// A 409 from the backend means the Firestore doc already exists (idempotent
+  /// retry) — this is treated as success, not an error.
   static Future<void> registerWithEmailPassword(
       String name, String email, String password) async {
     debugPrint('');
     debugPrint('[Email Auth] ── Starting registration ───────────────');
     debugPrint('[Email Auth] email=$email, name=$name');
-    UserCredential? credential;
     try {
       debugPrint('[Email Auth] Step 1: Creating Firebase user...');
-      credential = await _auth.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
           email: email, password: password);
       debugPrint('[Email Auth] Step 1: ✅ Firebase user created uid=${credential.user?.uid}');
       await credential.user?.updateDisplayName(name);
 
+      // Step 2 is best-effort: if the backend is unreachable the user is still
+      // authenticated via Firebase. GET /auth/me auto-creates the Firestore doc
+      // on the first home-screen load (same resilience strategy as Google sign-in).
       debugPrint('[Email Auth] Step 2: Calling Node backend ${ApiConstants.authRegister}...');
       debugPrint('[Email Auth]   ⚠️  If on physical device, ensure server URL is set correctly!');
       debugPrint('[Email Auth]   Run: flutter run --dart-define=SERVER_URL=http://YOUR_IP:3000');
-      await ApiService.post(ApiConstants.authRegister, body: {
-        'name': name,
-        'email': email,
-      });
-      debugPrint('[Email Auth] Step 2: ✅ Firestore profile created');
+      try {
+        await ApiService.post(ApiConstants.authRegister, body: {
+          'name': name,
+          'email': email,
+        });
+        debugPrint('[Email Auth] Step 2: ✅ Firestore profile created');
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 409) {
+          // User doc already exists — idempotent retry, treat as success.
+          debugPrint('[Email Auth] Step 2: ✅ User already registered (409 — idempotent)');
+        } else {
+          // Backend unreachable or server error — profile will be auto-created
+          // by GET /auth/me when the home screen loads.
+          debugPrint('[Email Auth] Step 2: ⚠️  Backend unreachable — '
+              'profile will be created on first home load. ($e)');
+        }
+      } catch (e) {
+        debugPrint('[Email Auth] Step 2: ⚠️  Backend call failed — '
+            'profile will be created on first home load. ($e)');
+      }
+
       debugPrint('[Email Auth] ── Registration complete ✅ ────────────');
       debugPrint('');
     } on FirebaseAuthException catch (e) {
       debugPrint('[Email Auth] ❌ FirebaseAuthException code=${e.code}: ${e.message}');
       throw _handleFirebaseError(e);
     } catch (e) {
-      debugPrint('[Email Auth] ❌ Backend call failed: $e');
-      debugPrint('[Email Auth]   Rolling back Firebase user...');
-      // Roll back the Firebase account so there is no orphaned auth record
-      // without a Firestore profile.
-      try {
-        await credential?.user?.delete();
-        debugPrint('[Email Auth]   Rollback ✅ Firebase user deleted');
-      } catch (deleteErr) {
-        debugPrint('[Email Auth]   Rollback ❌ Could not delete Firebase user: $deleteErr');
-      }
+      debugPrint('[Email Auth] ❌ Unexpected error: $e');
       throw Exception('Registration failed. Please try again.');
     }
   }

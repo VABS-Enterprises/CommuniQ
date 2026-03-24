@@ -1,10 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/views/onboarding/screens/level_selection_screen.dart';
 import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
 
 class SpeakingStyleScreen extends StatefulWidget {
-  const SpeakingStyleScreen({super.key});
+  const SpeakingStyleScreen({super.key, required this.data});
+
+  final OnboardingData data;
+
   @override
   State<SpeakingStyleScreen> createState() => _SpeakingStyleScreenState();
 }
@@ -73,7 +78,6 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen> {
                       );
                     }),
                     const SizedBox(height: 8),
-                    // Optional freeform input
                     Container(
                       decoration: BoxDecoration(
                         color: AppColors.surface,
@@ -102,10 +106,20 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen> {
               OnboardingButton(
                 label: 'Continue',
                 enabled: _selected != null,
-                onPressed: () => Navigator.push(
-                  context,
-                  slideRoute(const LevelSelectionScreen()),
-                ),
+                onPressed: () {
+                  final note = _noteController.text.trim();
+                  debugPrint('[Onboarding] Step 3/6 — Speaking style: "$_selected"'
+                      '${note.isNotEmpty ? ", note: \"$note\"" : ""}');
+                  Navigator.push(
+                    context,
+                    slideRoute(LevelSelectionScreen(
+                      data: widget.data.copyWith(
+                        speakingStyle: _selected!,
+                        speakingNote: note.isEmpty ? null : note,
+                      ),
+                    )),
+                  );
+                },
               ),
               const SizedBox(height: 24),
             ],

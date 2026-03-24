@@ -5,6 +5,7 @@ import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/session_result_model.dart';
+import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
 
@@ -962,7 +963,9 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const GoalConfirmationScreen()),
+                      builder: (_) => const GoalConfirmationScreen(
+                            data: OnboardingData(),
+                          )),
                   (_) => false,
                 );
               } else {
