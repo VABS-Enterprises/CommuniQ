@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
-import 'package:communiq/models/roleplay_config.dart';
+import 'package:communiq/views/auth/screens/signup_screen.dart';
 import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
 import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
-import 'package:communiq/views/roleplay_view/screens/roleplay_conversation_screen.dart';
 
 class RoleplayIntroScreen extends StatefulWidget {
   const RoleplayIntroScreen({super.key});
@@ -15,16 +14,6 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
-
-  static final RoleplayConfig _config = RoleplayConfig(
-    scenario: 'Introduce yourself to someone you just met.',
-    persona: 'Friendly Listener',
-    difficulty: 'Easy',
-    category: 'Introduction',
-    tone: 'Friendly',
-    timeLimit: '2 mins',
-    languageLevel: 'Beginner',
-  );
 
   @override
   void initState() {
@@ -81,7 +70,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               ),
               const SizedBox(height: 28),
               const Text(
-                "Let's try your first\nroleplay",
+                "Your first roleplay\nawaits",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.textPrimary,
@@ -92,7 +81,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               ),
               const SizedBox(height: 10),
               const Text(
-                'No pressure, just a quick practice',
+                'Create your account to get started',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: AppColors.textSecondary, fontSize: 15),
@@ -101,25 +90,22 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               _buildScenarioCard(),
               const Spacer(flex: 2),
               OnboardingButton(
-                label: 'Start Roleplay',
-                onPressed: () => Navigator.push(
-                  context,
-                  slideRoute(RoleplayConversationScreen(
-                    config: _config,
-                    isOnboarding: true,
-                  )),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
+                label: "Let's Go",
                 onPressed: () => Navigator.push(
                   context,
                   slideRoute(const GoalConfirmationScreen()),
                 ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pushAndRemoveUntil(
+                  context,
+                  slideRoute(const SignupScreen()),
+                  (_) => false,
+                ),
                 child: const Text(
                   'Skip for now',
-                  style:
-                      TextStyle(color: AppColors.textMuted, fontSize: 14),
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 14),
                 ),
               ),
               const SizedBox(height: 20),

@@ -1,4 +1,4 @@
-from fastapi import Request
+from fastapi import HTTPException, Request
 from groq import AsyncGroq
 
 
@@ -9,7 +9,8 @@ def get_groq_client(request: Request) -> AsyncGroq:
     """
     client: AsyncGroq | None = getattr(request.app.state, "groq_client", None)
     if client is None:
-        raise RuntimeError(
-            "Groq client not initialised. Server may still be starting up."
+        raise HTTPException(
+            status_code=503,
+            detail="AI service not ready. Please try again in a moment.",
         )
     return client

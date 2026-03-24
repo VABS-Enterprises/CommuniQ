@@ -2,19 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/models/roleplay_config.dart';
-import 'package:communiq/views/onboarding/screens/goal_selection_screen.dart';
+import 'package:communiq/views/auth/screens/signup_screen.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_conversation_screen.dart';
 
 class FirstRoleplayScreen extends StatelessWidget {
   const FirstRoleplayScreen({super.key});
 
   static final RoleplayConfig _onboardingConfig = RoleplayConfig(
+    scenarioTitle: 'Introduce Yourself',
     scenario: 'Introduce yourself to someone you just met at a networking event.',
     persona: 'Friendly Listener',
     difficulty: 'Easy',
     category: 'Introduction',
     tone: 'Friendly',
-    timeLimit: '2 mins',
+    timeLimit: '2 min',
     languageLevel: 'Beginner',
   );
 
@@ -92,9 +93,10 @@ class FirstRoleplayScreen extends StatelessWidget {
               // Skip button
               Center(
                 child: TextButton(
-                  onPressed: () => Navigator.push(
+                  onPressed: () => Navigator.pushAndRemoveUntil(
                     context,
-                    _slideRoute(const GoalSelectionScreen()),
+                    _slideRoute(const SignupScreen()),
+                    (_) => false,
                   ),
                   child: const Text(
                     'Skip for now',

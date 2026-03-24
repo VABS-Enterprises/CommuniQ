@@ -3,75 +3,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/spacing.dart';
+import 'package:communiq/models/feedback_config.dart';
+import 'package:communiq/models/session_result_model.dart';
 import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
-
-// ─── Data Models ───────────────────────────────────────────────────────────────
-
-class SkillCard {
-  final String title;
-  final int score;
-  final List<String> tags;
-  const SkillCard({required this.title, required this.score, required this.tags});
-}
-
-class FeedbackConfig {
-  final String scenarioTitle;
-  final int overallScore;
-  final List<SkillCard> skills;
-  final List<String> insights;
-  final List<String> improvements;
-
-  const FeedbackConfig({
-    required this.scenarioTitle,
-    required this.overallScore,
-    required this.skills,
-    required this.insights,
-    required this.improvements,
-  });
-
-  static FeedbackConfig demo = const FeedbackConfig(
-    scenarioTitle: 'Salary Negotiation',
-    overallScore: 82,
-    skills: [
-      SkillCard(
-        title: 'Tone & Delivery',
-        score: 88,
-        tags: ['Confident', 'Natural'],
-      ),
-      SkillCard(
-        title: 'Speech Clarity',
-        score: 79,
-        tags: ['Clear', 'Paced'],
-      ),
-      SkillCard(
-        title: 'Content Strategy',
-        score: 74,
-        tags: ['Structured', 'Focused'],
-      ),
-    ],
-    insights: [
-      'You maintained a calm and assertive tone throughout the negotiation, which is a strong signal of confidence to the other party.',
-      'Your arguments were well-structured and backed by relevant context. Try to tie your asks more directly to business outcomes.',
-      'Pausing strategically before responding showed great composure. Continue leveraging silence as a negotiation tool.',
-    ],
-    improvements: [
-      'Speak slower during key points to let them land',
-      'Maintain consistent volume — avoid trailing off at sentence ends',
-      'Ask more clarifying questions to understand the other side',
-    ],
-  );
-}
+import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
 
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
 class RoleplayFeedbackScreen extends StatefulWidget {
   final FeedbackConfig config;
+
+  /// Full session report — used by the "View Analysis" bottom sheet.
+  /// Optional: if null, the button is still shown but with limited data.
+  final SessionReport? report;
+
   final bool isOnboarding;
+
+  /// XP earned in this session — shown as a banner below the score ring.
+  /// Pass 0 (default) to hide the banner.
+  final int xpAwarded;
+  final int newLevel;
+  final bool leveledUp;
+  final List<String> newBadges;
+  final int newStreak;
 
   const RoleplayFeedbackScreen({
     super.key,
     required this.config,
+    this.report,
     this.isOnboarding = false,
+    this.xpAwarded = 0,
+    this.newLevel = 1,
+    this.leveledUp = false,
+    this.newBadges = const [],
+    this.newStreak = 0,
   });
 
   @override
@@ -168,10 +133,14 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                     _buildSectionLabel('IMPROVE NEXT TIME'),
                     const SizedBox(height: AppSpacing.s12),
                     _buildImprovementsCard(),
+                    if (widget.report?.recommendedNextType != null) ...[
+                      const SizedBox(height: AppSpacing.s24),
+                      _buildSectionLabel('RECOMMENDED NEXT'),
+                      const SizedBox(height: AppSpacing.s12),
+                      _buildRecommendedNextCard(context),
+                    ],
                     const SizedBox(height: AppSpacing.s32),
                     _buildBottomActions(context),
-                    const SizedBox(height: AppSpacing.s16),
-                    _buildFooter(context),
                     const SizedBox(height: AppSpacing.s24),
                   ],
                 ),
@@ -190,24 +159,23 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.s8, vertical: AppSpacing.s8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
           ),
-          Text(
-            'CommuniQ',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
+          Expanded(
+            child: Text(
+              'CommuniQ',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.ios_share_outlined, color: AppColors.textSecondary),
-            onPressed: () => HapticFeedback.lightImpact(),
-          ),
+          const SizedBox(width: 48),
         ],
       ),
     );
@@ -244,7 +212,20 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
 
   // ─── Score Section ───────────────────────────────────────────────────────────
 
+  Color _scoreColor(int score) {
+    if (score >= 75) return Colors.green;
+    if (score >= 50) return Colors.orange;
+    return Colors.redAccent;
+  }
+
+  Color _scoreLightColor(int score) {
+    if (score >= 75) return Colors.greenAccent;
+    if (score >= 50) return Colors.orangeAccent;
+    return Colors.red.shade200;
+  }
+
   Widget _buildScoreSection(BuildContext context) {
+    final scoreColor = _scoreColor(widget.config.overallScore);
     return Center(
       child: Column(
         children: [
@@ -252,32 +233,37 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
             animation: _scoreAnimation,
             builder: (_, __) {
               final value = _scoreAnimation.value;
-              final displayScore = (value * widget.config.overallScore /
-                      (widget.config.overallScore / 100))
-                  .round();
+              final overallScore = widget.config.overallScore;
+              final displayScore = overallScore == 0
+                  ? 0
+                  : (value * overallScore / (overallScore / 100)).round();
 
               return SizedBox(
                 width: 180,
                 height: 180,
                 child: CustomPaint(
-                  painter: _ScoreRingPainter(progress: value),
+                  painter: _ScoreRingPainter(
+                    progress: value,
+                    color: scoreColor,
+                    lightColor: _scoreLightColor(overallScore),
+                  ),
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           '$displayScore',
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
+                          style: TextStyle(
+                            color: scoreColor,
                             fontSize: 52,
                             fontWeight: FontWeight.bold,
                             height: 1,
                           ),
                         ),
-                        const Text(
+                        Text(
                           '%',
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color: scoreColor.withValues(alpha: 0.7),
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
@@ -291,7 +277,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
           ),
           const SizedBox(height: AppSpacing.s20),
           OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: () => _showAnalysisSheet(context),
             icon: const Icon(Icons.bar_chart_rounded,
                 size: 16, color: AppColors.primaryLight),
             label: const Text(
@@ -304,8 +290,371 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
+          if (widget.xpAwarded > 0 ||
+              widget.newBadges.isNotEmpty ||
+              widget.newStreak > 0) ...[
+            const SizedBox(height: AppSpacing.s16),
+            _buildXpBanner(),
+          ],
         ],
       ),
+    );
+  }
+
+  void _showAnalysisSheet(BuildContext context) {
+    final report = widget.report;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (_, controller) => Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  const Icon(Icons.bar_chart_rounded,
+                      color: AppColors.primaryLight, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Detailed Analysis',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView(
+                controller: controller,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: [
+                  // ── Individual scores ─────────────────────────────────
+                  _buildSheetLabel('SKILL SCORES'),
+                  const SizedBox(height: 12),
+                  if (report != null) ...[
+                    _buildScoreRow('Clarity', report.clarity),
+                    _buildScoreRow('Fluency', report.fluency),
+                    _buildScoreRow('Confidence', report.confidence),
+                    _buildScoreRow('Vocabulary', report.vocabulary),
+                    _buildScoreRow('Grammar', report.grammar),
+                  ] else
+                    ...widget.config.skills.map((s) => _buildScoreRow(s.title, s.score)),
+                  const SizedBox(height: 24),
+
+                  // ── Filler words ──────────────────────────────────────
+                  _buildSheetLabel('FILLER WORDS'),
+                  const SizedBox(height: 12),
+                  if (report != null && report.fillerWordCount > 0) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${report.fillerWordCount} filler word${report.fillerWordCount == 1 ? '' : 's'} detected',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: report.fillerWords.map((word) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                      color: Colors.orange.withValues(alpha: 0.35)),
+                                ),
+                                child: Text(
+                                  '"$word"',
+                                  style: const TextStyle(
+                                    color: Colors.orange,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle_outline_rounded,
+                              color: Colors.green, size: 18),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'No filler words detected — clean speech!',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 24),
+
+                  // ── Full transcript ───────────────────────────────────
+                  _buildSheetLabel('FULL TRANSCRIPT'),
+                  const SizedBox(height: 12),
+                  if (report != null && report.rawTranscript.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Text(
+                        report.rawTranscript,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                          height: 1.7,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: const Text(
+                        'Transcript not available.',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSheetLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        color: AppColors.textMuted,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.4,
+      ),
+    );
+  }
+
+  Widget _buildScoreRow(String label, int score) {
+    final color = score >= 80
+        ? Colors.green
+        : score >= 60
+            ? AppColors.primary
+            : Colors.orange;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                '$score%',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: score / 100,
+              minHeight: 5,
+              backgroundColor: AppColors.border,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildXpBanner() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // XP + level-up row
+        if (widget.xpAwarded > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.bolt_rounded, color: AppColors.primaryLight, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  '+${widget.xpAwarded} XP earned',
+                  style: const TextStyle(
+                    color: AppColors.primaryLight,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                if (widget.leveledUp) ...[
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Level ${widget.newLevel}!',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        // Streak callout
+        if (widget.newStreak > 0) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🔥', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                Text(
+                  '${widget.newStreak}-day streak!',
+                  style: const TextStyle(
+                    color: Colors.orange,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        // New badge chips
+        if (widget.newBadges.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: widget.newBadges.map((badge) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFBBF24).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: const Color(0xFFFBBF24).withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.military_tech_rounded,
+                        color: Color(0xFFFBBF24), size: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      badge,
+                      style: const TextStyle(
+                        color: Color(0xFFFBBF24),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
     );
   }
 
@@ -349,8 +698,8 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               ),
               Text(
                 '${skill.score}%',
-                style: const TextStyle(
-                  color: AppColors.primaryLight,
+                style: TextStyle(
+                  color: _scoreColor(skill.score),
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
                 ),
@@ -406,6 +755,21 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
   // ─── Insights Card ───────────────────────────────────────────────────────────
 
   Widget _buildInsightsCard() {
+    if (widget.config.insights.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Center(
+          child: Text('—',
+              style: TextStyle(
+                  color: AppColors.textMuted, fontSize: 14)),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
@@ -453,6 +817,21 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
   // ─── Improvements Card ───────────────────────────────────────────────────────
 
   Widget _buildImprovementsCard() {
+    if (widget.config.improvements.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Center(
+          child: Text('—',
+              style: TextStyle(
+                  color: AppColors.textMuted, fontSize: 14)),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
@@ -499,6 +878,74 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     );
   }
 
+  // ─── Recommended Next Card ───────────────────────────────────────────────────
+
+  Widget _buildRecommendedNextCard(BuildContext context) {
+    final nextType = widget.report!.recommendedNextType!;
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              RoleplaySetupScreen(mode: 'prefilled', scenario: nextType),
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                color: AppColors.primaryLight,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Try next:',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    nextType,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                color: AppColors.textMuted, size: 14),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ─── Bottom Actions ──────────────────────────────────────────────────────────
 
   Widget _buildBottomActions(BuildContext context) {
@@ -519,8 +966,11 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                   (_) => false,
                 );
               } else {
-                Navigator.pop(context);
-                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const RoleplaySetupScreen(mode: 'custom')),
+                );
               }
             },
             style: ElevatedButton.styleFrom(
@@ -563,27 +1013,20 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     );
   }
 
-  // ─── Footer ─────────────────────────────────────────────────────────────────
-
-  Widget _buildFooter(BuildContext context) {
-    return Center(
-      child: TextButton(
-        onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
-        child: const Text(
-          'Back to Home',
-          style: TextStyle(color: AppColors.textMuted, fontSize: 14),
-        ),
-      ),
-    );
-  }
 }
 
 // ─── Custom Painter: Score Ring ───────────────────────────────────────────────
 
 class _ScoreRingPainter extends CustomPainter {
   final double progress;
+  final Color color;
+  final Color lightColor;
 
-  _ScoreRingPainter({required this.progress});
+  _ScoreRingPainter({
+    required this.progress,
+    required this.color,
+    required this.lightColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -602,14 +1045,14 @@ class _ScoreRingPainter extends CustomPainter {
 
     // Primary filled arc
     final primaryPaint = Paint()
-      ..color = AppColors.primary
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
     // Secondary lighter arc (small accent)
     final lightPaint = Paint()
-      ..color = AppColors.primaryLight
+      ..color = lightColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
@@ -640,5 +1083,6 @@ class _ScoreRingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ScoreRingPainter old) => old.progress != progress;
+  bool shouldRepaint(_ScoreRingPainter old) =>
+      old.progress != progress || old.color != color;
 }

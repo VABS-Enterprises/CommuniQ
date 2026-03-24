@@ -4,13 +4,18 @@ import 'package:communiq/core/constants/glow.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 
 class AvatarHeroSection extends StatefulWidget {
-  const AvatarHeroSection({super.key});
+  /// Optional URL of the user's profile photo (e.g. from Google sign-in).
+  /// Falls back to the hummingbird asset when null.
+  final String? photoURL;
+
+  const AvatarHeroSection({super.key, this.photoURL});
 
   @override
   State<AvatarHeroSection> createState() => _AvatarHeroSectionState();
 }
 
-class _AvatarHeroSectionState extends State<AvatarHeroSection> with SingleTickerProviderStateMixin {
+class _AvatarHeroSectionState extends State<AvatarHeroSection>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -55,13 +60,13 @@ class _AvatarHeroSectionState extends State<AvatarHeroSection> with SingleTicker
                 color: AppColors.background,
               ),
               child: ClipOval(
-                child: Image.asset(
-                  'assets/images/hummingbird.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(Icons.person, size: 80, color: AppColors.white);
-                  },
-                ),
+                child: widget.photoURL != null
+                    ? Image.network(
+                        widget.photoURL!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _defaultImage(),
+                      )
+                    : _defaultImage(),
               ),
             ),
           ),
@@ -69,5 +74,13 @@ class _AvatarHeroSectionState extends State<AvatarHeroSection> with SingleTicker
       ),
     );
   }
-}
 
+  Widget _defaultImage() {
+    return Image.asset(
+      'assets/images/hummingbird.png',
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) =>
+          const Icon(Icons.person, size: 80, color: AppColors.white),
+    );
+  }
+}

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/constants/app_colors.dart';
-import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
 
 class StartRoleplayCard extends StatelessWidget {
-  const StartRoleplayCard({super.key});
+  final VoidCallback onStart;
+
+  const StartRoleplayCard({super.key, required this.onStart});
 
   @override
   Widget build(BuildContext context) {
@@ -52,14 +53,7 @@ class StartRoleplayCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.s24),
               ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RoleplaySetupScreen(mode: 'custom'),
-                    ),
-                  );
-                },
+                onPressed: onStart,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.textPrimary,

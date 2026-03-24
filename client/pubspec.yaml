@@ -31,8 +31,6 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.2.3
   firebase_core: ^4.5.0
@@ -40,6 +38,18 @@ dependencies:
   google_sign_in: ^6.2.1
   http: ^1.6.0
   provider: ^6.1.5+1
+
+  # Networking (multipart uploads for audio turns)
+  dio: ^5.7.0
+
+  # Audio recording (mic input for conversation turns)
+  record: ^6.0.0
+
+  # Audio playback (AI voice responses from base64)
+  just_audio: ^0.9.40
+
+  # Temp file directory for audio files
+  path_provider: ^2.1.4
 
 dev_dependencies:
   flutter_test:

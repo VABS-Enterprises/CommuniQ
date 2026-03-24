@@ -9,6 +9,17 @@ const { auth } = require('../config/firebase');
  *   req.picture  — profile photo URL (available for Google Sign-In tokens)
  */
 async function verifyToken(req, res, next) {
+  // DEV BYPASS — allows Flutter to call the API during development without a
+  // real Firebase token. Completely disabled in production.
+  // Remove this block (or set NODE_ENV=production) before any real deployment.
+  if (process.env.NODE_ENV !== 'production' && req.headers['x-dev-uid']) {
+    req.uid = req.headers['x-dev-uid'];
+    req.email = req.headers['x-dev-email'] || 'dev@communiq.test';
+    req.name = 'Dev User';
+    req.picture = null;
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

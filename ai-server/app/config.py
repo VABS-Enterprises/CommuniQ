@@ -8,6 +8,7 @@ load_dotenv()
 class Settings:
     groq_api_key: str = os.getenv("GROQ_API_KEY", "")
     port: int = int(os.getenv("PORT", "8000"))
+    llm_model: str = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
 
     def validate(self) -> None:
         if not self.groq_api_key:

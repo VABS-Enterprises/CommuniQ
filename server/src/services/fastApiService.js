@@ -64,7 +64,7 @@ async function sendTurnToFastApi(
   try {
     const response = await axios.post(`${FASTAPI_URL}/session/turn`, form, {
       headers: form.getHeaders(),
-      timeout: 30000,
+      timeout: 60000, // Whisper STT + LLM + edge-tts can take 20-40s on first call
     });
     return response.data;
   } catch (err) {
@@ -77,7 +77,7 @@ async function sendTurnToFastApi(
  * @param {string} sessionId
  * @param {string} fullTranscript
  * @param {string} scenarioType
- * @returns {{ scores, fillerWordCount, fillerWords, strengths, improvements, recommendedNextScenarioId }}
+ * @returns {{ scores, fillerWordCount, fillerWords, strengths, improvements, recommendedNextType }}
  */
 async function evaluateSession(sessionId, fullTranscript, scenarioType) {
   try {

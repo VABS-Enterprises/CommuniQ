@@ -123,7 +123,7 @@ def test_evaluate() -> bool:
         assert "fillerWords" in data,               "Missing 'fillerWords' (was 'filler_words')"
         assert "strengths" in data,                 "Missing 'strengths'"
         assert "improvements" in data,              "Missing 'improvements'"
-        assert "recommendedNextScenarioId" in data, "Missing 'recommendedNextScenarioId' (was 'recommended_next')"
+        assert "recommendedNextType" in data, "Missing 'recommendedNextType' (was 'recommendedNextScenarioId')"
 
         # Verify score scale is 0-100
         scores = data["scores"]

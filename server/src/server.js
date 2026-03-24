@@ -36,7 +36,9 @@ app.use(express.json({ limit: '512kb' }));
 // Health check — includes Firestore connectivity and version
 app.get('/health', async (req, res) => {
   try {
-    await db.collection('_health').doc('ping').get();
+    // Use a lightweight listCollections check instead of a document read
+    // to avoid cold-start Firestore latency on the health endpoint.
+    await db.listCollections();
     res.status(200).json({ status: 'ok', version, firebase: 'connected' });
   } catch {
     res.status(503).json({ status: 'degraded', version, firebase: 'unreachable' });

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/views/auth/screens/login_screen.dart';
 import 'package:communiq/views/onboarding/screens/communication_context_screen.dart';
 import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
 
@@ -81,6 +82,31 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 style: TextStyle(
                   color: AppColors.textMuted,
                   fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  slideRoute(const LoginScreen()),
+                ),
+                child: RichText(
+                  text: const TextSpan(
+                    text: 'Already a user? ',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'Login',
+                        style: TextStyle(
+                          color: AppColors.primaryLight,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 32),

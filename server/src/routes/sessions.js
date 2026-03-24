@@ -34,9 +34,11 @@ router.post('/turn', verifyToken, turnRateLimit, upload.single('audioFile'), pro
 router.post('/end', verifyToken, endSession);
 router.get('/history', verifyToken, getSessionHistory);
 
+// Static routes (body-based session ID)
+router.post('/abandon', verifyToken, abandonSession);
+
 // Dynamic routes
 router.get('/:sessionId', verifyToken, getSession);
 router.get('/:sessionId/report', verifyToken, getReport);
-router.post('/:sessionId/abandon', verifyToken, abandonSession);
 
 module.exports = router;
