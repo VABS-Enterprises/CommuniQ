@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/spacing.dart';
@@ -30,6 +31,7 @@ enum _ConvState { user_turn, processing, ai_speaking, ending }
 
 class RoleplayConversationScreen extends StatefulWidget {
   final RoleplayConfig config;
+
   /// Pass an empty string or omit to activate demo mode (no backend calls).
   final String sessionId;
   final bool isOnboarding;
@@ -48,20 +50,18 @@ class RoleplayConversationScreen extends StatefulWidget {
 
 class _RoleplayConversationScreenState
     extends State<RoleplayConversationScreen> with TickerProviderStateMixin {
-  // ─── Animations ─────────────────────────────────────────────────────────────
+  // ─── Animations ───────────────────────────────────────────────────────────────
   late AnimationController _pulseController;
   late AnimationController _waveformController;
 
-  // ─── Session state ───────────────────────────────────────────────────────────
+  // ─── Session state ────────────────────────────────────────────────────────────
   _ConvState _state = _ConvState.user_turn;
-  String _displayText = 'Speak when ready — tap SEND when done.';
-
   final List<Map<String, String>> _conversationHistory = [];
 
-  // Caption-style transcript state
-  String? _captionText;
-  String _captionSpeaker = '';    // 'You' or AI persona name
-  int _captionKey = 0;           // incremented each turn for AnimatedSwitcher
+  // The text shown in the large conversation card and who is speaking.
+  // Updated on every meaningful state change.
+  String _cardText = '';
+  int _cardAnimKey = 0; // increment to trigger AnimatedSwitcher
 
   Timer? _sessionTimer;
   int _secondsElapsed = 0;
@@ -70,13 +70,19 @@ class _RoleplayConversationScreenState
 
   bool _isMuted = false;
 
-  // ─── Amplitude (real waveform) ───────────────────────────────────────────────
+  // ─── Amplitude (real waveform) ────────────────────────────────────────────────
   Timer? _amplitudeTimer;
-  // One value per bar — normalized 0.0–1.0, used only during user_turn.
   List<double> _barAmplitudes = List.filled(7, 0.15);
 
+  // ─── Speech-to-text (live captions) ──────────────────────────────────────────
+  final SpeechToText _stt = SpeechToText();
+  bool _sttAvailable = false;
+  // Live partial transcript shown while the user speaks.
+  String _liveTranscript = '';
+
   /// True when running without a real session (onboarding demo, no auth).
-  bool get _isDemoMode => widget.sessionId == 'demo' || widget.sessionId.isEmpty;
+  bool get _isDemoMode =>
+      widget.sessionId == 'demo' || widget.sessionId.isEmpty;
 
   /// Scripted AI lines for the demo "Introduce yourself" session.
   static const List<String> _demoReplies = [
@@ -89,18 +95,17 @@ class _RoleplayConversationScreenState
         "Shall we wrap up the practice?",
   ];
 
-  /// End-call enabled after ≥ 10 s of speaking + not in the middle of
-  /// processing or AI speech.
+  /// End-call enabled after ≥ 10 s of speaking + not mid-processing.
   bool get _canEndCall =>
       _totalSpokenSeconds >= 10 && _state == _ConvState.user_turn;
 
-  // ─── Audio ───────────────────────────────────────────────────────────────────
+  // ─── Audio ────────────────────────────────────────────────────────────────────
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   String? _recordingPath;
   final List<String> _tempFiles = [];
 
-  // ─── Init / Dispose ──────────────────────────────────────────────────────────
+  // ─── Init / Dispose ───────────────────────────────────────────────────────────
 
   @override
   void initState() {
@@ -124,6 +129,7 @@ class _RoleplayConversationScreenState
       duration: const Duration(milliseconds: 600),
     )..repeat(reverse: true);
 
+    _initStt();
     _startTimer();
     _audioPlayer.playerStateStream.listen(_onPlayerStateChange);
     _startMic();
@@ -131,20 +137,65 @@ class _RoleplayConversationScreenState
 
   @override
   void dispose() {
-    debugPrint('🎙 [Conversation] Screen disposed — session=${widget.sessionId}');
+    debugPrint(
+        '🎙 [Conversation] Screen disposed — session=${widget.sessionId}');
     _sessionTimer?.cancel();
     _amplitudeTimer?.cancel();
     _pulseController.dispose();
     _waveformController.dispose();
     _recorder.dispose();
     _audioPlayer.dispose();
+    _stt.cancel();
     _cleanupTempFiles();
     super.dispose();
   }
 
-  // ─── Timer ───────────────────────────────────────────────────────────────────
+  // ─── Speech-to-text ───────────────────────────────────────────────────────────
 
-  /// Returns the time limit in seconds, or null for "No limit".
+  Future<void> _initStt() async {
+    try {
+      _sttAvailable = await _stt.initialize(
+        onError: (err) =>
+            debugPrint('[STT] Error: ${err.errorMsg}'),
+        onStatus: (status) =>
+            debugPrint('[STT] Status: $status'),
+      );
+      debugPrint('[STT] Available: $_sttAvailable');
+    } catch (e) {
+      debugPrint('[STT] Init failed: $e');
+      _sttAvailable = false;
+    }
+  }
+
+  Future<void> _startSttListening() async {
+    if (!_sttAvailable) return;
+    try {
+      await _stt.listen(
+        onResult: (result) {
+          if (!mounted || _state != _ConvState.user_turn) return;
+          setState(() {
+            _liveTranscript = result.recognizedWords;
+          });
+        },
+        listenFor: const Duration(minutes: 5),
+        pauseFor: const Duration(seconds: 15),
+        partialResults: true,
+        localeId: 'en_IN',
+        listenMode: ListenMode.dictation,
+      );
+    } catch (e) {
+      debugPrint('[STT] Listen failed (graceful): $e');
+    }
+  }
+
+  void _stopSttListening() {
+    if (_sttAvailable) {
+      _stt.stop();
+    }
+  }
+
+  // ─── Timer ────────────────────────────────────────────────────────────────────
+
   int? get _timeLimitSeconds {
     switch (widget.config.timeLimit) {
       case '30 sec':
@@ -166,7 +217,8 @@ class _RoleplayConversationScreenState
       if (limit != null &&
           _secondsElapsed >= limit &&
           _state == _ConvState.user_turn) {
-        debugPrint('⏱ [Conversation] Time limit reached — auto-ending session');
+        debugPrint(
+            '⏱ [Conversation] Time limit reached — auto-ending session');
         _endSession(force: true);
       }
     });
@@ -178,14 +230,13 @@ class _RoleplayConversationScreenState
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  /// Returns seconds remaining, or null if no limit set.
   int? get _secondsRemaining {
     final limit = _timeLimitSeconds;
     if (limit == null) return null;
     return math.max(0, limit - _secondsElapsed);
   }
 
-  // ─── Mic management ──────────────────────────────────────────────────────────
+  // ─── Mic management ───────────────────────────────────────────────────────────
 
   Future<void> _startMic() async {
     if (!mounted) return;
@@ -221,17 +272,22 @@ class _RoleplayConversationScreenState
     debugPrint('✅ [Conversation] Mic active — turn #${_conversationHistory.length ~/ 2 + 1}, '
         'recording to ${_recordingPath!.split('/').last}');
 
-    // Poll mic amplitude every 80 ms and feed real values into the waveform bars.
+    // NOTE: speech_to_text and the `record` package both compete for Android's
+    // audio focus (RECORD_AUDIO). Running them simultaneously causes the recorder
+    // to lose focus (onAudioFocusChange(-2)), producing corrupted or silent audio.
+    // STT is therefore only started AFTER the recorder has finished (see _onSend).
+    _liveTranscript = '';
+
+    // Poll mic amplitude every 80 ms.
     _amplitudeTimer?.cancel();
-    _amplitudeTimer = Timer.periodic(const Duration(milliseconds: 80), (_) async {
+    _amplitudeTimer =
+        Timer.periodic(const Duration(milliseconds: 80), (_) async {
       if (!mounted) return;
       try {
         final amp = await _recorder.getAmplitude();
-        // getAmplitude returns dBFS in range (-∞, 0]. Map -60..0 → 0.05..1.0.
         final normalized = ((amp.current + 60.0) / 60.0).clamp(0.05, 1.0);
         if (mounted) {
           setState(() {
-            // Shift left and add current amplitude at the end for a scrolling effect.
             _barAmplitudes = [..._barAmplitudes.sublist(1), normalized];
           });
         }
@@ -241,26 +297,25 @@ class _RoleplayConversationScreenState
     if (!mounted) return;
     setState(() {
       _state = _ConvState.user_turn;
-      _displayText = 'Listening... tap SEND when done.';
-      _captionSpeaker = 'You';
-      _captionText = 'Listening...';
-      _captionKey++;
+      _cardText = '';
+      _cardAnimKey++;
     });
-    // Speed up pulse while mic is on
     _pulseController.duration = const Duration(milliseconds: 800);
     _pulseController.repeat(reverse: true);
   }
 
   void _stopMic() {
+    _stopSttListening();
     _amplitudeTimer?.cancel();
     _amplitudeTimer = null;
-    // Reset bars to a quiet baseline so they don't freeze at last values.
     _barAmplitudes = List.filled(7, 0.15);
 
     if (_micStartTime != null) {
-      final spokenSecs = DateTime.now().difference(_micStartTime!).inSeconds;
+      final spokenSecs =
+          DateTime.now().difference(_micStartTime!).inSeconds;
       _totalSpokenSeconds += spokenSecs;
-      debugPrint('🎙 [Conversation] Mic stopped — spoke ${spokenSecs}s this turn, '
+      debugPrint(
+          '🎙 [Conversation] Mic stopped — spoke ${spokenSecs}s this turn, '
           'total ${_totalSpokenSeconds}s spoken');
       _micStartTime = null;
     }
@@ -268,7 +323,7 @@ class _RoleplayConversationScreenState
     _pulseController.repeat(reverse: true);
   }
 
-  // ─── SEND ────────────────────────────────────────────────────────────────────
+  // ─── SEND ─────────────────────────────────────────────────────────────────────
 
   Future<void> _onSend() async {
     if (_state != _ConvState.user_turn) return;
@@ -282,21 +337,45 @@ class _RoleplayConversationScreenState
     if (!mounted) return;
     setState(() {
       _state = _ConvState.processing;
-      _displayText = 'Processing your response...';
-      _captionSpeaker = 'You';
-      _captionText = 'Processing...';
-      _captionKey++;
+      _cardText = '';
+      _cardAnimKey++;
     });
 
     if (path == null) {
       debugPrint('❌ [Conversation] Recording path is null — mic failed');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Recording failed — please try again.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
       await _startMic();
-      if (mounted) setState(() => _displayText = 'Recording failed. Try again.');
       return;
     }
 
     final fileSize = await File(path).length();
-    debugPrint('📤 [Conversation] Sending audio: ${path.split('/').last} (${fileSize}B)');
+    debugPrint(
+        '📤 [Conversation] Sending audio: ${path.split('/').last} (${fileSize}B)');
+
+    // 16 kHz · 16-bit · mono WAV = 32 000 bytes/s + 44-byte header.
+    // Anything under ~1 s is too short for Whisper to transcribe reliably.
+    const _minAudioBytes = 32044; // ≈ 1 second
+    if (fileSize < _minAudioBytes) {
+      debugPrint('⚠️  [Conversation] Audio too short (${fileSize}B) — asking user to speak more');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Too short — please speak for at least 1 second, then tap SEND.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      await _startMic();
+      return;
+    }
+
     await _sendTurn(path);
   }
 
@@ -306,9 +385,7 @@ class _RoleplayConversationScreenState
     if (_state != _ConvState.ai_speaking) return;
     debugPrint('✋ [Conversation] INTERRUPT — stopping AI audio');
     HapticFeedback.lightImpact();
-
     await _audioPlayer.stop();
-    // _onPlayerStateChange will NOT fire on manual stop, so transition manually.
     await _startMic();
   }
 
@@ -318,14 +395,15 @@ class _RoleplayConversationScreenState
     final turnNumber = _conversationHistory.length ~/ 2 + 1;
     debugPrint('🔄 [Conversation] Processing turn #$turnNumber...');
 
-    // ── Demo mode: use scripted responses, skip all backend calls ──────────────
+    // ── Demo mode ──────────────────────────────────────────────────────────────
     if (_isDemoMode) {
-      await Future.delayed(const Duration(milliseconds: 1200)); // simulate latency
+      await Future.delayed(const Duration(milliseconds: 1200));
       if (!mounted) return;
 
-      final fakeUserTranscript = 'Great to be here — let me tell you a bit about myself.';
-      final replyIndex = (_conversationHistory.length ~/ 2)
-          .clamp(0, _demoReplies.length - 1);
+      final fakeUserTranscript =
+          'Great to be here — let me tell you a bit about myself.';
+      final replyIndex =
+          (_conversationHistory.length ~/ 2).clamp(0, _demoReplies.length - 1);
       final aiReply = _demoReplies[replyIndex];
 
       _conversationHistory.addAll([
@@ -333,26 +411,25 @@ class _RoleplayConversationScreenState
         {'role': 'ai', 'transcript': aiReply},
       ]);
 
+      // Briefly show what "you said"
       setState(() {
-        _captionSpeaker = 'You';
-        _captionText = fakeUserTranscript;
-        _captionKey++;
+        _state = _ConvState.user_turn;
+        _cardText = fakeUserTranscript;
+        _cardAnimKey++;
       });
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 900));
       if (!mounted) return;
 
       setState(() {
-        _displayText = aiReply;
         _state = _ConvState.ai_speaking;
-        _captionSpeaker = widget.config.persona;
-        _captionText = aiReply;
-        _captionKey++;
+        _cardText = aiReply;
+        _cardAnimKey++;
       });
-      // No audio in demo — go straight to next user turn.
       await _onAudioFinished();
       return;
     }
 
+    // ── Real mode ──────────────────────────────────────────────────────────────
     try {
       final bytes = await File(audioPath).readAsBytes();
       final filename = audioPath.split(Platform.pathSeparator).last;
@@ -371,36 +448,45 @@ class _RoleplayConversationScreenState
 
       debugPrint('✅ [Conversation] Turn #$turnNumber complete');
       debugPrint('   User: "${result.userTranscript}"');
-      debugPrint('   AI:   "${result.aiReply.length > 80 ? '${result.aiReply.substring(0, 80)}...' : result.aiReply}"');
-      debugPrint('   Audio: ${result.aiAudioBase64.isEmpty ? "none" : "${result.aiAudioBase64.length} chars (base64)"}');
+      debugPrint(
+          '   AI:   "${result.aiReply.length > 80 ? '${result.aiReply.substring(0, 80)}...' : result.aiReply}"');
 
       if (!mounted) return;
 
-      // Briefly show what the STT engine understood before the AI reply.
+      // Briefly surface what the STT engine understood.
       if (result.userTranscript.isNotEmpty) {
         setState(() {
-          _captionSpeaker = 'You';
-          _captionText = result.userTranscript;
-          _captionKey++;
+          _state = _ConvState.user_turn;
+          _cardText = result.userTranscript;
+          _cardAnimKey++;
+          _liveTranscript = '';
         });
-        await Future.delayed(const Duration(milliseconds: 800));
+        await Future.delayed(const Duration(milliseconds: 1000));
         if (!mounted) return;
       }
 
       setState(() {
-        _displayText = result.aiReply;
         _state = _ConvState.ai_speaking;
-        _captionSpeaker = widget.config.persona;
-        _captionText = result.aiReply;
-        _captionKey++;
+        _cardText = result.aiReply;
+        _cardAnimKey++;
       });
 
       await _playBase64Audio(result.aiAudioBase64);
     } catch (e) {
       debugPrint('❌ [Conversation] Turn #$turnNumber failed: $e');
       if (!mounted) return;
-      setState(() => _displayText = _friendlyError(e.toString()));
-      // Restart mic so user can retry
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_friendlyError(e.toString())),
+          backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      setState(() {
+        _liveTranscript = '';
+        _cardText = '';
+        _cardAnimKey++;
+      });
       await _startMic();
     }
   }
@@ -426,7 +512,8 @@ class _RoleplayConversationScreenState
       _tempFiles.add(filePath);
       final file = File(filePath);
       await file.writeAsBytes(bytes);
-      debugPrint('🔊 [Conversation] Playing AI audio (${bytes.length}B)...');
+      debugPrint(
+          '🔊 [Conversation] Playing AI audio (${bytes.length}B)...');
       await _audioPlayer.setFilePath(filePath);
       await _audioPlayer.play();
     } catch (e) {
@@ -437,14 +524,14 @@ class _RoleplayConversationScreenState
 
   void _onPlayerStateChange(PlayerState state) {
     if (state.processingState == ProcessingState.completed) {
-      debugPrint('🔊 [Conversation] AI audio finished — returning mic to user');
+      debugPrint(
+          '🔊 [Conversation] AI audio finished — returning mic to user');
       _onAudioFinished();
     }
   }
 
   Future<void> _onAudioFinished() async {
     if (!mounted) return;
-    // AI finished speaking — auto-start mic for the user's next turn.
     await _startMic();
   }
 
@@ -453,9 +540,9 @@ class _RoleplayConversationScreenState
   void _toggleMute() {
     HapticFeedback.lightImpact();
     setState(() => _isMuted = !_isMuted);
-    debugPrint('🔇 [Conversation] Mute toggled → ${_isMuted ? "MUTED" : "unmuted"}');
+    debugPrint(
+        '🔇 [Conversation] Mute toggled → ${_isMuted ? "MUTED" : "unmuted"}');
     if (_isMuted && _state == _ConvState.ai_speaking) {
-      debugPrint('🔇 [Conversation] Stopping AI audio (muted mid-playback)');
       _audioPlayer.stop();
       _onAudioFinished();
     }
@@ -470,7 +557,8 @@ class _RoleplayConversationScreenState
     debugPrint('');
     debugPrint('🏁 [Conversation] Ending session ─────────────────────');
     debugPrint('   sessionId:    ${widget.sessionId}');
-    debugPrint('   turns:        ${_conversationHistory.length ~/ 2}');
+    debugPrint(
+        '   turns:        ${_conversationHistory.length ~/ 2}');
     debugPrint('   total time:   ${_secondsElapsed}s');
     debugPrint('   spoken time:  ${_totalSpokenSeconds}s');
 
@@ -480,12 +568,13 @@ class _RoleplayConversationScreenState
 
     setState(() {
       _state = _ConvState.ending;
-      _displayText = 'Generating your feedback...';
+      _cardText = '';
+      _cardAnimKey++;
     });
 
-    // ── Demo mode: show scripted feedback, skip backend ────────────────────────
+    // ── Demo mode ──────────────────────────────────────────────────────────────
     if (_isDemoMode) {
-      await Future.delayed(const Duration(seconds: 2)); // simulate eval delay
+      await Future.delayed(const Duration(seconds: 2));
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -497,10 +586,22 @@ class _RoleplayConversationScreenState
                   : 'Introduce Yourself',
               overallScore: 78,
               skills: const [
-                SkillCard(title: 'Clarity & Fluency', score: 82, tags: ['Clear', 'Natural']),
-                SkillCard(title: 'Confidence', score: 74, tags: ['Developing', 'Growing']),
-                SkillCard(title: 'Vocabulary & Grammar', score: 79, tags: ['Solid', 'Good']),
-                SkillCard(title: 'Pronunciation', score: 76, tags: ['Good', 'Solid']),
+                SkillCard(
+                    title: 'Clarity & Fluency',
+                    score: 82,
+                    tags: ['Clear', 'Natural']),
+                SkillCard(
+                    title: 'Confidence',
+                    score: 74,
+                    tags: ['Developing', 'Growing']),
+                SkillCard(
+                    title: 'Vocabulary & Grammar',
+                    score: 79,
+                    tags: ['Solid', 'Good']),
+                SkillCard(
+                    title: 'Pronunciation',
+                    score: 76,
+                    tags: ['Good', 'Solid']),
               ],
               insights: const [
                 'You came across as warm and approachable — great first impression.',
@@ -525,22 +626,16 @@ class _RoleplayConversationScreenState
       return;
     }
 
+    // ── Real mode ──────────────────────────────────────────────────────────────
     try {
-      debugPrint('⏳ [Conversation] Requesting AI evaluation (may take up to 90s)...');
-      final result = await SessionService.instance.endSession(widget.sessionId);
+      debugPrint(
+          '⏳ [Conversation] Requesting AI evaluation (may take up to 90s)...');
+      final result =
+          await SessionService.instance.endSession(widget.sessionId);
       final feedbackConfig =
           result.report.toFeedbackConfig(widget.config.scenarioTitle);
 
       debugPrint('✅ [Conversation] Evaluation received');
-      debugPrint('   XP awarded: ${result.xpAwarded}');
-      debugPrint('   New level:  ${result.newLevel}');
-      debugPrint('   Leveled up: ${result.leveledUp}');
-      if (result.newBadges.isNotEmpty) {
-        debugPrint('   New badges: ${result.newBadges.join(", ")}');
-      }
-      debugPrint('   Navigating to feedback screen...');
-      debugPrint('');
-
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
@@ -563,13 +658,13 @@ class _RoleplayConversationScreenState
 
       final errStr = e.toString();
 
-      // The server already abandoned the session (no completed turns) or it is
-      // no longer active. Retrying will always return 400, so navigate back
-      // cleanly rather than looping forever.
+      // The server already abandoned the session (no turns) or it is no longer
+      // active — retrying will always 400, so navigate back cleanly.
       if (errStr.contains('No turns recorded') ||
           errStr.contains('not in progress') ||
           errStr.contains('abandoned')) {
-        debugPrint('⚠️  [Conversation] Session already closed server-side — navigating back');
+        debugPrint(
+            '⚠️  [Conversation] Session already closed server-side — navigating back');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -582,8 +677,18 @@ class _RoleplayConversationScreenState
         return;
       }
 
-      // Transient error (network blip, AI timeout) — let the user retry.
-      setState(() => _displayText = 'Could not generate feedback. Try again.');
+      // Transient error — let the user retry.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not generate feedback — please try again.'),
+          backgroundColor: Colors.redAccent,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      setState(() {
+        _cardText = '';
+        _cardAnimKey++;
+      });
       _sessionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() => _secondsElapsed++);
       });
@@ -599,10 +704,12 @@ class _RoleplayConversationScreenState
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('End Session?',
             style: TextStyle(
-                color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold)),
         content: const Text(
             'Leaving now will abandon this session. Progress will not be saved.',
             style: TextStyle(color: AppColors.textSecondary)),
@@ -615,29 +722,28 @@ class _RoleplayConversationScreenState
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Leave',
-                style: TextStyle(color: Colors.redAccent,
+                style: TextStyle(
+                    color: Colors.redAccent,
                     fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
     if (confirm == true) {
-      debugPrint('🗑  [Conversation] User chose to abandon — '
+      debugPrint(
+          '🗑  [Conversation] User chose to abandon — '
           'turns completed: ${_conversationHistory.length ~/ 2}, '
           'time: ${_secondsElapsed}s');
       _sessionTimer?.cancel();
       await _recorder.stop();
       await _audioPlayer.stop();
-      // Best-effort: fire-and-forget abandon call.
       SessionService.instance.abandonSession(widget.sessionId).ignore();
       _cleanupTempFiles();
       if (mounted) Navigator.pop(context);
-    } else {
-      debugPrint('✅ [Conversation] User chose to stay');
     }
   }
 
-  // ─── Cleanup ─────────────────────────────────────────────────────────────────
+  // ─── Cleanup ──────────────────────────────────────────────────────────────────
 
   void _cleanupTempFiles() {
     for (final path in _tempFiles) {
@@ -648,17 +754,32 @@ class _RoleplayConversationScreenState
     _tempFiles.clear();
   }
 
-  // ─── Helpers ─────────────────────────────────────────────────────────────────
+  // ─── Helpers ──────────────────────────────────────────────────────────────────
 
   String _friendlyError(String raw) {
     if (raw.contains('SocketException') ||
         raw.contains('Connection refused') ||
-        raw.contains('Network')) {
-      return 'Server not reachable. Check your connection.';
+        raw.contains('Network') ||
+        raw.contains('reach the server')) {
+      return 'Cannot reach the server. Check your connection.';
     }
-    if (raw.contains('503')) return 'AI service unavailable. Try again.';
-    if (raw.contains('400')) return 'Could not process audio. Try again.';
-    return 'Something went wrong. Try again.';
+    if (raw.contains('unavailable') || raw.contains('503')) {
+      return 'AI service unavailable — please try again.';
+    }
+    if (raw.contains('timed out') || raw.contains('timeout')) {
+      return 'Request timed out — please try again.';
+    }
+    // 422 = audio too short / empty transcript from Whisper
+    if (raw.contains('too short') || raw.contains('empty transcript') ||
+        raw.contains('too small') || raw.contains('422')) {
+      return 'Audio too short or unclear — please speak more clearly.';
+    }
+    // The AI server returned a speech recognition or LLM error
+    if (raw.contains('Speech recognition') || raw.contains('AI response') ||
+        raw.contains('Voice synthesis')) {
+      return raw; // already a user-friendly message from FastAPI
+    }
+    return 'Something went wrong — please try again.';
   }
 
   // ─── Build ────────────────────────────────────────────────────────────────────
@@ -675,43 +796,23 @@ class _RoleplayConversationScreenState
         backgroundColor: AppColors.background,
         body: Stack(
           children: [
-            // Ambient background glow
-            Positioned(
-              top: MediaQuery.of(context).size.height * 0.3,
-              left: MediaQuery.of(context).size.width * 0.5 - 150,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: _state == _ConvState.ai_speaking
-                          ? AppColors.primaryLight.withValues(alpha: 0.12)
-                          : AppColors.primary.withValues(alpha: 0.15),
-                      blurRadius: 120,
-                      spreadRadius: 30,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _buildAmbientGlow(),
             SafeArea(
               child: Column(
                 children: [
                   _buildTopBar(),
+                  const SizedBox(height: 16),
+                  _buildOrb(),
+                  const SizedBox(height: 16),
+                  // Conversation card is the hero — takes all remaining space.
                   Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildOrbVisual(),
-                        const SizedBox(height: 32),
-                        _buildVoiceBars(),
-                      ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s16),
+                      child: _buildConversationCard(),
                     ),
                   ),
-                  if (_captionText != null)
-                    _buildCaptionDisplay(),
+                  const SizedBox(height: 8),
                   _buildBottomControls(),
                 ],
               ),
@@ -722,7 +823,34 @@ class _RoleplayConversationScreenState
     );
   }
 
-  // ─── Top bar ─────────────────────────────────────────────────────────────────
+  // ─── Ambient glow ─────────────────────────────────────────────────────────────
+
+  Widget _buildAmbientGlow() {
+    final glowColor = _state == _ConvState.ai_speaking
+        ? const Color(0xFF3B82F6)
+        : AppColors.primary;
+    return Positioned(
+      top: MediaQuery.of(context).size.height * 0.15,
+      left: MediaQuery.of(context).size.width * 0.5 - 160,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 600),
+        width: 320,
+        height: 320,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: glowColor.withValues(alpha: 0.08),
+              blurRadius: 140,
+              spreadRadius: 40,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Top bar ──────────────────────────────────────────────────────────────────
 
   Widget _buildTopBar() {
     return Padding(
@@ -733,7 +861,7 @@ class _RoleplayConversationScreenState
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-            onPressed: () => _onWillPop(),
+            onPressed: _onWillPop,
           ),
           Column(
             children: [
@@ -820,14 +948,14 @@ class _RoleplayConversationScreenState
     );
   }
 
-  // ─── Orb visual ──────────────────────────────────────────────────────────────
+  // ─── Orb (compact) ────────────────────────────────────────────────────────────
 
-  Widget _buildOrbVisual() {
+  Widget _buildOrb() {
     return AnimatedBuilder(
       animation: _pulseController,
       builder: (context, _) {
         final pulse = _pulseController.value;
-        double scale = 1.0 + (pulse * 0.08);
+        double scale = 1.0 + (pulse * 0.06);
 
         Color orbColor;
         Color glowColor;
@@ -835,9 +963,9 @@ class _RoleplayConversationScreenState
           case _ConvState.user_turn:
             orbColor = AppColors.primary;
             glowColor = AppColors.primaryLight;
-            scale = 1.0 + (pulse * 0.14); // larger pulse = mic active
+            scale = 1.0 + (pulse * 0.12);
           case _ConvState.ai_speaking:
-            orbColor = const Color(0xFF3B82F6); // cool blue for AI
+            orbColor = const Color(0xFF3B82F6);
             glowColor = const Color(0xFF93C5FD);
           case _ConvState.processing:
           case _ConvState.ending:
@@ -849,50 +977,49 @@ class _RoleplayConversationScreenState
         return Stack(
           alignment: Alignment.center,
           children: [
-            // Outer ring
             Transform.scale(
               scale: scale * 1.4,
               child: Container(
-                width: 140,
-                height: 140,
+                width: 96,
+                height: 96,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: orbColor.withValues(alpha: 0.15 * (1.0 - pulse)),
+                    color: orbColor.withValues(
+                        alpha: 0.12 * (1.0 - pulse)),
                     width: 2,
                   ),
                 ),
               ),
             ),
-            // Middle ring
             Transform.scale(
               scale: scale * 1.2,
               child: Container(
-                width: 140,
-                height: 140,
+                width: 96,
+                height: 96,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: orbColor.withValues(alpha: 0.3 * (1.0 - pulse)),
+                    color: orbColor.withValues(
+                        alpha: 0.25 * (1.0 - pulse)),
                     width: 2,
                   ),
                 ),
               ),
             ),
-            // Core orb
             Transform.scale(
               scale: scale,
               child: Container(
-                width: 140,
-                height: 140,
+                width: 96,
+                height: 96,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: orbColor,
                   boxShadow: [
                     BoxShadow(
                       color: glowColor.withValues(alpha: 0.45),
-                      blurRadius: 30 + 20 * pulse,
-                      spreadRadius: 4 * pulse,
+                      blurRadius: 24 + 16 * pulse,
+                      spreadRadius: 3 * pulse,
                     ),
                   ],
                 ),
@@ -911,60 +1038,342 @@ class _RoleplayConversationScreenState
       case _ConvState.ending:
         return const Center(
           child: SizedBox(
-            width: 28,
-            height: 28,
-            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+                color: Colors.white, strokeWidth: 2.5),
           ),
         );
       case _ConvState.user_turn:
         return const Center(
-          child: Icon(Icons.mic, color: Colors.white, size: 42),
+          child: Icon(Icons.mic, color: Colors.white, size: 34),
         );
       case _ConvState.ai_speaking:
         return Center(
           child: Icon(
             _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-            color: _isMuted
-                ? Colors.white.withValues(alpha: 0.35)
-                : Colors.white,
-            size: 40,
+            color:
+                _isMuted ? Colors.white.withValues(alpha: 0.35) : Colors.white,
+            size: 32,
           ),
         );
     }
   }
 
-  // ─── Waveform bars ────────────────────────────────────────────────────────────
+  // ─── Conversation card (hero element) ─────────────────────────────────────────
 
-  Widget _buildVoiceBars() {
+  Widget _buildConversationCard() {
+    final Color borderColor;
+    final Color accentColor;
+
+    switch (_state) {
+      case _ConvState.user_turn:
+        borderColor = AppColors.primary.withValues(alpha: 0.35);
+        accentColor = AppColors.primary;
+      case _ConvState.ai_speaking:
+        borderColor = const Color(0xFF3B82F6).withValues(alpha: 0.35);
+        accentColor = const Color(0xFF3B82F6);
+      case _ConvState.processing:
+      case _ConvState.ending:
+        borderColor = AppColors.border;
+        accentColor = AppColors.textMuted;
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.06),
+            blurRadius: 32,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header: speaker dot + label + REC badge ──────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle, color: accentColor),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _getSpeakerLabel(),
+                  style: TextStyle(
+                    color: accentColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const Spacer(),
+                if (_state == _ConvState.user_turn) _buildRecordingBadge(),
+              ],
+            ),
+
+            const SizedBox(height: 4),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
+              height: 1,
+              color: borderColor,
+            ),
+            const SizedBox(height: 16),
+
+            // ── Main text content ─────────────────────────────────────────────
+            Expanded(child: _buildCardContent()),
+
+            // ── Waveform (only when recording) ────────────────────────────────
+            if (_state == _ConvState.user_turn) ...[
+              const SizedBox(height: 12),
+              _buildWaveformRow(),
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  'Speak clearly, then tap SEND',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getSpeakerLabel() {
+    switch (_state) {
+      case _ConvState.user_turn:
+        return 'YOU';
+      case _ConvState.ai_speaking:
+        return widget.config.persona.toUpperCase();
+      case _ConvState.processing:
+        return 'PROCESSING';
+      case _ConvState.ending:
+        return 'EVALUATING';
+    }
+  }
+
+  Widget _buildRecordingBadge() {
+    // Per-turn elapsed seconds, updated every second via the main timer tick.
+    final secs = _micStartTime != null
+        ? DateTime.now().difference(_micStartTime!).inSeconds
+        : 0;
+    final mins = secs ~/ 60;
+    final s = secs % 60;
+    final timeStr =
+        mins > 0 ? '$mins:${s.toString().padLeft(2, '0')}' : '${s}s';
+
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (_, __) => Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.28)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withValues(
+                    alpha: 0.5 + 0.5 * _pulseController.value),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'REC  $timeStr',
+              style: TextStyle(
+                color: AppColors.primaryLight,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardContent() {
+    switch (_state) {
+      case _ConvState.user_turn:
+        // Show live transcript from STT if available; otherwise placeholder.
+        final displayText = _liveTranscript.isNotEmpty
+            ? _liveTranscript
+            : (_cardText.isNotEmpty ? _cardText : '');
+        final isPlaceholder = displayText.isEmpty;
+
+        return Align(
+          alignment: Alignment.topLeft,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: isPlaceholder
+                ? _buildPlaceholderText()
+                : Text(
+                    displayText,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 17,
+                      height: 1.65,
+                    ),
+                  ),
+          ),
+        );
+
+      case _ConvState.processing:
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                    color: AppColors.primary, strokeWidth: 2.5),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Transcribing your response...',
+                style: TextStyle(
+                    color: AppColors.textSecondary, fontSize: 15, height: 1.5),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Usually takes 5–15 seconds',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+            ],
+          ),
+        );
+
+      case _ConvState.ai_speaking:
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 350),
+          switchInCurve: Curves.easeOut,
+          child: Align(
+            key: ValueKey<int>(_cardAnimKey),
+            alignment: Alignment.topLeft,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Text(
+                _cardText,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 17,
+                  height: 1.65,
+                ),
+              ),
+            ),
+          ),
+        );
+
+      case _ConvState.ending:
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                    color: AppColors.primary, strokeWidth: 2.5),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Generating your feedback...',
+                style: TextStyle(
+                    color: AppColors.textSecondary, fontSize: 15),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'This may take up to 60 seconds',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+            ],
+          ),
+        );
+    }
+  }
+
+  // Animated placeholder shown when the user hasn't spoken yet this turn.
+  Widget _buildPlaceholderText() {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (_, __) => Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            'Speak now',
+            style: TextStyle(
+              color: AppColors.textMuted.withValues(
+                  alpha: 0.5 + 0.3 * _pulseController.value),
+              fontSize: 17,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(width: 2),
+          Text(
+            '...',
+            style: TextStyle(
+              color: AppColors.textMuted.withValues(
+                  alpha: 0.3 + 0.5 * _pulseController.value),
+              fontSize: 17,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Waveform row ─────────────────────────────────────────────────────────────
+
+  Widget _buildWaveformRow() {
     return AnimatedBuilder(
       animation: _waveformController,
       builder: (context, _) {
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(7, (i) {
-            double height = 4.0;
-            if (_state == _ConvState.ai_speaking) {
-              // AI bars: smooth sine wave animation.
-              final offset =
-                  math.sin((_waveformController.value * math.pi * 2) + i);
-              height = 8.0 + (18.0 * offset.abs());
-            } else if (_state == _ConvState.user_turn) {
-              // User bars: driven by real mic amplitude.
-              // Add a small sine offset per bar so adjacent bars vary slightly.
-              final sineNudge = math.sin((_waveformController.value * math.pi) + i * 0.8) * 0.15;
-              final amp = (_barAmplitudes[i] + sineNudge).clamp(0.05, 1.0);
-              height = 6.0 + (24.0 * amp);
-            }
-            final barColor = _state == _ConvState.ai_speaking
-                ? const Color(0xFF93C5FD)
-                : AppColors.primaryLight;
+          children: List.generate(9, (i) {
+            final sineNudge =
+                math.sin((_waveformController.value * math.pi) + i * 0.8) *
+                    0.15;
+            final amp = i < _barAmplitudes.length
+                ? (_barAmplitudes[i] + sineNudge).clamp(0.05, 1.0)
+                : 0.15;
+            final height = 4.0 + (22.0 * amp);
             return AnimatedContainer(
               duration: const Duration(milliseconds: 80),
-              width: 4,
+              width: 3.5,
               height: height,
-              margin: const EdgeInsets.symmetric(horizontal: 3),
+              margin: const EdgeInsets.symmetric(horizontal: 2.5),
               decoration: BoxDecoration(
-                color: barColor,
+                color: AppColors.primaryLight
+                    .withValues(alpha: 0.5 + 0.5 * amp),
                 borderRadius: BorderRadius.circular(2),
               ),
             );
@@ -974,148 +1383,44 @@ class _RoleplayConversationScreenState
     );
   }
 
-  // ─── Display text ─────────────────────────────────────────────────────────────
-
-  Widget _buildDisplayText() {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      child: Padding(
-        key: ValueKey<String>(_displayText),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s32),
-        child: Text(
-          _displayText,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
-        ),
-      ),
-    );
-  }
-
-  // ─── Caption display ─────────────────────────────────────────────────────────
-
-  Widget _buildCaptionDisplay() {
-    final isUser = _captionSpeaker == 'You';
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.s16, vertical: AppSpacing.s8),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.15),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
-          ),
-        ),
-        child: Container(
-          key: ValueKey<int>(_captionKey),
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: isUser
-                ? AppColors.primary.withValues(alpha: 0.10)
-                : AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isUser
-                  ? AppColors.primary.withValues(alpha: 0.25)
-                  : AppColors.border,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _captionSpeaker.toUpperCase(),
-                style: TextStyle(
-                  color: isUser ? AppColors.primaryLight : AppColors.textMuted,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _captionText ?? '',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 14,
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   // ─── Bottom controls ──────────────────────────────────────────────────────────
 
   Widget _buildBottomControls() {
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).padding.bottom + 32,
+        bottom: MediaQuery.of(context).padding.bottom + 24,
         left: AppSpacing.s24,
         right: AppSpacing.s24,
+        top: 8,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // End-call hint
-          AnimatedOpacity(
-            opacity: (!_canEndCall && _state == _ConvState.user_turn) ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 300),
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Text(
-                'Speak for ${math.max(0, 10 - _totalSpokenSeconds)}s more to end the call',
-                style: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 12,
-                ),
-              ),
-            ),
+          _buildIconButton(
+            icon: _isMuted ? Icons.volume_off : Icons.volume_up,
+            color:
+                _isMuted ? AppColors.textMuted : AppColors.textPrimary,
+            onTap: _toggleMute,
+            tooltip: _isMuted ? 'Unmute AI' : 'Mute AI',
           ),
-
-          // Main action row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Mute button (always visible)
-              _buildIconButton(
-                icon: _isMuted ? Icons.volume_off : Icons.volume_up,
-                color: _isMuted ? AppColors.textMuted : AppColors.textPrimary,
-                onTap: _toggleMute,
-              ),
-
-              // Center: SEND or INTERRUPT or spinner
-              _buildCenterAction(),
-
-              // End-call button
-              _buildIconButton(
-                icon: Icons.call_end_rounded,
-                color: _canEndCall ? Colors.white : AppColors.textMuted,
-                backgroundColor: _canEndCall
-                    ? const Color(0xFFEF4444)
-                    : AppColors.surface,
-                borderColor: _canEndCall
-                    ? const Color(0xFFEF4444)
-                    : AppColors.border,
-                glow: _canEndCall
-                    ? const Color(0xFFEF4444).withValues(alpha: 0.4)
-                    : null,
-                onTap: _canEndCall ? _endSession : null,
-              ),
-            ],
+          _buildCenterAction(),
+          _buildIconButton(
+            icon: Icons.call_end_rounded,
+            color: _canEndCall ? Colors.white : AppColors.textMuted,
+            backgroundColor: _canEndCall
+                ? const Color(0xFFEF4444)
+                : AppColors.surface,
+            borderColor: _canEndCall
+                ? const Color(0xFFEF4444)
+                : AppColors.border,
+            glow: _canEndCall
+                ? const Color(0xFFEF4444).withValues(alpha: 0.4)
+                : null,
+            onTap: _canEndCall ? _endSession : null,
+            tooltip: _canEndCall
+                ? 'End & get feedback'
+                : 'Speak for ${math.max(0, 10 - _totalSpokenSeconds)}s more to end',
           ),
         ],
       ),
@@ -1128,16 +1433,16 @@ class _RoleplayConversationScreenState
       case _ConvState.ending:
         return Container(
           width: 140,
-          height: 64,
+          height: 60,
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(32),
+            borderRadius: BorderRadius.circular(30),
             border: Border.all(color: AppColors.border),
           ),
           child: const Center(
             child: SizedBox(
-              width: 24,
-              height: 24,
+              width: 22,
+              height: 22,
               child: CircularProgressIndicator(
                   color: AppColors.primary, strokeWidth: 2.5),
             ),
@@ -1149,10 +1454,10 @@ class _RoleplayConversationScreenState
           onTap: _onInterrupt,
           child: Container(
             width: 140,
-            height: 64,
+            height: 60,
             decoration: BoxDecoration(
-              color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(32),
+              color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(30),
               border: Border.all(
                   color: const Color(0xFFEF4444).withValues(alpha: 0.5),
                   width: 1.5),
@@ -1161,7 +1466,7 @@ class _RoleplayConversationScreenState
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.pan_tool_rounded,
-                    color: Color(0xFFEF4444), size: 18),
+                    color: Color(0xFFEF4444), size: 16),
                 const SizedBox(width: 8),
                 Text(
                   'INTERRUPT',
@@ -1182,10 +1487,10 @@ class _RoleplayConversationScreenState
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: 140,
-            height: 64,
+            height: 60,
             decoration: BoxDecoration(
               color: AppColors.primary,
-              borderRadius: BorderRadius.circular(32),
+              borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primary.withValues(alpha: 0.4),
@@ -1198,7 +1503,7 @@ class _RoleplayConversationScreenState
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   'SEND',
@@ -1222,13 +1527,14 @@ class _RoleplayConversationScreenState
     Color? borderColor,
     Color? glow,
     VoidCallback? onTap,
+    String? tooltip,
   }) {
-    return GestureDetector(
+    final btn = GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        width: 56,
-        height: 56,
+        width: 54,
+        height: 54,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: backgroundColor ?? AppColors.surface,
@@ -1237,8 +1543,12 @@ class _RoleplayConversationScreenState
               ? [BoxShadow(color: glow, blurRadius: 12, spreadRadius: 1)]
               : [],
         ),
-        child: Icon(icon, color: color, size: 24),
+        child: Icon(icon, color: color, size: 22),
       ),
     );
+    if (tooltip != null) {
+      return Tooltip(message: tooltip, child: btn);
+    }
+    return btn;
   }
 }
