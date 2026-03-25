@@ -500,6 +500,7 @@ class _RoleplayConversationScreenState
                 SkillCard(title: 'Clarity & Fluency', score: 82, tags: ['Clear', 'Natural']),
                 SkillCard(title: 'Confidence', score: 74, tags: ['Developing', 'Growing']),
                 SkillCard(title: 'Vocabulary & Grammar', score: 79, tags: ['Solid', 'Good']),
+                SkillCard(title: 'Pronunciation', score: 76, tags: ['Good', 'Solid']),
               ],
               insights: const [
                 'You came across as warm and approachable — great first impression.',

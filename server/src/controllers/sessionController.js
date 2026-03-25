@@ -245,7 +245,25 @@ async function endSession(req, res) {
     }
     await updateUser(userId, userUpdates);
 
-    return res.status(200).json({ report, xpAwarded, newLevel, leveledUp, newBadges, newStreak });
+    // Return a clean report object — do NOT forward the Firestore document directly
+    // because it contains FieldValue.serverTimestamp() which serialises as a raw
+    // internal object rather than a real timestamp.
+    return res.status(200).json({
+      report: {
+        scores: evaluation.scores,
+        fillerWordCount: evaluation.fillerWordCount,
+        fillerWords: evaluation.fillerWords,
+        strengths: evaluation.strengths,
+        improvements: evaluation.improvements,
+        recommendedNextType: evaluation.recommendedNextType,
+        rawTranscript,
+      },
+      xpAwarded,
+      newLevel,
+      leveledUp,
+      newBadges,
+      newStreak,
+    });
   } catch (err) {
     console.error('endSession error:', err.message);
     const status = err.statusCode || 500;
