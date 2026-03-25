@@ -1,7 +1,13 @@
 const axios = require('axios');
 const FormData = require('form-data');
 
-const FASTAPI_URL = process.env.FASTAPI_URL || 'http://localhost:8000';
+// When deployed on Render, FASTAPI_URL comes from a `fromService` reference
+// which returns only the hostname (e.g. "communiq-ai-server.onrender.com")
+// without a protocol. Ensure we always have a full URL.
+const _rawFastApiUrl = process.env.FASTAPI_URL || 'http://localhost:8000';
+const FASTAPI_URL = _rawFastApiUrl.startsWith('http')
+  ? _rawFastApiUrl
+  : `https://${_rawFastApiUrl}`;
 
 // Bug5 fix: derive correct MIME type from the audio file's extension
 const MIME_MAP = {

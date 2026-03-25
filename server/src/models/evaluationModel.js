@@ -15,11 +15,12 @@ const { FieldValue } = require('firebase-admin/firestore');
  * rawTranscript              string    full conversation as plain text
  *
  * Scores shape:
- *   clarity     number  0–100
- *   fluency     number  0–100
- *   confidence  number  0–100
- *   vocabulary  number  0–100
- *   grammar     number  0–100
+ *   clarity       number  0–100
+ *   fluency       number  0–100
+ *   confidence    number  0–100
+ *   vocabulary    number  0–100
+ *   grammar       number  0–100
+ *   pronunciation number  0–100  (inferred from Whisper transcript quality)
  */
 
 function createEvaluationDoc(sessionId, {

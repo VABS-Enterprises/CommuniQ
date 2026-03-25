@@ -3,11 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 /// Server URL is configured at build time via --dart-define=SERVER_URL=...
-/// Default targets the Android emulator's loopback alias for 127.0.0.1 on host.
-/// For physical devices run: flutter run --dart-define=SERVER_URL=http://192.168.x.x:3000
+/// Defaults to the deployed Render backend.
+/// For local development run: flutter run --dart-define=SERVER_URL=http://10.0.2.2:3000
 const _kServerUrl = String.fromEnvironment(
   'SERVER_URL',
-  defaultValue: 'http://10.0.2.2:3000',
+  defaultValue: 'https://communiq.onrender.com',
 );
 
 /// Singleton Dio client that attaches the Firebase ID token to every request.

@@ -500,6 +500,7 @@ class _RoleplayConversationScreenState
                 SkillCard(title: 'Clarity & Fluency', score: 82, tags: ['Clear', 'Natural']),
                 SkillCard(title: 'Confidence', score: 74, tags: ['Developing', 'Growing']),
                 SkillCard(title: 'Vocabulary & Grammar', score: 79, tags: ['Solid', 'Good']),
+                SkillCard(title: 'Pronunciation', score: 76, tags: ['Good', 'Solid']),
               ],
               insights: const [
                 'You came across as warm and approachable — great first impression.',
@@ -559,6 +560,29 @@ class _RoleplayConversationScreenState
     } catch (e) {
       debugPrint('❌ [Conversation] endSession failed: $e');
       if (!mounted) return;
+
+      final errStr = e.toString();
+
+      // The server already abandoned the session (no completed turns) or it is
+      // no longer active. Retrying will always return 400, so navigate back
+      // cleanly rather than looping forever.
+      if (errStr.contains('No turns recorded') ||
+          errStr.contains('not in progress') ||
+          errStr.contains('abandoned')) {
+        debugPrint('⚠️  [Conversation] Session already closed server-side — navigating back');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Session ended — no turns were completed.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+          Navigator.pop(context);
+        }
+        return;
+      }
+
+      // Transient error (network blip, AI timeout) — let the user retry.
       setState(() => _displayText = 'Could not generate feedback. Try again.');
       _sessionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() => _secondsElapsed++);

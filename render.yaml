@@ -1,0 +1,57 @@
+# Render deployment configuration for CommuniQ.
+#
+# Two services are defined here:
+#   1. communiq-ai-server  — Python / FastAPI (Groq STT + LLM + TTS)
+#   2. communiq-server     — Node.js / Express (REST API + Firestore)
+#
+# Deploy order matters: deploy the AI server first so you can copy its URL
+# into FASTAPI_URL on the Node server (Render sets this automatically when
+# using the `fromService` reference below).
+#
+# After your first deploy:
+#   1. Open the Render dashboard for communiq-server.
+#   2. Confirm FASTAPI_URL is set to https://communiq-ai-server.onrender.com
+#      (Render resolves the fromService reference at deploy time).
+#   3. Add every secret marked sync: false in the dashboard Environment tab.
+
+services:
+  # ── AI server (FastAPI) ───────────────────────────────────────────────────────
+  - type: web
+    name: communiq-ai-server
+    runtime: python
+    rootDir: ai-server
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false   # paste your Groq API key in the Render dashboard
+
+  # ── Node.js backend ───────────────────────────────────────────────────────────
+  - type: web
+    name: communiq-server
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FASTAPI_URL
+        fromService:
+          type: web
+          name: communiq-ai-server
+          property: host
+          # Render sets this to the HTTPS URL of communiq-ai-server automatically.
+          # Format: https://communiq-ai-server.onrender.com
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false   # paste the full -----BEGIN PRIVATE KEY----- block
+      - key: ADMIN_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: '*'    # tighten this to your domain in production

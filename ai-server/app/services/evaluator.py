@@ -125,12 +125,13 @@ def _validate(data: dict) -> None:
         improvements.append("Focus on reducing filler words and speaking at a measured pace.")
     data["improvements"] = improvements[:2]
 
-    # recommended_next
+    # recommended_next — sanitize rather than hard-fail so a non-compliant LLM
+    # response never prevents the user from seeing their evaluation results.
     rec = data.get("recommended_next")
-    if not isinstance(rec, str) or not rec.strip():
-        raise ValueError("'recommended_next' must be a non-empty string.")
-    if not _RECOMMENDED_NEXT_PATTERN.match(rec.strip()):
-        raise ValueError(
-            f"'recommended_next' must follow the format 'scenarioType_level' "
-            f"(e.g. 'hr_interview_intermediate'), got: {rec!r}"
-        )
+    if isinstance(rec, str) and rec.strip():
+        # Normalise: lowercase, replace hyphens/spaces with underscores, strip edges
+        rec = re.sub(r"[\s\-]+", "_", rec.strip().lower())
+        rec = re.sub(r"[^a-z0-9_]", "", rec)
+    if not isinstance(rec, str) or not rec.strip() or not _RECOMMENDED_NEXT_PATTERN.match(rec):
+        rec = "general_intermediate"
+    data["recommended_next"] = rec

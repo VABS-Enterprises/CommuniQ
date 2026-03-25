@@ -2,7 +2,7 @@ const { getScenariosForLevel, getScenarioById, getUserById, createScenario, upse
 const { stripSystemPrompt } = require('../models/scenarioModel');
 const { v4: uuidv4 } = require('uuid');
 
-const VALID_TYPES = ['hr_interview', 'gd', 'sales', 'technical'];
+const VALID_TYPES = ['hr_interview', 'gd', 'sales', 'technical', 'social', 'professional', 'communication', 'leadership'];
 
 // GET /scenarios
 async function listScenarios(req, res) {

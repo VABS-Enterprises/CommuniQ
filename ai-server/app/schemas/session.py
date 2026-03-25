@@ -17,7 +17,7 @@ class EvaluateResponse(BaseModel):
     Matches the shape Node's fastApiService.evaluateSession() expects
     and what sessionController writes to Firestore evaluationReports.
     """
-    scores: dict[str, int]       # { clarity, fluency, confidence, vocabulary, grammar } — 0-100
+    scores: dict[str, int]       # { clarity, fluency, confidence, vocabulary, grammar, pronunciation } — 0-100
     fillerWordCount: int
     fillerWords: list[str]
     strengths: list[str]         # exactly 2 items
