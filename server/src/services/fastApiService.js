@@ -82,7 +82,8 @@ async function sendTurnToFastApi(
   try {
     const response = await axios.post(`${FASTAPI_URL}/session/turn`, form, {
       headers: form.getHeaders(),
-      timeout: 60000, // Whisper STT + LLM + edge-tts can take 20-40s on first call
+      // 90 s covers a cold-start wake-up (~50 s on free tier) + STT+LLM+TTS (~20 s).
+      timeout: 90000,
     });
     return response.data;
   } catch (err) {

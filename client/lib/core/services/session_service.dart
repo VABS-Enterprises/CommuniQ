@@ -127,7 +127,9 @@ class SessionService {
         data: formData,
         options: Options(
           sendTimeout: const Duration(seconds: 120),
-          receiveTimeout: const Duration(seconds: 75), // Whisper+LLM+TTS can take up to 60s
+          // 120 s: 90 s Node→AI timeout + 30 s buffer for cold-start wake-up on
+          // Render's free tier (services spin down after 15 min of inactivity).
+          receiveTimeout: const Duration(seconds: 120),
         ),
       );
 
