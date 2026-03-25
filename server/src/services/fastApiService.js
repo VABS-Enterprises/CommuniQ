@@ -29,11 +29,23 @@ function getAudioMimeType(filename) {
 function handleAxiosError(err, context) {
   if (err.response) {
     const status = err.response.status;
+    const contentType = (err.response.headers?.['content-type'] || '').toLowerCase();
+    const isJson = contentType.includes('application/json');
+
+    // Non-JSON body means Render returned its own HTML error page (service not
+    // found, gateway timeout, etc.) — the AI server itself is not reachable.
+    if (!isJson) {
+      const e = new Error('AI service is currently unavailable — please try again');
+      e.statusCode = 503;
+      throw e;
+    }
+
     const message =
-      err.response.data?.detail || err.response.data?.error || `FastAPI ${context} error`;
+      err.response.data?.detail || err.response.data?.error || `AI ${context} failed`;
     const e = new Error(message);
-    // 4xx from FastAPI = bad request from us → surface as 400
-    e.statusCode = status >= 400 && status < 500 ? 400 : 503;
+    // 4xx from FastAPI = bad request from us → surface as 422 (unprocessable)
+    // so Flutter shows a contextual message rather than a generic error.
+    e.statusCode = status >= 400 && status < 500 ? status : 503;
     throw e;
   }
   // Network error or timeout
