@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/common_widgets/gradient_button.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
+import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
 import 'package:communiq/core/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -36,7 +37,11 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await AuthService.signInWithGoogle();
       if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        debugPrint('🎯 [Auth/Login] ── Root Navigation to Main App ───────');
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainNavigationView()),
+          (route) => false,
+        );
       }
     } on CancelledException {
       // User dismissed the picker — stay on screen.
@@ -60,7 +65,11 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
       if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        debugPrint('🎯 [Auth/Login] ── Root Navigation to Main App ───────');
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const MainNavigationView()),
+          (route) => false,
+        );
       }
     } catch (e) {
       _showError(e.toString().replaceFirst('Exception: ', ''));

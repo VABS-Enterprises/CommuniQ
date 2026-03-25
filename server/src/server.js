@@ -11,6 +11,7 @@ const sessionRoutes = require('./routes/sessions');
 const scenarioRoutes = require('./routes/scenarios');
 const leaderboardRoutes = require('./routes/leaderboard');
 const userRoutes = require('./routes/user');
+const levelsRoutes = require('./routes/levels');
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use('/sessions', sessionRoutes);
 app.use('/scenarios', scenarioRoutes);
 app.use('/leaderboard', leaderboardRoutes);
 app.use('/user', userRoutes);
+app.use('/levels', levelsRoutes);
 
 // 404 handler
 app.use((req, res) => {
