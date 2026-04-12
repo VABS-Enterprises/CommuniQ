@@ -1,520 +1,167 @@
-import 'dart:convert';
 import 'package:communiq/models/communiq_level.dart';
 
+/// Static data source for all 150 CommuniQ learning scenarios.
+/// Sourced from communiq_levels_v3.json.
+/// Grouped internally as: 1–50 (Easy), 51–100 (Intermediate), 101–150 (Hard).
+/// Difficulty is intentionally NOT exposed to the user in the UI.
 class StaticLevels {
-  static const String jsonString = '''
-{
-  "app": "Communiq",
-  "version": "1.0",
-  "total_levels": 50,
-  "levels": [
-    {
-      "id": 1,
-      "title": "Introducing yourself",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Introduce yourself in class", "prompt": "You're a new student. Tell the class your name, where you're from, and one hobby." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Introduce yourself in a job interview", "prompt": "You've just sat down with an interviewer. Give a confident self-introduction in under 90 seconds." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Introduce yourself at a professional networking event", "prompt": "You're at an industry mixer. Introduce yourself to a group of strangers and make it memorable." }
-      ]
-    },
-    {
-      "id": 2,
-      "title": "Greeting people",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Greet a new classmate", "prompt": "Say hello to someone sitting next to you for the first time. Start a short, friendly conversation." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Greet a client at a meeting", "prompt": "A client has arrived at your office. Welcome them warmly and make them feel comfortable." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Greet a senior executive at a formal event", "prompt": "You're at a company gala and the CEO walks toward you. How do you greet and engage them?" }
-      ]
-    },
-    {
-      "id": 3,
-      "title": "Small talk",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Chat about the weather with a neighbour", "prompt": "You bump into your neighbour. Keep a light conversation going for at least one minute." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Small talk before a meeting starts", "prompt": "You arrive 5 minutes early to a work meeting. Make small talk with a colleague you don't know well." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Keep a conversation alive at a dinner party", "prompt": "You're seated next to someone you've just met. Keep engaging small talk going throughout the meal." }
-      ]
-    },
-    {
-      "id": 4,
-      "title": "Asking for help",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Ask a classmate to explain a topic", "prompt": "You didn't understand a concept in class. Politely ask a peer to explain it to you." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Ask your manager for guidance", "prompt": "You're stuck on a work task. Request help from your manager without sounding incompetent." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Ask a senior expert for mentorship", "prompt": "You want guidance from someone highly respected in your field. How do you make the ask?" }
-      ]
-    },
-    {
-      "id": 5,
-      "title": "Saying thank you",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Thank a friend for a favour", "prompt": "A friend helped you move flats. Express genuine gratitude in a short conversation." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Thank a colleague for covering your work", "prompt": "A teammate handled your tasks while you were sick. Thank them sincerely in person." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Write and deliver a thank-you speech", "prompt": "You're receiving an award at college. Deliver a 1-minute thank-you speech to your audience." }
-      ]
-    },
-    {
-      "id": 6,
-      "title": "Apologising",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Apologise for being late to class", "prompt": "You walk in 10 minutes late. Apologise to your teacher and classmates briefly but sincerely." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Apologise for missing a deadline at work", "prompt": "You missed an important submission. Apologise to your manager and explain your plan going forward." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Apologise to a client for a serious error", "prompt": "A mistake on your team's part cost a client time and money. Lead the apology conversation." }
-      ]
-    },
-    {
-      "id": 7,
-      "title": "Giving directions",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Direct someone to the library on campus", "prompt": "A new student asks you how to get to the library. Give clear spoken directions." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Guide a visitor around your office building", "prompt": "A guest has arrived for a meeting in a different department. Walk them through the building verbally." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Give directions to a tourist in an unfamiliar area", "prompt": "A tourist asks you for directions to a landmark but you're not fully sure of the route. Navigate this confidently." }
-      ]
-    },
-    {
-      "id": 8,
-      "title": "Making requests",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Ask a classmate to share notes", "prompt": "You missed a lecture. Politely ask a classmate if you can borrow their notes." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Request a deadline extension from a professor", "prompt": "You need more time on an assignment. Make a clear and respectful request to your professor." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Negotiate a raise with your manager", "prompt": "You believe you deserve a salary increase. Make the case clearly and confidently in a 1:1 meeting." }
-      ]
-    },
-    {
-      "id": 9,
-      "title": "Disagreeing politely",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Disagree with a classmate's opinion", "prompt": "Your classmate says something you don't agree with. Respectfully share your different view." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Challenge an idea in a team meeting", "prompt": "Someone proposes a plan you think won't work. How do you push back without damaging the relationship?" },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Disagree with your manager's decision", "prompt": "Your manager makes a call you strongly disagree with. Voice your concern professionally and constructively." }
-      ]
-    },
-    {
-      "id": 10,
-      "title": "Giving opinions",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Share your opinion on a book in class", "prompt": "Your teacher asks what you thought of the assigned reading. Give a clear, structured opinion." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Give feedback on a colleague's presentation", "prompt": "A teammate just presented their work. Offer honest, constructive feedback in a team setting." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Present your point of view in a debate", "prompt": "You're in a formal debate. Argue your position convincingly while responding to counterpoints." }
-      ]
-    },
-    {
-      "id": 11,
-      "title": "Making phone calls",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Call to check your exam results", "prompt": "You need to call the admin office to ask about your results. What do you say?" },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Call a client to confirm a meeting", "prompt": "You need to confirm a client appointment over the phone. Keep it professional and concise." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Handle a difficult customer complaint call", "prompt": "An angry customer calls to complain. De-escalate the situation and resolve it professionally." }
-      ]
-    },
-    {
-      "id": 12,
-      "title": "Writing emails",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Email your professor about an absence", "prompt": "You missed class due to illness. Write a short, polite email to your professor explaining why." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Email a client to follow up on a proposal", "prompt": "You sent a proposal a week ago and haven't heard back. Write a professional follow-up email." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Write a formal complaint email", "prompt": "A service you paid for was not delivered properly. Write a firm but professional complaint email." }
-      ]
-    },
-    {
-      "id": 13,
-      "title": "Job interviews",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Answer 'Tell me about yourself'", "prompt": "You're in an interview. Give a clear, engaging answer to the classic opener." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Explain a gap in your CV", "prompt": "The interviewer notices a gap in your work history. Address it confidently and honestly." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Handle a stress interview", "prompt": "The interviewer is deliberately challenging every answer you give. Stay composed and respond effectively." }
-      ]
-    },
-    {
-      "id": 14,
-      "title": "Presentations",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Present a 2-minute summary to your class", "prompt": "Give a brief presentation on a topic of your choice to your classmates." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Present a project update to your team", "prompt": "Brief your team on where a project stands, what's been done, and what's next." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Present to senior leadership", "prompt": "You're presenting a business proposal to the leadership team. Deliver it with confidence and handle their questions." }
-      ]
-    },
-    {
-      "id": 15,
-      "title": "Active listening",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Listen and summarise a classmate's story", "prompt": "Your classmate tells you about their weekend. Listen carefully and summarise it back to them." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Listen actively in a team briefing", "prompt": "Your manager gives a detailed project briefing. Demonstrate active listening and ask one follow-up question." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Listen and respond to a distressed colleague", "prompt": "A colleague comes to you visibly upset about a work issue. Show empathy and help them feel heard." }
-      ]
-    },
-    {
-      "id": 16,
-      "title": "Negotiating",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Negotiate a group project role", "prompt": "Your group is dividing tasks and you want a specific role. Make your case fairly." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Negotiate a project deadline with a client", "prompt": "The client wants results faster than is realistic. Negotiate a timeline that works for both sides." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Negotiate a business contract", "prompt": "You're in a formal negotiation over contract terms. Navigate the discussion strategically." }
-      ]
-    },
-    {
-      "id": 17,
-      "title": "Giving a compliment",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Compliment a friend's new look", "prompt": "Your friend has a new haircut. Give a genuine, natural compliment." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Compliment a colleague's work in a meeting", "prompt": "A teammate delivered excellent work. Acknowledge it publicly in a team meeting." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Give a formal appreciation speech", "prompt": "At a company event, you're asked to say a few words appreciating a long-serving team member." }
-      ]
-    },
-    {
-      "id": 18,
-      "title": "Refusing politely",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Decline an invitation from a friend", "prompt": "A friend invites you to a party you can't attend. Say no politely without hurting their feelings." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Turn down an extra task at work", "prompt": "Your manager asks you to take on another project when you're already at capacity. How do you decline?" },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Reject a business proposal", "prompt": "A vendor pitches you something that's not a fit. Decline professionally while keeping the relationship intact." }
-      ]
-    },
-    {
-      "id": 19,
-      "title": "Talking about your day",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Tell a friend how your day went", "prompt": "Recount your day to a friend in a natural, engaging way — highs and lows included." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Give a daily standup update at work", "prompt": "In your team's standup meeting, share what you did yesterday, today's plan, and any blockers." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Debrief a difficult day to a senior mentor", "prompt": "You had a stressful, complex day. Articulate it clearly and ask for advice professionally." }
-      ]
-    },
-    {
-      "id": 20,
-      "title": "Telling stories",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Tell a funny story to friends", "prompt": "Share a funny thing that happened to you recently. Keep your audience engaged throughout." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Tell a professional story in an interview (STAR method)", "prompt": "Use the Situation–Task–Action–Result format to tell a story about a challenge you overcame at work." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Tell a compelling story in a public speech", "prompt": "You're speaking to 50 people. Open with a story that draws the audience in immediately." }
-      ]
-    },
-    {
-      "id": 21,
-      "title": "Asking questions",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Ask questions to understand a new concept", "prompt": "You're confused by something in class. Ask your teacher two clear, specific questions." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Ask probing questions in a business meeting", "prompt": "You're in a client discovery meeting. Ask questions that uncover their real needs." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Ask questions in a panel interview", "prompt": "You're on a panel with 4 interviewers. Ask them questions that show intelligence and genuine interest." }
-      ]
-    },
-    {
-      "id": 22,
-      "title": "Expressing emotions",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Tell a friend you're feeling stressed", "prompt": "You're overwhelmed with exams. Open up to a trusted friend about how you're feeling." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Express frustration professionally at work", "prompt": "A situation at work has been bothering you. Communicate your feelings to your manager constructively." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Handle emotions in a difficult conversation", "prompt": "You're in a charged discussion where emotions are running high. Stay calm and keep the talk productive." }
-      ]
-    },
-    {
-      "id": 23,
-      "title": "Describing things",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Describe your hometown to someone who's never been", "prompt": "Paint a picture of your city or town for someone hearing about it for the first time." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Describe a product to a potential buyer", "prompt": "You work in sales. Describe your product's features and benefits to an interested customer." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Describe a complex technical concept to a non-expert", "prompt": "Explain a technical idea from your field to someone who has no background in it." }
-      ]
-    },
-    {
-      "id": 24,
-      "title": "Handling criticism",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Receive feedback on a class assignment", "prompt": "Your teacher gives you critical feedback on your work. Respond gracefully and ask how to improve." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Handle negative feedback in a performance review", "prompt": "Your manager points out areas you're underperforming. Respond professionally and constructively." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Respond to public criticism", "prompt": "Someone criticises your work in front of a group. How do you respond calmly and professionally?" }
-      ]
-    },
-    {
-      "id": 25,
-      "title": "Motivating others",
-      "category": "Leadership",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Encourage a friend who's feeling low", "prompt": "Your friend is discouraged and thinking of quitting something important to them. Lift their spirits." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Motivate your team before a tough deadline", "prompt": "Your team is exhausted and morale is low. Give a short pep talk before a critical sprint." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Deliver an inspiring speech to a large group", "prompt": "You're addressing 100 people who are struggling. Deliver a 2-minute speech that genuinely motivates them." }
-      ]
-    },
-    {
-      "id": 26,
-      "title": "Leading a meeting",
-      "category": "Leadership",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Chair a study group session", "prompt": "You're leading a group revision session. Open it, keep everyone on track, and close it effectively." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Facilitate a team brainstorming meeting", "prompt": "Lead a 20-minute brainstorming session, draw out ideas from quiet participants, and summarise outcomes." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Run a high-stakes board meeting", "prompt": "You're presenting to and facilitating a meeting with senior stakeholders. Manage time, conflict, and decisions." }
-      ]
-    },
-    {
-      "id": 27,
-      "title": "Resolving conflict",
-      "category": "Leadership",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Resolve a disagreement between friends", "prompt": "Two friends in your group are in conflict. Mediate the situation calmly and fairly." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Resolve a dispute between team members", "prompt": "Two colleagues aren't getting along and it's affecting the team. Step in and help resolve it." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Mediate a formal workplace dispute", "prompt": "You've been asked to mediate a serious conflict between two departments. Handle it professionally." }
-      ]
-    },
-    {
-      "id": 28,
-      "title": "Persuading others",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Persuade your friends to try a new restaurant", "prompt": "Convince your group of friends to try a cuisine they're hesitant about." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Persuade a manager to approve your idea", "prompt": "You have an idea that could improve a process at work. Make a persuasive case for it." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Pitch to investors", "prompt": "You're pitching a startup idea to a panel of investors. Persuade them your idea is worth funding." }
-      ]
-    },
-    {
-      "id": 29,
-      "title": "Giving instructions",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Explain a game's rules to a friend", "prompt": "Teach someone a game or activity they've never tried. Give clear, step-by-step instructions." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Onboard a new team member", "prompt": "A new joiner has arrived. Walk them through their first-week tasks clearly and helpfully." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Brief a team on a complex new process", "prompt": "Your team needs to adopt a new system. Explain it clearly, anticipate confusion, and answer questions." }
-      ]
-    },
-    {
-      "id": 30,
-      "title": "Talking about goals",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Share your goals with a friend", "prompt": "Tell a close friend what you want to achieve in the next year and why it matters to you." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Discuss career goals in a performance review", "prompt": "Your manager asks where you see yourself in 3 years. Give a clear, ambitious, and realistic answer." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Present your vision to a leadership team", "prompt": "You're asked to share your 5-year vision for your department. Make it compelling and credible." }
-      ]
-    },
-    {
-      "id": 31,
-      "title": "Discussing current events",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Talk about a news story with a friend", "prompt": "Share your thoughts on a recent news event. Keep it balanced and invite the other person's views." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Discuss industry news with a colleague", "prompt": "A relevant development has happened in your industry. Discuss its implications with a colleague." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Comment on a controversial topic in a group", "prompt": "A heated topic comes up at a gathering. Share your view thoughtfully without causing offence." }
-      ]
-    },
-    {
-      "id": 32,
-      "title": "Talking about hobbies",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Tell a classmate about your favourite hobby", "prompt": "Describe something you love doing in your free time in an engaging way." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Connect over shared interests in a networking setting", "prompt": "You discover a shared hobby with someone at a professional event. Use it to build rapport." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Speak passionately about your hobby to a skeptical audience", "prompt": "You're talking to people who don't share your interest. Get them curious and engaged." }
-      ]
-    },
-    {
-      "id": 33,
-      "title": "Using formal language",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Write a formal request to your college admin", "prompt": "You need a letter confirming your enrolment. Write a formal request email." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Speak formally in a board meeting", "prompt": "You're presenting to senior leadership. Use precise, formal language throughout your delivery." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Draft a formal press statement", "prompt": "Your organisation needs to issue a statement on a sensitive topic. Write it with care and formality." }
-      ]
-    },
-    {
-      "id": 34,
-      "title": "Using informal language",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Chat casually with a new classmate", "prompt": "Strike up a relaxed, friendly conversation with someone new in class." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Use casual English with a team during a fun outing", "prompt": "You're at a team lunch. Keep the tone light and conversational — no office jargon." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Switch fluidly from formal to informal in one conversation", "prompt": "A meeting with a client ends and you all go for a coffee. Shift your language register naturally." }
-      ]
-    },
-    {
-      "id": 35,
-      "title": "Interviewing someone",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Interview a classmate for a class project", "prompt": "You need to gather information from a peer. Conduct a short structured interview." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Interview a job candidate", "prompt": "You're on the hiring side. Conduct a professional, fair, and insightful job interview." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Interview a senior expert for a research piece", "prompt": "You're speaking with a well-known figure in your field. Ask smart, probing questions and keep them engaged." }
-      ]
-    },
-    {
-      "id": 36,
-      "title": "Talking on panels",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Answer a question on a student panel", "prompt": "You're on a panel at a college event. Answer a question confidently in front of an audience." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Represent your company on an industry panel", "prompt": "You're a panelist at a conference. Share your company's perspective on a sector trend." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Moderate a live panel discussion", "prompt": "You're the moderator for a panel of 4 experts. Keep the discussion flowing, balanced, and engaging." }
-      ]
-    },
-    {
-      "id": 37,
-      "title": "Talking about achievements",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Tell a friend about something you're proud of", "prompt": "Share a recent achievement with a friend. Be proud but not boastful." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Highlight achievements in a performance review", "prompt": "Walk your manager through your top 3 achievements from the past 6 months with evidence." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Present a case study of your success to a client", "prompt": "A potential client wants to know what you've achieved before. Present a compelling success story." }
-      ]
-    },
-    {
-      "id": 38,
-      "title": "Welcoming guests",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Welcome a guest to your home", "prompt": "A friend is visiting your place for the first time. Make them feel warm and comfortable." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Welcome new employees at an orientation", "prompt": "You're hosting a group of new joiners. Welcome them warmly and set a positive tone." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Welcome VIP guests at a formal event", "prompt": "You're the host at a company gala with senior guests. Open the event with a polished welcome address." }
-      ]
-    },
-    {
-      "id": 39,
-      "title": "Making suggestions",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Suggest a movie to watch with friends", "prompt": "Your group can't decide what to watch. Make a recommendation and explain why they'll enjoy it." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Suggest an improvement in a team meeting", "prompt": "You notice a process that could be done better. Raise it constructively in a group setting." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Propose a strategic initiative to leadership", "prompt": "You've identified a significant opportunity. Make a clear, structured proposal to the leadership team." }
-      ]
-    },
-    {
-      "id": 40,
-      "title": "Clarifying misunderstandings",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Clarify what you meant after being misunderstood by a friend", "prompt": "Your friend took something you said the wrong way. Calmly explain what you actually meant." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Clarify a miscommunication with a client", "prompt": "A client misunderstood the scope of your work. Correct the misunderstanding professionally." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Clear up a public misunderstanding", "prompt": "Something you said in a meeting has been misinterpreted by multiple people. Address it clearly and diplomatically." }
-      ]
-    },
-    {
-      "id": 41,
-      "title": "Networking",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Connect with someone at a college career fair", "prompt": "You're at a career fair. Approach a recruiter, introduce yourself, and ask about opportunities." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Work the room at a professional mixer", "prompt": "You're at a networking event. Move between conversations and leave a strong impression on 3 people." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Build a meaningful connection with a senior leader", "prompt": "You've been introduced to someone very senior and influential. Make the conversation count." }
-      ]
-    },
-    {
-      "id": 42,
-      "title": "Delivering bad news",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Tell a friend disappointing news", "prompt": "You have to tell a friend something they won't want to hear. Do it with care and empathy." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Inform a client of a delay", "prompt": "The project will be delivered late. Call or meet the client and deliver the news professionally." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Announce redundancies to a team", "prompt": "You need to inform your team that roles are being cut. Handle the conversation with honesty and compassion." }
-      ]
-    },
-    {
-      "id": 43,
-      "title": "Following up",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Follow up with a classmate on a shared task", "prompt": "A group task is overdue and one person hasn't delivered. Follow up politely but clearly." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Follow up with a client after a meeting", "prompt": "You had a productive client meeting. Send a follow-up that summarises key points and next steps." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Chase a decision from a senior stakeholder", "prompt": "A key decision from leadership has been pending for weeks. Follow up assertively but respectfully." }
-      ]
-    },
-    {
-      "id": 44,
-      "title": "Discussing money",
-      "category": "Professional",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Split a bill with friends", "prompt": "You're out at dinner and sorting who owes what. Handle the conversation naturally and without awkwardness." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Discuss project budget with a manager", "prompt": "You need more budget to complete a project. Make the case clearly with numbers and reasoning." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Negotiate pricing with a vendor", "prompt": "A supplier has quoted above your budget. Negotiate the price down while keeping the relationship positive." }
-      ]
-    },
-    {
-      "id": 45,
-      "title": "Talking about culture",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Share something interesting about your culture with a classmate", "prompt": "A foreign exchange student wants to learn about where you're from. What do you share?" },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Navigate a cultural difference at work", "prompt": "A cultural misunderstanding has occurred with a colleague from a different background. Address it sensitively." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Present a cross-cultural perspective in a business setting", "prompt": "You're working with an international team. Bring cultural awareness into a key business discussion." }
-      ]
-    },
-    {
-      "id": 46,
-      "title": "Public speaking",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Speak for 1 minute on any topic in class", "prompt": "Your teacher gives you one minute to speak on anything you like. Fill it confidently." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Give a 5-minute speech at a college event", "prompt": "You've been asked to address the student body on a topic relevant to campus life." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Deliver a keynote at a professional conference", "prompt": "You're the keynote speaker at an industry conference with 200 attendees. Deliver with authority and engagement." }
-      ]
-    },
-    {
-      "id": 47,
-      "title": "Handling silence",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Recover from a pause in casual conversation", "prompt": "The conversation dies out for a moment. Restart it naturally without it being awkward." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Use silence strategically in a negotiation", "prompt": "During a negotiation, resist filling every silence. Let pauses work in your favour." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Hold composure during a silent interview moment", "prompt": "The interviewer goes silent after your answer and stares at you. Hold your ground and respond wisely." }
-      ]
-    },
-    {
-      "id": 48,
-      "title": "Talking about failure",
-      "category": "Communication",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Share a time you failed at something with a friend", "prompt": "Tell a friend about a time things didn't go to plan. Be honest and show what you learned." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Discuss a failure in an interview", "prompt": "The interviewer asks: 'Tell me about a time you failed.' Give a composed, reflective answer." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Address a team failure to your organisation", "prompt": "A project your team led didn't succeed. Address the organisation honestly and with a recovery plan." }
-      ]
-    },
-    {
-      "id": 49,
-      "title": "Wrapping up conversations",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "End a chat with a classmate politely", "prompt": "You need to head to your next class. Close the conversation naturally without being abrupt." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Close a client call professionally", "prompt": "The call has covered everything. Wrap it up clearly with agreed next steps." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Close a multi-hour negotiation meeting", "prompt": "After a long, intense session, bring the meeting to a clear, positive conclusion with all parties aligned." }
-      ]
-    },
-    {
-      "id": 50,
-      "title": "Building rapport",
-      "category": "Social",
-      "stages": [
-        { "stage": 1, "difficulty": "Easy", "scenario": "Build a quick connection with a new classmate", "prompt": "You have 5 minutes before class. Build genuine rapport with someone you've never spoken to." },
-        { "stage": 2, "difficulty": "Medium", "scenario": "Build rapport with a new client", "prompt": "It's your first meeting with a client. Spend the first few minutes creating a warm, trusting connection." },
-        { "stage": 3, "difficulty": "Hard", "scenario": "Rebuild rapport after a damaged relationship", "prompt": "A professional relationship went cold after a conflict. Strategically re-establish trust and connection." }
-      ]
-    }
-  ]
-}
-''';
+  StaticLevels._();
 
-  static List<CommuniqLevel> get allLevels {
-    final Map<String, dynamic> data = jsonDecode(jsonString);
-    final List<dynamic> levelsList = data['levels'];
-    return levelsList.map((l) => CommuniqLevel.fromJson(l)).toList();
-  }
+  static const List<CommuniqLevel> allLevels = [
+    // ── EASY (1–50) ──────────────────────────────────────────────────────────
+    CommuniqLevel(id: 1, title: 'Introducing yourself', category: 'Social', scenario: 'Introduce yourself in class', prompt: "You're a new student. Tell the class your name, where you're from, and one hobby."),
+    CommuniqLevel(id: 2, title: 'Greeting people', category: 'Social', scenario: 'Greet a new classmate', prompt: 'Say hello to someone sitting next to you for the first time. Start a short, friendly conversation.'),
+    CommuniqLevel(id: 3, title: 'Small talk', category: 'Social', scenario: 'Chat about the weather with a neighbour', prompt: 'You bump into your neighbour. Keep a light conversation going for at least one minute.'),
+    CommuniqLevel(id: 4, title: 'Asking for help', category: 'Social', scenario: 'Ask a classmate to explain a topic', prompt: "You didn't understand a concept in class. Politely ask a peer to explain it to you."),
+    CommuniqLevel(id: 5, title: 'Saying thank you', category: 'Social', scenario: 'Thank a friend for a favour', prompt: 'A friend helped you move flats. Express genuine gratitude in a short conversation.'),
+    CommuniqLevel(id: 6, title: 'Apologising', category: 'Social', scenario: 'Apologise for being late to class', prompt: 'You walk in 10 minutes late. Apologise to your teacher and classmates briefly but sincerely.'),
+    CommuniqLevel(id: 7, title: 'Giving directions', category: 'Social', scenario: 'Direct someone to the library on campus', prompt: 'A new student asks you how to get to the library. Give clear spoken directions.'),
+    CommuniqLevel(id: 8, title: 'Making requests', category: 'Social', scenario: 'Ask a classmate to share notes', prompt: 'You missed a lecture. Politely ask a classmate if you can borrow their notes.'),
+    CommuniqLevel(id: 9, title: 'Disagreeing politely', category: 'Professional', scenario: "Disagree with a classmate's opinion", prompt: "Your classmate says something you don't agree with. Respectfully share your different view."),
+    CommuniqLevel(id: 10, title: 'Giving opinions', category: 'Communication', scenario: 'Share your opinion on a book in class', prompt: 'Your teacher asks what you thought of the assigned reading. Give a clear, structured opinion.'),
+    CommuniqLevel(id: 11, title: 'Making phone calls', category: 'Professional', scenario: 'Call to check your exam results', prompt: 'You need to call the admin office to ask about your results. What do you say?'),
+    CommuniqLevel(id: 12, title: 'Writing emails', category: 'Professional', scenario: 'Email your professor about an absence', prompt: 'You missed class due to illness. Write a short, polite email to your professor explaining why.'),
+    CommuniqLevel(id: 13, title: 'Job interviews', category: 'Professional', scenario: "Answer 'Tell me about yourself'", prompt: "You're in an interview. Give a clear, engaging answer to the classic opener."),
+    CommuniqLevel(id: 14, title: 'Presentations', category: 'Professional', scenario: 'Present a 2-minute summary to your class', prompt: 'Give a brief presentation on a topic of your choice to your classmates.'),
+    CommuniqLevel(id: 15, title: 'Active listening', category: 'Communication', scenario: "Listen and summarise a classmate's story", prompt: 'Your classmate tells you about their weekend. Listen carefully and summarise it back to them.'),
+    CommuniqLevel(id: 16, title: 'Negotiating', category: 'Professional', scenario: 'Negotiate a group project role', prompt: 'Your group is dividing tasks and you want a specific role. Make your case fairly.'),
+    CommuniqLevel(id: 17, title: 'Giving a compliment', category: 'Social', scenario: "Compliment a friend's new look", prompt: 'Your friend has a new haircut. Give a genuine, natural compliment.'),
+    CommuniqLevel(id: 18, title: 'Refusing politely', category: 'Social', scenario: 'Decline an invitation from a friend', prompt: "A friend invites you to a party you can't attend. Say no politely without hurting their feelings."),
+    CommuniqLevel(id: 19, title: 'Talking about your day', category: 'Social', scenario: 'Tell a friend how your day went', prompt: 'Recount your day to a friend in a natural, engaging way — highs and lows included.'),
+    CommuniqLevel(id: 20, title: 'Telling stories', category: 'Communication', scenario: 'Tell a funny story to friends', prompt: 'Share a funny thing that happened to you recently. Keep your audience engaged throughout.'),
+    CommuniqLevel(id: 21, title: 'Asking questions', category: 'Communication', scenario: 'Ask questions to understand a new concept', prompt: "You're confused by something in class. Ask your teacher two clear, specific questions."),
+    CommuniqLevel(id: 22, title: 'Expressing emotions', category: 'Social', scenario: "Tell a friend you're feeling stressed", prompt: "You're overwhelmed with exams. Open up to a trusted friend about how you're feeling."),
+    CommuniqLevel(id: 23, title: 'Describing things', category: 'Communication', scenario: "Describe your hometown to someone who's never been", prompt: 'Paint a picture of your city or town for someone hearing about it for the first time.'),
+    CommuniqLevel(id: 24, title: 'Handling criticism', category: 'Professional', scenario: 'Receive feedback on a class assignment', prompt: 'Your teacher gives you critical feedback on your work. Respond gracefully and ask how to improve.'),
+    CommuniqLevel(id: 25, title: 'Motivating others', category: 'Leadership', scenario: "Encourage a friend who's feeling low", prompt: "Your friend is discouraged and thinking of quitting something important to them. Lift their spirits."),
+    CommuniqLevel(id: 26, title: 'Leading a meeting', category: 'Leadership', scenario: 'Chair a study group session', prompt: "You're leading a group revision session. Open it, keep everyone on track, and close it effectively."),
+    CommuniqLevel(id: 27, title: 'Resolving conflict', category: 'Leadership', scenario: 'Resolve a disagreement between friends', prompt: 'Two friends in your group are in conflict. Mediate the situation calmly and fairly.'),
+    CommuniqLevel(id: 28, title: 'Persuading others', category: 'Communication', scenario: 'Persuade your friends to try a new restaurant', prompt: "Convince your group of friends to try a cuisine they're hesitant about."),
+    CommuniqLevel(id: 29, title: 'Giving instructions', category: 'Professional', scenario: "Explain a game's rules to a friend", prompt: "Teach someone a game or activity they've never tried. Give clear, step-by-step instructions."),
+    CommuniqLevel(id: 30, title: 'Talking about goals', category: 'Communication', scenario: 'Share your goals with a friend', prompt: 'Tell a close friend what you want to achieve in the next year and why it matters to you.'),
+    CommuniqLevel(id: 31, title: 'Discussing current events', category: 'Social', scenario: 'Talk about a news story with a friend', prompt: "Share your thoughts on a recent news event. Keep it balanced and invite the other person's views."),
+    CommuniqLevel(id: 32, title: 'Talking about hobbies', category: 'Social', scenario: 'Tell a classmate about your favourite hobby', prompt: 'Describe something you love doing in your free time in an engaging way.'),
+    CommuniqLevel(id: 33, title: 'Using formal language', category: 'Professional', scenario: 'Write a formal request to your college admin', prompt: 'You need a letter confirming your enrolment. Write a formal request email.'),
+    CommuniqLevel(id: 34, title: 'Using informal language', category: 'Social', scenario: 'Chat casually with a new classmate', prompt: "Strike up a relaxed, friendly conversation with someone new in class."),
+    CommuniqLevel(id: 35, title: 'Interviewing someone', category: 'Professional', scenario: 'Interview a classmate for a class project', prompt: 'You need to gather information from a peer. Conduct a short structured interview.'),
+    CommuniqLevel(id: 36, title: 'Talking on panels', category: 'Professional', scenario: 'Answer a question on a student panel', prompt: "You're on a panel at a college event. Answer a question confidently in front of an audience."),
+    CommuniqLevel(id: 37, title: 'Talking about achievements', category: 'Professional', scenario: "Tell a friend about something you're proud of", prompt: 'Share a recent achievement with a friend. Be proud but not boastful.'),
+    CommuniqLevel(id: 38, title: 'Welcoming guests', category: 'Social', scenario: 'Welcome a guest to your home', prompt: 'A friend is visiting your place for the first time. Make them feel warm and comfortable.'),
+    CommuniqLevel(id: 39, title: 'Making suggestions', category: 'Communication', scenario: 'Suggest a movie to watch with friends', prompt: "Your group can't decide what to watch. Make a recommendation and explain why they'll enjoy it."),
+    CommuniqLevel(id: 40, title: 'Clarifying misunderstandings', category: 'Communication', scenario: 'Clarify what you meant after being misunderstood by a friend', prompt: 'Your friend took something you said the wrong way. Calmly explain what you actually meant.'),
+    CommuniqLevel(id: 41, title: 'Networking', category: 'Professional', scenario: 'Connect with someone at a college career fair', prompt: "You're at a career fair. Approach a recruiter, introduce yourself, and ask about opportunities."),
+    CommuniqLevel(id: 42, title: 'Delivering bad news', category: 'Professional', scenario: 'Tell a friend disappointing news', prompt: "You have to tell a friend something they won't want to hear. Do it with care and empathy."),
+    CommuniqLevel(id: 43, title: 'Following up', category: 'Professional', scenario: 'Follow up with a classmate on a shared task', prompt: "A group task is overdue and one person hasn't delivered. Follow up politely but clearly."),
+    CommuniqLevel(id: 44, title: 'Discussing money', category: 'Professional', scenario: 'Split a bill with friends', prompt: "You're out at dinner and sorting who owes what. Handle the conversation naturally and without awkwardness."),
+    CommuniqLevel(id: 45, title: 'Talking about culture', category: 'Social', scenario: 'Share something interesting about your culture with a classmate', prompt: "A foreign exchange student wants to learn about where you're from. What do you share?"),
+    CommuniqLevel(id: 46, title: 'Public speaking', category: 'Communication', scenario: 'Speak for 1 minute on any topic in class', prompt: 'Your teacher gives you one minute to speak on anything you like. Fill it confidently.'),
+    CommuniqLevel(id: 47, title: 'Handling silence', category: 'Communication', scenario: 'Recover from a pause in casual conversation', prompt: 'The conversation dies out for a moment. Restart it naturally without it being awkward.'),
+    CommuniqLevel(id: 48, title: 'Talking about failure', category: 'Communication', scenario: 'Share a time you failed at something with a friend', prompt: "Tell a friend about a time things didn't go to plan. Be honest and show what you learned."),
+    CommuniqLevel(id: 49, title: 'Wrapping up conversations', category: 'Social', scenario: 'End a chat with a classmate politely', prompt: 'You need to head to your next class. Close the conversation naturally without being abrupt.'),
+    CommuniqLevel(id: 50, title: 'Building rapport', category: 'Social', scenario: 'Build a quick connection with a new classmate', prompt: "You have 5 minutes before class. Build genuine rapport with someone you've never spoken to."),
+
+    // ── INTERMEDIATE (51–100) ─────────────────────────────────────────────────
+    CommuniqLevel(id: 51, title: 'Asking for clarification', category: 'Communication', scenario: 'Ask your manager to clarify vague instructions on a task', prompt: "Your manager gave you instructions that aren't entirely clear. Ask for clarification without seeming incompetent or annoying."),
+    CommuniqLevel(id: 52, title: 'Giving a status update', category: 'Professional', scenario: 'Update a client on project progress mid-way through delivery', prompt: 'A client emails asking where things stand. Give a clear, professional status update that reassures them.'),
+    CommuniqLevel(id: 53, title: 'Talking about stress', category: 'Social', scenario: 'Open up to a close friend about feeling overwhelmed at work', prompt: "You've been under a lot of pressure lately. Talk to a trusted friend about your stress without oversharing."),
+    CommuniqLevel(id: 54, title: 'Making a complaint', category: 'Professional', scenario: 'Complain to a restaurant manager about poor service', prompt: 'Your meal was delayed and incorrect. Raise the issue with the manager calmly but assertively.'),
+    CommuniqLevel(id: 55, title: 'Explaining a process', category: 'Communication', scenario: "Walk a new intern through your team's onboarding process", prompt: "A new intern joins today. Walk them step-by-step through the first-week process in a clear and welcoming way."),
+    CommuniqLevel(id: 56, title: 'Asking for feedback', category: 'Professional', scenario: 'Request constructive feedback from your manager after a presentation', prompt: 'You just finished presenting to your team. Ask your manager for honest, specific feedback on your delivery.'),
+    CommuniqLevel(id: 57, title: 'Talking about career plans', category: 'Professional', scenario: 'Discuss your next career move with a mentor', prompt: "You're at a crossroads in your career. Have an open conversation with your mentor about your options and goals."),
+    CommuniqLevel(id: 58, title: 'Inviting someone to an event', category: 'Social', scenario: 'Invite a colleague to a team social gathering', prompt: "You're organising a team outing. Invite a quieter colleague in a way that makes them feel genuinely included."),
+    CommuniqLevel(id: 59, title: 'Explaining a mistake', category: 'Professional', scenario: 'Explain to your manager why a report was submitted incorrectly', prompt: 'You made an error on an important report. Explain what happened, take responsibility, and outline how you\'ll fix it.'),
+    CommuniqLevel(id: 60, title: 'Giving a tour', category: 'Social', scenario: 'Show a visiting relative around your college campus', prompt: 'Your cousin is visiting your college. Give them an engaging tour and share what you love about the place.'),
+    CommuniqLevel(id: 61, title: 'Talking about your background', category: 'Social', scenario: 'Share your personal story with a new friend', prompt: 'Someone new wants to know more about you. Share your background in an interesting and natural way.'),
+    CommuniqLevel(id: 62, title: 'Checking in on someone', category: 'Social', scenario: 'Check in on a friend who has been going through a tough time', prompt: "A friend has been quiet lately and you're concerned. Reach out and check in sincerely without being intrusive."),
+    CommuniqLevel(id: 63, title: 'Setting expectations', category: 'Professional', scenario: 'Set clear expectations with a new team member on deliverables', prompt: 'A new teammate is joining your project. Clearly communicate what is expected of them without sounding bossy.'),
+    CommuniqLevel(id: 64, title: 'Discussing work-life balance', category: 'Professional', scenario: 'Talk to your manager about boundaries around after-hours work', prompt: "You've been receiving messages late at night. Raise the topic of work-life balance with your manager professionally."),
+    CommuniqLevel(id: 65, title: 'Making a recommendation', category: 'Communication', scenario: 'Recommend a tool or software to your team', prompt: "You've discovered a tool that could improve your team's workflow. Present your recommendation clearly and persuasively."),
+    CommuniqLevel(id: 66, title: 'Talking about a project', category: 'Professional', scenario: 'Describe your current project to someone outside your field', prompt: "A family member asks what you've been working on. Explain your project in a way a non-expert would find interesting and clear."),
+    CommuniqLevel(id: 67, title: 'Joining a conversation', category: 'Social', scenario: 'Join a group conversation at a social event', prompt: "You're at a gathering and a group is already deep in conversation. Enter the conversation naturally without interrupting rudely."),
+    CommuniqLevel(id: 68, title: 'Saying goodbye', category: 'Social', scenario: 'Say goodbye to a colleague who is leaving the company', prompt: "A teammate you've worked closely with is moving on. Send them off warmly and meaningfully in person."),
+    CommuniqLevel(id: 69, title: 'Discussing a book or film', category: 'Social', scenario: 'Talk about a recently watched film with a classmate', prompt: 'You and a classmate both watched the same film. Have a genuine back-and-forth conversation sharing your reactions and opinions.'),
+    CommuniqLevel(id: 70, title: 'Talking about health', category: 'Social', scenario: 'Discuss a health concern with a doctor', prompt: "You have a health concern you've been putting off. Describe your symptoms clearly and ask the right questions."),
+    CommuniqLevel(id: 71, title: 'Handling interruptions', category: 'Communication', scenario: 'Manage being interrupted repeatedly during a meeting', prompt: 'You keep getting cut off while speaking in a team meeting. Handle the interruptions assertively but professionally.'),
+    CommuniqLevel(id: 72, title: 'Expressing disagreement via email', category: 'Professional', scenario: 'Push back on a decision made by a colleague over email', prompt: "A colleague sent an email proposing something you disagree with. Write a professional response that challenges their position constructively."),
+    CommuniqLevel(id: 73, title: 'Talking about diversity', category: 'Social', scenario: 'Discuss inclusion and diversity with a colleague from a different background', prompt: 'A conversation at work naturally moves toward diversity and inclusion. Navigate it thoughtfully, respectfully, and openly.'),
+    CommuniqLevel(id: 74, title: 'Handling a misquote', category: 'Professional', scenario: 'Correct someone who misquoted what you said in a meeting', prompt: 'A colleague referenced something you said — but got it wrong. Politely correct the record in front of others.'),
+    CommuniqLevel(id: 75, title: 'Making introductions', category: 'Social', scenario: "Introduce two people who don't know each other at an event", prompt: "You're with two people from different parts of your life. Introduce them to each other in a way that gives them something to connect over."),
+    CommuniqLevel(id: 76, title: 'Declining an offer gracefully', category: 'Professional', scenario: "Turn down a job offer you've received", prompt: "You've been offered a role but have decided not to take it. Decline in a way that leaves a good impression."),
+    CommuniqLevel(id: 77, title: "Asking about someone's work", category: 'Social', scenario: 'Show genuine interest in what a new acquaintance does for a living', prompt: "You've just met someone at a gathering. Ask about their work in a way that's curious and engaging, not interrogative."),
+    CommuniqLevel(id: 78, title: 'Talking about travel', category: 'Social', scenario: 'Share your travel experiences with a group of new friends', prompt: 'The conversation turns to travel. Share a memorable trip in a way that\'s vivid and draws others in.'),
+    CommuniqLevel(id: 79, title: 'Navigating office politics', category: 'Professional', scenario: 'Handle a politically sensitive topic in a team discussion', prompt: 'A sensitive internal topic comes up in a meeting. Navigate it diplomatically without taking sides or causing tension.'),
+    CommuniqLevel(id: 80, title: 'Expressing enthusiasm', category: 'Communication', scenario: 'Show genuine excitement about a new project opportunity', prompt: "You've been assigned an exciting new project. Express your enthusiasm to your team in a way that energises the room."),
+    CommuniqLevel(id: 81, title: 'Providing a reference', category: 'Professional', scenario: 'Speak as a reference for a former colleague applying for a job', prompt: 'A past colleague has listed you as a reference. Give a structured, honest, and positive verbal reference over the phone.'),
+    CommuniqLevel(id: 82, title: 'Discussing learning and growth', category: 'Professional', scenario: 'Talk about your learning goals with a manager during a check-in', prompt: 'Your manager asks what skills you want to develop. Have a thoughtful conversation about your professional growth plan.'),
+    CommuniqLevel(id: 83, title: 'Giving a toast', category: 'Social', scenario: "Give a short toast at a friend's birthday dinner", prompt: "You've been asked to say a few words at your friend's birthday. Give a heartfelt, engaging 1-minute toast."),
+    CommuniqLevel(id: 84, title: 'Resolving a billing issue', category: 'Professional', scenario: 'Dispute an incorrect charge with a service provider', prompt: 'Your invoice has an error. Call customer service and dispute the charge calmly and effectively.'),
+    CommuniqLevel(id: 85, title: 'Sharing an unpopular opinion', category: 'Communication', scenario: 'Voice a minority viewpoint in a group discussion', prompt: "Everyone in the room seems to agree on something you disagree with. Share your opposing view diplomatically."),
+    CommuniqLevel(id: 86, title: 'Leaving a voicemail', category: 'Professional', scenario: "Leave a professional voicemail for a client you couldn't reach", prompt: "Your client didn't pick up. Leave a clear, concise voicemail that prompts them to call back."),
+    CommuniqLevel(id: 87, title: 'Talking about money problems', category: 'Social', scenario: 'Discuss financial stress with a trusted family member', prompt: "You're going through a tough financial period. Open up to a family member and ask for advice or support."),
+    CommuniqLevel(id: 88, title: 'Managing expectations', category: 'Professional', scenario: "Tell a client that their expectations are unrealistic", prompt: "A client expects results that aren't achievable in their given timeline or budget. Reset their expectations professionally."),
+    CommuniqLevel(id: 89, title: 'Responding to a rumour', category: 'Professional', scenario: "Address a rumour about yourself that's circulating at work", prompt: 'A false rumour is going around about you at the office. Address it directly with the person most likely spreading it.'),
+    CommuniqLevel(id: 90, title: 'Explaining a delay', category: 'Professional', scenario: 'Inform a client that a deliverable will be late', prompt: 'Something unexpected has pushed back your delivery date. Call the client, explain the situation, and propose a new timeline.'),
+    CommuniqLevel(id: 91, title: 'Talking about education', category: 'Social', scenario: 'Discuss your academic journey with a younger student looking for advice', prompt: 'A first-year student asks you about your college experience. Share genuinely useful advice and personal insights.'),
+    CommuniqLevel(id: 92, title: 'Helping someone in distress', category: 'Social', scenario: 'Support a stranger who seems lost or upset in a public space', prompt: 'You notice someone nearby who seems distressed. Approach and offer help sensitively without overstepping.'),
+    CommuniqLevel(id: 93, title: 'Disagreeing with a group decision', category: 'Leadership', scenario: 'Speak up against a team consensus you believe is wrong', prompt: "Your team has reached a conclusion you think is mistaken. Challenge the group decision thoughtfully without dismissing others."),
+    CommuniqLevel(id: 94, title: 'Talking about remote work', category: 'Professional', scenario: 'Discuss remote work preferences with your manager', prompt: 'You prefer working from home but your manager wants people in the office. Make your case respectfully.'),
+    CommuniqLevel(id: 95, title: 'Giving credit to others', category: 'Leadership', scenario: "Acknowledge your team's contribution during a project wrap-up", prompt: "Your project was a success. Publicly recognise each team member's specific contribution in a sincere, meaningful way."),
+    CommuniqLevel(id: 96, title: 'Discussing ethical dilemmas', category: 'Professional', scenario: 'Talk through a workplace ethical conflict with a trusted colleague', prompt: "You've witnessed something at work that doesn't sit right with you ethically. Talk it through with a colleague you trust."),
+    CommuniqLevel(id: 97, title: 'Making small talk in a lift', category: 'Social', scenario: 'Have a brief, friendly exchange with someone in an elevator', prompt: 'You step into a lift with a colleague you barely know. Fill 30 seconds with natural, easy small talk.'),
+    CommuniqLevel(id: 98, title: 'Pitching a side project', category: 'Professional', scenario: 'Pitch a personal side project to a potential collaborator', prompt: 'You have a side project idea and want someone to join you. Pitch it compellingly to a peer in under 2 minutes.'),
+    CommuniqLevel(id: 99, title: 'Discussing team dynamics', category: 'Leadership', scenario: 'Talk honestly with your manager about a team friction issue', prompt: "There's a noticeable tension in your team affecting productivity. Bring it up with your manager constructively."),
+    CommuniqLevel(id: 100, title: 'Reconnecting with someone', category: 'Social', scenario: "Reach out to an old friend you haven't spoken to in years", prompt: "You want to reconnect with someone from your past. Start the conversation in a way that's warm, natural, and not awkward."),
+
+    // ── HARD (101–150) ────────────────────────────────────────────────────────
+    CommuniqLevel(id: 101, title: 'Managing up', category: 'Leadership', scenario: "Influence your manager's decision without overstepping", prompt: "You believe your manager is about to make a poor call. Influence the outcome through persuasion and tact, not authority."),
+    CommuniqLevel(id: 102, title: 'Crisis communication', category: 'Professional', scenario: 'Address a team during a company-wide crisis', prompt: 'Your company is facing a serious public crisis. Address your team — acknowledge the situation, reassure them, and outline next steps.'),
+    CommuniqLevel(id: 103, title: 'Navigating a hostile interview', category: 'Professional', scenario: 'Perform under pressure in an aggressive panel interview', prompt: 'The interview panel is deliberately confrontational. Remain composed, assertive, and articulate under sustained pressure.'),
+    CommuniqLevel(id: 104, title: 'Delivering a eulogy', category: 'Communication', scenario: 'Speak at a memorial service for a respected mentor', prompt: "You've been asked to give a eulogy. Write and deliver a 2-minute tribute that is heartfelt, composed, and honourable."),
+    CommuniqLevel(id: 105, title: 'Confronting a peer', category: 'Professional', scenario: 'Address a colleague who is taking credit for your work', prompt: 'A colleague has been presenting your ideas as their own in meetings. Confront them directly but without causing a scene.'),
+    CommuniqLevel(id: 106, title: 'Communicating under uncertainty', category: 'Leadership', scenario: "Update your team when you don't have all the answers", prompt: "Your organisation is going through major changes and your team is anxious. Lead a team meeting where you acknowledge uncertainty while maintaining confidence."),
+    CommuniqLevel(id: 107, title: 'Negotiating a partnership deal', category: 'Professional', scenario: 'Negotiate terms of a strategic partnership with another company', prompt: "You're in a high-stakes partnership negotiation. Represent your organisation's interests firmly while finding mutually beneficial ground."),
+    CommuniqLevel(id: 108, title: 'Responding to a media question', category: 'Communication', scenario: "Answer a journalist's difficult question on behalf of your organisation", prompt: "A reporter asks you a sharp, uncomfortable question about your company. Give a composed, measured response that protects your organisation's reputation."),
+    CommuniqLevel(id: 109, title: 'Handling a whistleblower situation', category: 'Leadership', scenario: 'Navigate a conversation with an employee who has raised a serious concern', prompt: 'A team member has come to you with a serious allegation against another colleague. Handle the conversation with gravity, sensitivity, and process.'),
+    CommuniqLevel(id: 110, title: 'Giving a TED-style talk', category: 'Communication', scenario: 'Deliver a 5-minute idea-driven talk to a live audience', prompt: "You've been given 5 minutes on a stage to share an idea worth spreading. Structure and deliver a compelling, memorable talk."),
+    CommuniqLevel(id: 111, title: 'Cross-cultural negotiation', category: 'Professional', scenario: 'Negotiate a deal with a partner from a very different cultural background', prompt: "You're in a business negotiation with someone whose cultural communication norms differ significantly from yours. Navigate it with awareness and respect."),
+    CommuniqLevel(id: 112, title: 'Talking to the board', category: 'Leadership', scenario: 'Present a difficult recommendation to your board of directors', prompt: 'You need to recommend a major strategic shift that not all board members will like. Present it with clarity, evidence, and confidence.'),
+    CommuniqLevel(id: 113, title: 'Handling a PR crisis on social media', category: 'Communication', scenario: 'Respond to a viral negative post about your organisation', prompt: 'A post criticising your company has gone viral. Draft and deliver a public response that is transparent, calm, and credible.'),
+    CommuniqLevel(id: 114, title: 'Leading change', category: 'Leadership', scenario: "Announce a major organisational change to a resistant team", prompt: "Your team must adopt a significant new process they didn't ask for. Communicate the change in a way that gets buy-in, not pushback."),
+    CommuniqLevel(id: 115, title: 'Speaking truth to power', category: 'Leadership', scenario: "Challenge a senior leader's strategy directly", prompt: "You have data suggesting your CEO's strategy is flawed. Make your case respectfully but boldly in a leadership meeting."),
+    CommuniqLevel(id: 116, title: 'Facilitating a difficult workshop', category: 'Leadership', scenario: 'Run a workshop where participants are disengaged or combative', prompt: "You're facilitating a session and the room isn't cooperating — people are disengaged or argumentative. Regain control and redirect the energy."),
+    CommuniqLevel(id: 117, title: 'Survivor interview', category: 'Professional', scenario: 'Conduct a sensitive exit interview with a valued employee who is leaving due to burnout', prompt: 'A high-performing team member is leaving because they burned out under your leadership. Conduct the exit interview with honesty, accountability, and care.'),
+    CommuniqLevel(id: 118, title: 'Accepting an apology', category: 'Social', scenario: 'Respond to a sincere apology from someone who wronged you seriously', prompt: 'Someone who genuinely hurt you is now apologising. Respond in a way that is honest about your feelings while choosing how to move forward.'),
+    CommuniqLevel(id: 119, title: 'Giving a difficult performance review', category: 'Leadership', scenario: "Deliver a negative performance review to an employee who thinks they're doing well", prompt: "Your team member expects a glowing review, but their performance has been below par. Deliver the truth with kindness and a clear improvement plan."),
+    CommuniqLevel(id: 120, title: 'Debating a policy publicly', category: 'Communication', scenario: 'Argue your position in a structured public policy debate', prompt: "You're in a formal debate on a complex policy issue. Present your argument, counter your opponent's points, and close persuasively — all in front of an audience."),
+    CommuniqLevel(id: 121, title: 'Communicating grief', category: 'Social', scenario: 'Talk to your employer about needing time off following a bereavement', prompt: "You've just lost someone close to you. Communicate your need for compassionate leave to your manager with dignity."),
+    CommuniqLevel(id: 122, title: 'Handling a hostile audience', category: 'Communication', scenario: 'Continue speaking when an audience becomes openly critical', prompt: "You're mid-presentation and the audience starts pushing back aggressively. Hold your ground, listen actively, and redirect the room."),
+    CommuniqLevel(id: 123, title: 'Announcing a strategic failure', category: 'Leadership', scenario: "Tell your company's stakeholders that a key strategy didn't work", prompt: "A major initiative you championed has failed. Communicate this to stakeholders honestly while maintaining credibility and proposing a path forward."),
+    CommuniqLevel(id: 124, title: 'Managing a star performer', category: 'Leadership', scenario: 'Give honest developmental feedback to your best employee', prompt: "Your top performer has a blind spot that's holding them back. Give them feedback they're not expecting in a way they can actually hear."),
+    CommuniqLevel(id: 125, title: 'Navigating taboo topics', category: 'Social', scenario: 'Handle a conversation that drifts into a sensitive personal topic', prompt: 'A social conversation moves toward a topic — religion, politics, personal tragedy — that makes you uncomfortable. Navigate away from it gracefully.'),
+    CommuniqLevel(id: 126, title: 'Emergency communication', category: 'Professional', scenario: 'Communicate critical safety information quickly and clearly in a crisis', prompt: 'An unexpected emergency arises in your building. Communicate instructions to a group of panicked people calmly, quickly, and clearly.'),
+    CommuniqLevel(id: 127, title: 'Making a difficult ask', category: 'Leadership', scenario: 'Ask a senior stakeholder for a significant favour', prompt: 'You need something substantial from someone with far more power than you. Make the ask confidently, with a clear value exchange.'),
+    CommuniqLevel(id: 128, title: 'Cold outreach to a high-profile contact', category: 'Professional', scenario: "Reach out to a well-known industry figure you've never met", prompt: 'You want to connect with someone influential who gets hundreds of messages. Craft an outreach that stands out and gets a response.'),
+    CommuniqLevel(id: 129, title: 'Mediating between leadership and staff', category: 'Leadership', scenario: 'Bridge the gap between frustrated employees and senior management', prompt: "Staff morale is low and leadership is out of touch. You're caught in the middle. Mediate between the two sides fairly and constructively."),
+    CommuniqLevel(id: 130, title: 'Closing a high-value deal', category: 'Professional', scenario: 'Close a major sales deal in a final negotiation meeting', prompt: "You're in the final meeting to close a deal worth a lot to your company. Seal it with confidence, address last-minute objections, and get the yes."),
+    CommuniqLevel(id: 131, title: 'Communicating a vision', category: 'Leadership', scenario: 'Inspire a sceptical team with a long-term vision', prompt: 'You have a bold vision for where your team should go, but many are cynical. Make them believe in it — and in you.'),
+    CommuniqLevel(id: 132, title: 'Talking a friend through a crisis', category: 'Social', scenario: 'Support a friend who is on the verge of making a destructive decision', prompt: 'A close friend is about to do something you believe will seriously harm them. Intervene with care, honesty, and love — not control.'),
+    CommuniqLevel(id: 133, title: 'Navigating a high-conflict conversation', category: 'Communication', scenario: 'De-escalate a conversation that has become heated and personal', prompt: "A professional conversation has turned emotional and hostile. De-escalate it without dismissing either party's concerns."),
+    CommuniqLevel(id: 134, title: 'Legacy communication', category: 'Leadership', scenario: 'Communicate what you stand for to a new generation of your organisation', prompt: "You're stepping back from a long-held leadership role. Leave behind a statement — spoken or written — that captures the values you built the team around."),
+    CommuniqLevel(id: 135, title: 'Responding to a job rejection', category: 'Professional', scenario: 'Reply professionally and gracefully to a job rejection email', prompt: "You didn't get the job you really wanted. Respond to the rejection in a way that leaves the door open for future opportunities."),
+    CommuniqLevel(id: 136, title: 'Raising a safeguarding concern', category: 'Professional', scenario: "Report a concern about a vulnerable person's welfare to the appropriate authority", prompt: "You've noticed warning signs that a colleague or student may be in an unsafe situation. Report your concern clearly, factually, and sensitively."),
+    CommuniqLevel(id: 137, title: 'Handling false accusations', category: 'Professional', scenario: 'Defend yourself against a false accusation made in a professional setting', prompt: "You've been falsely accused of something serious at work. Respond with composure, facts, and dignity — not defensiveness."),
+    CommuniqLevel(id: 138, title: 'Talking about mental health at work', category: 'Professional', scenario: 'Disclose a mental health challenge to your manager', prompt: "You're struggling with your mental health and it's affecting your work. Tell your manager in a way that is honest, professional, and asks for what you need."),
+    CommuniqLevel(id: 139, title: 'Challenging groupthink', category: 'Leadership', scenario: 'Break a cycle of groupthink in a leadership team meeting', prompt: 'Your leadership team keeps agreeing with each other without real debate. Disrupt the pattern constructively by challenging assumptions and inviting dissent.'),
+    CommuniqLevel(id: 140, title: 'Giving feedback upward', category: 'Leadership', scenario: "Give honest feedback to your own manager about their leadership", prompt: "Your manager has a pattern that's negatively affecting the team. Give them constructive upward feedback with tact and courage."),
+    CommuniqLevel(id: 141, title: 'Communicating across generations', category: 'Communication', scenario: 'Bridge a communication gap between older and younger team members', prompt: 'Your team has a noticeable generational divide causing friction. Address it openly and help both sides communicate more effectively.'),
+    CommuniqLevel(id: 142, title: 'Accepting public criticism gracefully', category: 'Communication', scenario: 'Respond to public criticism of your work at a conference Q&A', prompt: 'During a Q&A at a public event, someone challenges your work sharply in front of an audience. Respond with poise and intellectual honesty.'),
+    CommuniqLevel(id: 143, title: 'Navigating a power imbalance', category: 'Professional', scenario: 'Advocate for yourself in a conversation with someone who has authority over you', prompt: 'You need to push back on a decision made by someone with significant power over your career. Do it firmly, professionally, and without burning bridges.'),
+    CommuniqLevel(id: 144, title: 'Leading a post-mortem', category: 'Leadership', scenario: 'Facilitate a project post-mortem after a high-profile failure', prompt: 'A major project went badly wrong. Lead a post-mortem meeting that is honest, blame-free, and genuinely focused on learning.'),
+    CommuniqLevel(id: 145, title: 'Storytelling for fundraising', category: 'Communication', scenario: 'Use a personal story to inspire donors at a fundraising event', prompt: "You're speaking at a charity gala. Use a real or compelling narrative to move your audience to donate generously."),
+    CommuniqLevel(id: 146, title: 'Refusing an unethical request', category: 'Professional', scenario: 'Decline a request from a senior figure that crosses an ethical line', prompt: 'Someone with authority over you asks you to do something you believe is unethical. Refuse clearly, professionally, and without backing down.'),
+    CommuniqLevel(id: 147, title: 'Communicating during layoffs', category: 'Leadership', scenario: 'Deliver the news of role eliminations to affected employees individually', prompt: 'You must tell individuals one-on-one that their role has been made redundant. Handle each conversation with humanity, clarity, and respect.'),
+    CommuniqLevel(id: 148, title: 'Building consensus across teams', category: 'Leadership', scenario: 'Align multiple departments on a shared decision', prompt: 'Three departments have conflicting priorities around a key initiative. Facilitate alignment and bring them to a shared decision.'),
+    CommuniqLevel(id: 149, title: 'Recovering from a public mistake', category: 'Communication', scenario: 'Address a significant error you made publicly and move forward', prompt: 'You made a notable mistake that others witnessed. Acknowledge it fully, take ownership, and redirect the narrative constructively.'),
+    CommuniqLevel(id: 150, title: 'Communicating values under pressure', category: 'Leadership', scenario: 'Hold firm on your principles in a high-pressure business meeting', prompt: "You're being pushed hard to compromise on something that goes against your values. Articulate your position clearly and hold your ground with composure."),
+  ];
 }
