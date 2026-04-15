@@ -1,32 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/constants/glow.dart';
 
 class StartRoleplayCard extends StatelessWidget {
   final VoidCallback onStart;
+  final bool isCustom;
 
-  const StartRoleplayCard({super.key, required this.onStart});
+  const StartRoleplayCard({
+    super.key, 
+    required this.onStart,
+    this.isCustom = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.s24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.border,
-          width: 1,
+          color: AppColors.primary.withValues(alpha: 0.3),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.05),
-            blurRadius: 20,
-            spreadRadius: 2,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: AppGlow.mixedGlow(blurRadius: 18, spreadRadius: 2),
       ),
       child: Stack(
         children: [
@@ -34,24 +31,28 @@ class StartRoleplayCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Start New Roleplay',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                isCustom ? 'Custom Roleplay' : 'Start Selected',
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              const SizedBox(height: AppSpacing.s8),
+              const SizedBox(height: 8),
               SizedBox(
                 width: MediaQuery.of(context).size.width * 0.55,
                 child: Text(
-                  'Choose your scenario and begin your immersive AI session.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                        height: 1.4,
-                      ),
+                  isCustom 
+                      ? 'Create your own scenario and start practicing'
+                      : 'Configure advanced options or jump right in',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                    fontSize: 14,
+                  ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.s24),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: onStart,
                 style: ElevatedButton.styleFrom(
@@ -73,8 +74,8 @@ class StartRoleplayCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(16),
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.psychology,

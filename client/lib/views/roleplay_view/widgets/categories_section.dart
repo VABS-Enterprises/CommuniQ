@@ -1,153 +1,142 @@
 import 'package:flutter/material.dart';
-import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/constants/app_colors.dart';
-import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
+import 'package:communiq/views/roleplay_view/screens/all_scenarios_page.dart';
 
-class CategoriesSection extends StatefulWidget {
-  const CategoriesSection({super.key});
+class CategoriesSection extends StatelessWidget {
+  final Map<String, dynamic>? selectedScenario;
+  final ValueChanged<Map<String, dynamic>?> onSelect;
 
-  @override
-  State<CategoriesSection> createState() => _CategoriesSectionState();
-}
-
-class _CategoriesSectionState extends State<CategoriesSection> {
-  int _selectedIndex = -1;
-
-  final List<Map<String, dynamic>> _categories = [
-    {'title': 'Assertiveness', 'icon': Icons.bolt},
-    {'title': 'Leadership', 'icon': Icons.groups},
-    {'title': 'Negotiation', 'icon': Icons.handshake},
-  ];
+  const CategoriesSection({
+    super.key,
+    required this.selectedScenario,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final List<Map<String, dynamic>> displayedCategories = [
+      {'title': 'Assertiveness', 'icon': Icons.bolt, 'scenario': 'Say no politely to extra work', 'persona': 'Strict Boss'},
+      {'title': 'Leadership', 'icon': Icons.groups, 'scenario': 'Guide a struggling team member through a project delay', 'persona': 'Friendly Mentor'},
+      {'title': 'Negotiation', 'icon': Icons.handshake, 'scenario': 'Negotiate a larger budget for your department', 'persona': 'Angry Client'},
+      {'title': 'Small Talk', 'icon': Icons.chat_bubble_outline, 'scenario': 'Network at a corporate event', 'persona': 'Friendly Stranger'},
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
+            const Text(
               'Scenarios',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const RoleplaySetupScreen(mode: 'custom'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AllScenariosPage()),
+                );
+              },
+              child: const Text(
+                'View All →',
+                style: TextStyle(
+                  color: AppColors.primaryLight,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
-              ),
-              child: Text(
-                'VIEW ALL',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.primaryLight,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.0,
-                    ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.s16),
-        SizedBox(
-          height: 140,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: _categories.length,
-            separatorBuilder: (context, index) => const SizedBox(width: AppSpacing.s16),
-            itemBuilder: (context, index) {
-              final isSelected = _selectedIndex == index;
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedIndex = index;
-                  });
-                  
-                  String prefilledScenario = '';
-                  String prefilledPersona = 'Friendly Mentor';
-                  
-                  switch (_categories[index]['title']) {
-                    case 'Assertiveness':
-                      prefilledScenario = 'Say no politely to extra work';
-                      prefilledPersona = 'Strict Boss';
-                      break;
-                    case 'Leadership':
-                      prefilledScenario = 'Guide a struggling team member through a project delay';
-                      prefilledPersona = 'Friendly Mentor';
-                      break;
-                    case 'Negotiation':
-                      prefilledScenario = 'Negotiate a larger budget for your department';
-                      prefilledPersona = 'Angry Client';
-                      break;
-                  }
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => RoleplaySetupScreen(
-                        mode: 'prefilled',
-                        scenario: prefilledScenario,
-                        persona: prefilledPersona,
-                        difficulty: 'Medium',
-                        category: _categories[index]['title'],
-                      ),
-                    ),
-                  ).then((_) {
-                    if (mounted) setState(() => _selectedIndex = -1);
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 120,
-                  padding: const EdgeInsets.all(AppSpacing.s16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.border,
-                      width: isSelected ? 1.5 : 1.0,
-                    ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              spreadRadius: 2,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        _categories[index]['icon'],
-                        color: isSelected ? AppColors.primaryLight : AppColors.textMuted,
-                        size: 28,
-                      ),
-                      const Spacer(),
-                      Text(
-                        _categories[index]['title'],
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+        const SizedBox(height: 16),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.1,
           ),
+          itemCount: displayedCategories.length,
+          itemBuilder: (context, index) {
+            final item = displayedCategories[index];
+            final isSelected = selectedScenario != null && selectedScenario!['title'] == item['title'];
+            return _ScenarioGridCard(
+              item: item,
+              isSelected: isSelected,
+              onTap: () => onSelect(item),
+            );
+          },
         ),
       ],
+    );
+  }
+}
+
+class _ScenarioGridCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ScenarioGridCard({
+    required this.item,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              item['icon'],
+              color: isSelected ? AppColors.primary : AppColors.primaryLight,
+              size: 28,
+            ),
+            const Spacer(),
+            Text(
+              item['title'],
+              style: TextStyle(
+                color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                fontSize: 14,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
