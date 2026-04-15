@@ -60,6 +60,17 @@ Expected output: a short response from the LLM printed to the terminal. If you s
 
 This is more than sufficient for a development prototype.
 
+### Optional — hosted model via OpenAI-compatible API
+
+If a teammate deploys a fine-tuned model behind **Together**, **OpenRouter**, **OpenAI**, or any server that speaks `POST /v1/chat/completions` with a Bearer key:
+
+1. In `ai-server/.env` set `LLM_BACKEND=openai_compat` (and/or `EVAL_LLM_BACKEND=openai_compat` if evaluation should use the same provider).
+2. Set `OPENAI_COMPAT_BASE_URL` to the API root (examples: `https://api.openai.com`, `https://api.together.xyz/v1`, `https://openrouter.ai/api/v1`).
+3. Set `OPENAI_COMPAT_API_KEY` to the provider’s API key.
+4. Set `LLM_MODEL` and `EVAL_LLM_MODEL` to that provider’s **model id** strings.
+
+Keep `ASR_BACKEND=groq` and `TTS_BACKEND=edge` if you still want Groq Whisper and free Edge TTS for live voice. No GPU is required on your machine.
+
 ---
 
 ## 2. edge-tts — Default Text-to-Speech
@@ -187,8 +198,12 @@ For the `/conversation` test, drop a short voice recording (any format: m4a, wav
 ## 6. Troubleshooting
 
 **`GROQ_API_KEY is not set` on server start**
-- Make sure `ai-server/.env` exists (not just `.env.example`)
-- Make sure you are running uvicorn from the `ai-server/` directory, not from a parent folder
+- Happens when any of `ASR_BACKEND`, `LLM_BACKEND`, or `EVAL_LLM_BACKEND` is `groq` but the key is missing.
+- Either set `GROQ_API_KEY`, or switch those backends to `openai_compat` / local options and set the matching env vars.
+- Make sure `ai-server/.env` exists and you run uvicorn from the `ai-server/` directory.
+
+**`OPENAI_COMPAT_*` error on server start**
+- You set `LLM_BACKEND=openai_compat` or `EVAL_LLM_BACKEND=openai_compat` but left `OPENAI_COMPAT_BASE_URL` or `OPENAI_COMPAT_API_KEY` empty.
 
 **TTS produces silence or fails**
 - By default edge-tts is used. If it fails, check your internet connection (edge-tts calls Microsoft's servers)

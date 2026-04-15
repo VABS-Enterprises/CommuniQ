@@ -98,6 +98,25 @@ async function sendTurnToFastApi(
  * @param {string} scenarioType
  * @returns {{ scores, fillerWordCount, fillerWords, strengths, improvements, recommendedNextType }}
  */
+/**
+ * Opening line: LLM + TTS only (no STT). Colab parity — same contract as turn audio fields.
+ */
+async function sendOpeningToFastApi(sessionId, systemPrompt) {
+  try {
+    const response = await axios.post(
+      `${FASTAPI_URL}/session/opening`,
+      { sessionId, systemPrompt },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 90000,
+      }
+    );
+    return response.data;
+  } catch (err) {
+    handleAxiosError(err, 'opening');
+  }
+}
+
 async function evaluateSession(sessionId, fullTranscript, scenarioType) {
   try {
     const response = await axios.post(
@@ -111,4 +130,4 @@ async function evaluateSession(sessionId, fullTranscript, scenarioType) {
   }
 }
 
-module.exports = { sendTurnToFastApi, evaluateSession };
+module.exports = { sendTurnToFastApi, sendOpeningToFastApi, evaluateSession };

@@ -1,6 +1,28 @@
 from pydantic import BaseModel, field_validator
 
 
+class OpeningRequest(BaseModel):
+    """JSON body for POST /session/opening — AI speaks first (no user audio)."""
+
+    sessionId: str
+    systemPrompt: str
+
+    @field_validator("systemPrompt")
+    @classmethod
+    def validate_system_prompt(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("systemPrompt must not be empty.")
+        return v
+
+
+class OpeningResponse(BaseModel):
+    """Response from POST /session/opening — matches Node opening route."""
+
+    aiReply: str
+    aiAudioBase64: str
+
+
 class TurnResponse(BaseModel):
     """
     Response from POST /session/turn.

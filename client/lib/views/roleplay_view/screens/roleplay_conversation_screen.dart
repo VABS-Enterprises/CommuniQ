@@ -14,6 +14,8 @@ import 'package:speech_to_text/speech_to_text.dart';
 
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/spacing.dart';
+import 'package:communiq/core/services/api_service.dart';
+import 'package:communiq/core/services/live_voice_service.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/roleplay_config.dart';
@@ -27,6 +29,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 //      └──────────────────[AI finishes or INTERRUPT]─────────────┘
 //
 enum _ConvState { user_turn, processing, ai_speaking, ending }
+
+/// Colab parity: opening plays once; after each turn the AI clip plays twice before mic.
+enum _AiPlaybackStage { none, afterOpening, afterTurnFirstPlay, afterTurnReplay }
 
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
@@ -62,8 +67,11 @@ class _RoleplayConversationScreenState
   late AnimationController _waveformController;
 
   // ─── Session state ────────────────────────────────────────────────────────────
-  _ConvState _state = _ConvState.user_turn;
+  _ConvState _state = _ConvState.processing;
   final List<Map<String, String>> _conversationHistory = [];
+  _AiPlaybackStage _aiPlaybackStage = _AiPlaybackStage.none;
+  /// Last turn’s AI audio bytes (base64) — replayed once before the next mic (Colab).
+  String? _lastAiAudioForReplay;
 
   // The text shown in the large conversation card and who is speaking.
   // Updated on every meaningful state change.
@@ -112,6 +120,15 @@ class _RoleplayConversationScreenState
   String? _recordingPath;
   final List<String> _tempFiles = [];
 
+  // ─── CP2: Live voice (LiveKit WebRTC) ─────────────────────────────────────────
+  // Created lazily when the user opts into live voice mode.
+  // Null when using classic HTTP mode (press-Send, upload WAV).
+  LiveVoiceService? _liveVoiceService;
+  bool _isLiveVoiceActive = false;
+
+  /// Server said opening response included LiveKit — we connect after the HTTP opening audio finishes.
+  bool _serverLiveVoiceEnabled = false;
+
   // ─── Init / Dispose ───────────────────────────────────────────────────────────
 
   @override
@@ -139,7 +156,11 @@ class _RoleplayConversationScreenState
     _initStt();
     _startTimer();
     _audioPlayer.playerStateStream.listen(_onPlayerStateChange);
-    _startMic();
+    if (_isDemoMode) {
+      _bootstrapDemoOpening();
+    } else {
+      _bootstrapRealOpening();
+    }
   }
 
   @override
@@ -153,8 +174,43 @@ class _RoleplayConversationScreenState
     _recorder.dispose();
     _audioPlayer.dispose();
     _stt.cancel();
+    _liveVoiceService?.dispose();
     _cleanupTempFiles();
     super.dispose();
+  }
+
+  // ─── CP2: Live voice helpers ──────────────────────────────────────────────────
+
+  /// Connect to LiveKit for the current session.
+  /// Falls back to classic HTTP mode silently if the server does not support it.
+  Future<void> _connectLiveVoice() async {
+    if (_isDemoMode || widget.sessionId.isEmpty) return;
+    if (_isLiveVoiceActive) return;
+    try {
+      final svc = LiveVoiceService(ApiService.instance.dio);
+      await svc.connect(widget.sessionId);
+      if (mounted) {
+        setState(() {
+          _liveVoiceService = svc;
+          _isLiveVoiceActive = true;
+        });
+      }
+      debugPrint('[LiveVoice] Live voice mode active — session=${widget.sessionId}');
+    } on LiveVoiceException catch (e) {
+      debugPrint('[LiveVoice] Falling back to classic HTTP mode: $e');
+      // Non-fatal — classic HTTP mode continues as before.
+    }
+  }
+
+  /// Disconnect from LiveKit at session end or on dispose.
+  Future<void> _disconnectLiveVoice() async {
+    if (!_isLiveVoiceActive) return;
+    await _liveVoiceService?.disconnect();
+    if (mounted) {
+      setState(() {
+        _isLiveVoiceActive = false;
+      });
+    }
   }
 
   // ─── Speech-to-text ───────────────────────────────────────────────────────────
@@ -199,6 +255,67 @@ class _RoleplayConversationScreenState
     if (_sttAvailable) {
       _stt.stop();
     }
+  }
+
+  int get _completedUserTurns =>
+      _conversationHistory.where((m) => m['role'] == 'user').length;
+
+  /// Demo: scripted opener on card, then mic (no backend, no Colab replay).
+  void _bootstrapDemoOpening() {
+    setState(() {
+      _state = _ConvState.processing;
+      _cardText = '';
+      _cardAnimKey++;
+    });
+    Future<void>.microtask(() async {
+      await Future.delayed(const Duration(milliseconds: 900));
+      if (!mounted) return;
+      final opener = _demoReplies.first;
+      _conversationHistory.add({'role': 'ai', 'transcript': opener});
+      setState(() {
+        _state = _ConvState.ai_speaking;
+        _cardText = opener;
+        _cardAnimKey++;
+      });
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return;
+      _aiPlaybackStage = _AiPlaybackStage.none;
+      await _startMic();
+    });
+  }
+
+  void _bootstrapRealOpening() {
+    Future<void>.microtask(() async {
+      try {
+        final opening = await SessionService.instance
+            .fetchOpening(sessionId: widget.sessionId);
+        if (!mounted) return;
+        _serverLiveVoiceEnabled = opening.liveVoiceEnabled;
+        _conversationHistory.add({
+          'role': 'ai',
+          'transcript': opening.aiReply,
+        });
+        setState(() {
+          _state = _ConvState.ai_speaking;
+          _cardText = opening.aiReply;
+          _cardAnimKey++;
+        });
+        _aiPlaybackStage = _AiPlaybackStage.afterOpening;
+        await _playBase64Audio(opening.aiAudioBase64);
+      } catch (e) {
+        debugPrint('❌ [Conversation] Opening failed: $e');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_friendlyError(e.toString())),
+            backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        _aiPlaybackStage = _AiPlaybackStage.none;
+        await _startMic();
+      }
+    });
   }
 
   // ─── Timer ────────────────────────────────────────────────────────────────────
@@ -261,6 +378,23 @@ class _RoleplayConversationScreenState
       return;
     }
 
+    // LiveKit is already publishing the mic — do not start the file recorder
+    // (Android: record + WebRTC mic together breaks audio focus).
+    if (_isLiveVoiceActive) {
+      _micStartTime = DateTime.now();
+      _liveTranscript = '';
+      if (!mounted) return;
+      setState(() {
+        _state = _ConvState.user_turn;
+        _cardText = 'Live voice — speak with the AI';
+        _cardAnimKey++;
+      });
+      _pulseController.duration = const Duration(milliseconds: 800);
+      _pulseController.repeat(reverse: true);
+      debugPrint('🎙 [Conversation] Live voice user turn (no file recorder)');
+      return;
+    }
+
     final dir = await getTemporaryDirectory();
     _recordingPath =
         '${dir.path}/turn_${DateTime.now().millisecondsSinceEpoch}.wav';
@@ -276,7 +410,7 @@ class _RoleplayConversationScreenState
     );
 
     _micStartTime = DateTime.now();
-    debugPrint('✅ [Conversation] Mic active — turn #${_conversationHistory.length ~/ 2 + 1}, '
+    debugPrint('✅ [Conversation] Mic active — user turn #${_completedUserTurns + 1}, '
         'recording to ${_recordingPath!.split('/').last}');
 
     // NOTE: speech_to_text and the `record` package both compete for Android's
@@ -335,6 +469,20 @@ class _RoleplayConversationScreenState
   Future<void> _onSend() async {
     if (_state != _ConvState.user_turn) return;
 
+    if (_isLiveVoiceActive) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Live mode: you are talking to the AI over the network. '
+            'Tap End call when you are done.',
+          ),
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     HapticFeedback.mediumImpact();
     debugPrint('📤 [Conversation] SEND pressed — stopping recording...');
     _stopMic();
@@ -392,6 +540,7 @@ class _RoleplayConversationScreenState
     if (_state != _ConvState.ai_speaking) return;
     debugPrint('✋ [Conversation] INTERRUPT — stopping AI audio');
     HapticFeedback.lightImpact();
+    _aiPlaybackStage = _AiPlaybackStage.none;
     await _audioPlayer.stop();
     await _startMic();
   }
@@ -399,7 +548,7 @@ class _RoleplayConversationScreenState
   // ─── API: process turn ────────────────────────────────────────────────────────
 
   Future<void> _sendTurn(String audioPath) async {
-    final turnNumber = _conversationHistory.length ~/ 2 + 1;
+    final turnNumber = _completedUserTurns + 1;
     debugPrint('🔄 [Conversation] Processing turn #$turnNumber...');
 
     // ── Demo mode ──────────────────────────────────────────────────────────────
@@ -410,7 +559,7 @@ class _RoleplayConversationScreenState
       final fakeUserTranscript =
           'Great to be here — let me tell you a bit about myself.';
       final replyIndex =
-          (_conversationHistory.length ~/ 2).clamp(0, _demoReplies.length - 1);
+          (_completedUserTurns + 1).clamp(0, _demoReplies.length - 1);
       final aiReply = _demoReplies[replyIndex];
 
       _conversationHistory.addAll([
@@ -432,6 +581,7 @@ class _RoleplayConversationScreenState
         _cardText = aiReply;
         _cardAnimKey++;
       });
+      _aiPlaybackStage = _AiPlaybackStage.none;
       await _onAudioFinished();
       return;
     }
@@ -478,6 +628,8 @@ class _RoleplayConversationScreenState
         _cardAnimKey++;
       });
 
+      _lastAiAudioForReplay = result.aiAudioBase64;
+      _aiPlaybackStage = _AiPlaybackStage.afterTurnFirstPlay;
       await _playBase64Audio(result.aiAudioBase64);
     } catch (e) {
       debugPrint('❌ [Conversation] Turn #$turnNumber failed: $e');
@@ -531,6 +683,7 @@ class _RoleplayConversationScreenState
 
   void _onPlayerStateChange(PlayerState state) {
     if (state.processingState == ProcessingState.completed) {
+      if (_state != _ConvState.ai_speaking) return;
       debugPrint(
           '🔊 [Conversation] AI audio finished — returning mic to user');
       _onAudioFinished();
@@ -539,7 +692,32 @@ class _RoleplayConversationScreenState
 
   Future<void> _onAudioFinished() async {
     if (!mounted) return;
-    await _startMic();
+    switch (_aiPlaybackStage) {
+      case _AiPlaybackStage.afterOpening:
+        _aiPlaybackStage = _AiPlaybackStage.none;
+        if (_serverLiveVoiceEnabled) {
+          await _connectLiveVoice();
+        }
+        await _startMic();
+        return;
+      case _AiPlaybackStage.afterTurnFirstPlay:
+        final b64 = _lastAiAudioForReplay;
+        if (b64 == null || b64.isEmpty || _isMuted) {
+          _aiPlaybackStage = _AiPlaybackStage.none;
+          await _startMic();
+          return;
+        }
+        _aiPlaybackStage = _AiPlaybackStage.afterTurnReplay;
+        await _playBase64Audio(b64);
+        return;
+      case _AiPlaybackStage.afterTurnReplay:
+        _aiPlaybackStage = _AiPlaybackStage.none;
+        await _startMic();
+        return;
+      case _AiPlaybackStage.none:
+        await _startMic();
+        return;
+    }
   }
 
   // ─── Mute ─────────────────────────────────────────────────────────────────────
@@ -561,11 +739,12 @@ class _RoleplayConversationScreenState
     if (!force && !_canEndCall) return;
     HapticFeedback.heavyImpact();
 
+    await _disconnectLiveVoice();
+
     debugPrint('');
     debugPrint('🏁 [Conversation] Ending session ─────────────────────');
     debugPrint('   sessionId:    ${widget.sessionId}');
-    debugPrint(
-        '   turns:        ${_conversationHistory.length ~/ 2}');
+    debugPrint('   user turns:   $_completedUserTurns');
     debugPrint('   total time:   ${_secondsElapsed}s');
     debugPrint('   spoken time:  ${_totalSpokenSeconds}s');
 
@@ -763,9 +942,10 @@ class _RoleplayConversationScreenState
     if (confirm == true) {
       debugPrint(
           '🗑  [Conversation] User chose to abandon — '
-          'turns completed: ${_conversationHistory.length ~/ 2}, '
+          'user turns completed: $_completedUserTurns, '
           'time: ${_secondsElapsed}s');
       _sessionTimer?.cancel();
+      await _disconnectLiveVoice();
       await _recorder.stop();
       await _audioPlayer.stop();
       SessionService.instance.abandonSession(widget.sessionId).ignore();

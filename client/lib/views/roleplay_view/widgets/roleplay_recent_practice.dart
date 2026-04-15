@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/services/session_service.dart';
+import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
 
 class RoleplayRecentPractice extends StatefulWidget {
   const RoleplayRecentPractice({super.key});
@@ -32,7 +32,7 @@ class _RoleplayRecentPracticeState extends State<RoleplayRecentPractice> {
         setState(() {
           _sessions = sessions
               .where((s) => s['status'] == 'completed')
-              .take(2)
+              .take(4) // Show 4 items
               .toList();
           _loading = false;
         });
@@ -52,20 +52,20 @@ class _RoleplayRecentPracticeState extends State<RoleplayRecentPractice> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Recent Practice',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-              ),
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        const SizedBox(height: AppSpacing.s16),
+        const SizedBox(height: 16),
         if (_loading)
           const Center(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
-              child: CircularProgressIndicator(
-                  color: AppColors.primary, strokeWidth: 2),
+              child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
             ),
           )
         else if (_error)
@@ -73,12 +73,7 @@ class _RoleplayRecentPracticeState extends State<RoleplayRecentPractice> {
         else if (_sessions.isEmpty)
           _buildEmptyState(context)
         else
-          ..._sessions.map((s) => _buildCompactRow(
-                context,
-                s['scenarioTitle'] as String? ?? 'Session',
-                _formatSubtitle(s),
-                _formatScore(s),
-              )),
+          ..._sessions.map((s) => _buildCompactRow(context, s)),
       ],
     );
   }
@@ -104,11 +99,8 @@ class _RoleplayRecentPracticeState extends State<RoleplayRecentPractice> {
 
   Widget _buildErrorState(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s16,
-        vertical: AppSpacing.s20,
-      ),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -117,26 +109,17 @@ class _RoleplayRecentPracticeState extends State<RoleplayRecentPractice> {
       child: Center(
         child: Column(
           children: [
-            const Icon(Icons.wifi_off_rounded,
-                color: AppColors.textMuted, size: 28),
+            const Icon(Icons.wifi_off_rounded, color: AppColors.textMuted, size: 28),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Could not load recent practice.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: _load,
-              child: const Text(
-                'Retry',
-                style: TextStyle(
-                  color: AppColors.primaryLight,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              child: const Text('Retry', style: TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -146,11 +129,8 @@ class _RoleplayRecentPracticeState extends State<RoleplayRecentPractice> {
 
   Widget _buildEmptyState(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s16,
-        vertical: AppSpacing.s20,
-      ),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -159,15 +139,12 @@ class _RoleplayRecentPracticeState extends State<RoleplayRecentPractice> {
       child: Center(
         child: Column(
           children: [
-            const Icon(Icons.mic_none_rounded,
-                color: AppColors.textMuted, size: 32),
+            const Icon(Icons.mic_none_rounded, color: AppColors.textMuted, size: 32),
             const SizedBox(height: 10),
-            Text(
+            const Text(
               'No practice sessions yet\nStart your first roleplay!',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ],
         ),
@@ -175,88 +152,91 @@ class _RoleplayRecentPracticeState extends State<RoleplayRecentPractice> {
     );
   }
 
-  Widget _buildCompactRow(
-    BuildContext context,
-    String title,
-    String subtitle,
-    String score,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.s12),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s16,
-        vertical: AppSpacing.s16,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border,
-          width: 1,
+  Widget _buildCompactRow(BuildContext context, Map<String, dynamic> session) {
+    final title = session['scenarioTitle'] as String? ?? 'Session';
+    final subtitle = _formatSubtitle(session);
+    final score = _formatScore(session);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RoleplaySetupScreen(
+              mode: 'prefilled',
+              category: 'Custom',
+              scenario: title,
+              persona: session['persona'] ?? 'Friendly Colleague',
+              difficulty: session['difficulty'] ?? 'Medium',
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.s8),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.background,
-                ),
-                child: const Icon(
-                  Icons.history,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Row(
                 children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.background,
+                    ),
+                    child: const Icon(Icons.history, color: AppColors.primary, size: 20),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                score,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.primaryLight,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              if (score != '--')
+            ),
+            const SizedBox(width: 12),
+            Row(
+              children: [
                 Text(
-                  'SCORE',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.textMuted,
-                        fontSize: 8,
-                        letterSpacing: 1.0,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  score,
+                  style: const TextStyle(
+                    color: AppColors.primaryLight,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
