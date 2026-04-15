@@ -154,10 +154,11 @@ class _RecentActivitySectionState extends State<RecentActivitySection> {
 
     Color scoreColor = AppColors.primary;
     if (score != null) {
-      if (score >= 80) scoreColor = Colors.green;
-      else if (score >= 60) scoreColor = Colors.orange;
-      else scoreColor = Colors.redAccent;
+      if (score >= 80) scoreColor = AppColors.primaryExtraLight;
+      else if (score >= 60) scoreColor = AppColors.primaryLight;
+      else scoreColor = AppColors.textSecondary;
     }
+
 
     String dateStr = 'Date unknown';
     if (startedAt != null) {
@@ -214,7 +215,7 @@ class _RecentActivitySectionState extends State<RecentActivitySection> {
                 _buildDetailChip(
                   icon: Icons.flag_rounded,
                   label: status[0].toUpperCase() + status.substring(1),
-                  color: status == 'completed' ? Colors.green : Colors.orange,
+                  color: status == 'completed' ? AppColors.primaryLight : AppColors.textMuted,
                 ),
               ],
             ),
