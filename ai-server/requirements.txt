@@ -5,3 +5,20 @@ edge-tts==7.2.7
 python-dotenv==1.2.2
 python-multipart==0.0.22
 httpx==0.28.1
+# Local model backends (CP1)
+# NumPy: pin before kokoro/faster-whisper. On Windows + Python 3.13, unpinned kokoro can pull
+# numpy 1.26.x as sdist — that build needs GCC 8.4+ and fails with older MinGW. Wheels exist for 2.x.
+numpy>=2.1.0,<3
+# faster-whisper: local STT via CTranslate2 (GPU). Requires CUDA toolkit + matching ctranslate2 wheel.
+faster-whisper
+# kokoro: local TTS (CPU). 0.9+ supports NumPy 2.x but declares Requires-Python <3.13 — not on PyPI for 3.13.
+# On 3.13 use TTS_BACKEND=edge or a Python 3.12 venv for Kokoro. 0.7.16 (last on 3.13) pins numpy==1.26.4 (conflicts below).
+kokoro>=0.9.0; python_version < "3.13"
+# soundfile: WAV I/O used by the Kokoro TTS path.
+soundfile
+# pydub: WAV -> MP3 conversion. Requires ffmpeg binary on the OS: https://ffmpeg.org/download.html
+pydub
+# CP1 automated checks: pytest tests/test_health_contract.py
+pytest>=8.0
+# Optional: official Ollama Python client (HTTP path in llm_facade uses httpx only)
+# ollama>=0.3.0

@@ -2,14 +2,18 @@ const router = require('express').Router();
 const multer = require('multer');
 const rateLimit = require('express-rate-limit');
 const { verifyToken } = require('../middleware/auth');
+const { verifyWorkerSecret } = require('../middleware/workerAuth');
 const {
   startSession,
+  sessionOpening,
   processTurn,
   endSession,
   getReport,
   abandonSession,
   getSessionHistory,
   getSession,
+  getLivekitToken,
+  appendLiveVoiceTurn,
 } = require('../controllers/sessionController');
 
 const upload = multer({
@@ -28,8 +32,26 @@ const turnRateLimit = rateLimit({
   message: { error: 'Too many requests — please slow down' },
 });
 
+const openingRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => req.uid || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests — please slow down' },
+});
+
 // Static routes first — must come before /:sessionId to avoid shadowing
 router.post('/start', verifyToken, startSession);
+// CP2: LiveKit token endpoint — Flutter calls this to join the WebRTC room
+router.post('/livekit-token', verifyToken, getLivekitToken);
+// Pipecat worker → Firestore (shared secret, not Firebase)
+router.post(
+  '/internal/live-voice-turn',
+  verifyWorkerSecret,
+  appendLiveVoiceTurn
+);
+router.post('/opening', verifyToken, openingRateLimit, sessionOpening);
 router.post('/turn', verifyToken, turnRateLimit, upload.single('audioFile'), processTurn);
 router.post('/end', verifyToken, endSession);
 router.get('/history', verifyToken, getSessionHistory);

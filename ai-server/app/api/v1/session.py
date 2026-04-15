@@ -1,6 +1,7 @@
 import base64
 import json
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from groq import AsyncGroq
@@ -8,16 +9,25 @@ from groq import AsyncGroq
 from app.config import settings
 from app.core.prompts import build_evaluator_prompt
 from app.dependencies import get_groq_client
-from app.schemas.session import EvaluateRequest, EvaluateResponse, TurnResponse
+from app.schemas.session import (
+    EvaluateRequest,
+    EvaluateResponse,
+    OpeningRequest,
+    OpeningResponse,
+    TurnResponse,
+)
+from app.services import asr_facade, llm_facade, tts_facade
 from app.services.evaluator import parse_evaluation
-from app.services.stt import MAX_AUDIO_BYTES, MIN_AUDIO_BYTES, transcribe
-from app.services.tts import synthesize_full
+from app.services.stt import MAX_AUDIO_BYTES, MIN_AUDIO_BYTES
 
 logger = logging.getLogger("communiq")
 
 LLM_MODEL = settings.llm_model
 
 router = APIRouter()
+
+# Colab parity: same user nudge as opening turn ("Start the interview now.").
+_OPENING_USER_MESSAGE = "Start the interview now."
 
 
 def _convert_history(raw_history: list) -> list[dict]:
@@ -38,6 +48,60 @@ def _convert_history(raw_history: list) -> list[dict]:
     return result
 
 
+# ─── POST /session/opening ──────────────────────────────────────────────────
+
+@router.post("/session/opening", response_model=OpeningResponse)
+async def session_opening(
+    req: OpeningRequest,
+    groq: Optional[AsyncGroq] = Depends(get_groq_client),
+):
+    """
+    Generate the first AI line + TTS before any user audio (Colab parity).
+
+    LLM sees: system = scenario prompt, user = "Start the interview now."
+    """
+    logger.info("Opening start — session=%s", req.sessionId)
+
+    try:
+        response = await llm_facade.chat_completion(
+            groq,
+            model=LLM_MODEL,
+            messages=[
+                {"role": "system", "content": req.systemPrompt},
+                {"role": "user", "content": _OPENING_USER_MESSAGE},
+            ],
+            max_tokens=128,
+            temperature=0.75,
+            timeout=25,
+        )
+    except Exception as e:
+        logger.error("Opening LLM failed — session=%s: %s", req.sessionId, e)
+        raise HTTPException(
+            status_code=502, detail="AI opening failed. Please try again."
+        ) from e
+
+    ai_reply = (response.choices[0].message.content or "").strip()
+    if not ai_reply:
+        raise HTTPException(
+            status_code=502, detail="AI returned an empty opening. Please try again."
+        )
+
+    logger.info("Opening LLM done — session=%s chars=%d", req.sessionId, len(ai_reply))
+
+    try:
+        audio_out = await tts_facade.synthesize_full(ai_reply)
+    except RuntimeError as e:
+        logger.error("Opening TTS failed — session=%s: %s", req.sessionId, e)
+        raise HTTPException(
+            status_code=502, detail="Voice synthesis failed. Please try again."
+        ) from e
+
+    ai_audio_base64 = base64.b64encode(audio_out).decode("utf-8")
+    logger.info("Opening TTS done — session=%s", req.sessionId)
+
+    return OpeningResponse(aiReply=ai_reply, aiAudioBase64=ai_audio_base64)
+
+
 # ─── POST /session/turn ───────────────────────────────────────────────────────
 
 @router.post("/session/turn", response_model=TurnResponse)
@@ -46,7 +110,7 @@ async def session_turn(
     sessionId: str = Form(...),
     conversationHistory: str = Form(default="[]"),
     systemPrompt: str = Form(...),
-    groq: AsyncGroq = Depends(get_groq_client),
+    groq: Optional[AsyncGroq] = Depends(get_groq_client),
 ):
     """
     Process one conversation turn for an active session.
@@ -99,7 +163,7 @@ async def session_turn(
         sessionId, filename, len(audio_bytes),
     )
     try:
-        user_transcript = await transcribe(audio_bytes, filename, groq)
+        user_transcript = await asr_facade.transcribe(audio_bytes, filename, groq)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except RuntimeError as e:
@@ -116,10 +180,10 @@ async def session_turn(
 
     logger.info("LLM start — session=%s messages=%d", sessionId, len(messages))
     try:
-        response = await groq.chat.completions.create(
+        response = await llm_facade.chat_completion(
+            groq,
             model=LLM_MODEL,
             messages=messages,
-            stream=False,
             max_tokens=256,
             temperature=0.75,
             timeout=25,
@@ -140,7 +204,7 @@ async def session_turn(
     # ── Step 3: TTS ───────────────────────────────────────────────────────────
     logger.info("TTS start — session=%s text=%d chars", sessionId, len(ai_reply))
     try:
-        audio_out = await synthesize_full(ai_reply)
+        audio_out = await tts_facade.synthesize_full(ai_reply)
     except RuntimeError as e:
         logger.error("TTS failed — session=%s: %s", sessionId, e)
         raise HTTPException(
@@ -164,7 +228,7 @@ async def session_turn(
 @router.post("/session/evaluate", response_model=EvaluateResponse)
 async def session_evaluate(
     req: EvaluateRequest,
-    groq: AsyncGroq = Depends(get_groq_client),
+    groq: Optional[AsyncGroq] = Depends(get_groq_client),
 ):
     """
     Evaluate a completed session.
@@ -187,8 +251,8 @@ async def session_evaluate(
     )
 
     try:
-        response = await groq.chat.completions.create(
-            model=LLM_MODEL,
+        response = await llm_facade.eval_chat_completion(
+            groq,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {
@@ -196,13 +260,12 @@ async def session_evaluate(
                     "content": f"Evaluate this session transcript:\n\n{req.fullTranscript}",
                 },
             ],
-            stream=False,
             max_tokens=1024,
             temperature=0.2,
             timeout=50,
         )
     except Exception as e:
-        logger.error("Groq evaluation request failed — session=%s: %s", req.sessionId, e)
+        logger.error("Evaluation LLM request failed — session=%s: %s", req.sessionId, e)
         raise HTTPException(
             status_code=502, detail="Evaluation service unavailable. Please try again."
         )

@@ -1,5 +1,30 @@
 import 'package:communiq/models/feedback_config.dart';
 
+// ─── Opening Response ──────────────────────────────────────────────────────────
+
+/// Maps the response from POST /sessions/opening (AI speaks first, no user audio).
+class OpeningResult {
+  final String aiReply;
+  final String aiAudioBase64;
+
+  /// True when Node has `LIVEKIT_ENABLED=true` — Flutter joins the LiveKit room after the opening clip.
+  final bool liveVoiceEnabled;
+
+  const OpeningResult({
+    required this.aiReply,
+    required this.aiAudioBase64,
+    this.liveVoiceEnabled = false,
+  });
+
+  factory OpeningResult.fromJson(Map<String, dynamic> json) {
+    return OpeningResult(
+      aiReply: json['aiReply'] as String? ?? '',
+      aiAudioBase64: json['aiAudioBase64'] as String? ?? '',
+      liveVoiceEnabled: json['liveVoiceEnabled'] as bool? ?? false,
+    );
+  }
+}
+
 // ─── Turn Response ─────────────────────────────────────────────────────────────
 
 /// Maps the response from POST /sessions/turn.
@@ -104,6 +129,7 @@ class SessionReport {
   int get confidence => scores['confidence'] ?? 0;
   int get vocabulary => scores['vocabulary'] ?? 0;
   int get grammar => scores['grammar'] ?? 0;
+  int get pronunciation => scores['pronunciation'] ?? 0;
 
   int get overallScore {
     if (scores.isEmpty) return 0;
@@ -125,10 +151,14 @@ class SessionReport {
     final List<String> insights = [
       ...strengths,
       if (fillerWordCount > 0)
-        'You used $fillerWordCount filler word${fillerWordCount == 1 ? '' : 's'} — '
-            'practice pausing instead of filling silence.',
+        'You used $fillerWordCount filler word${fillerWordCount == 1 ? '' : 's'}'
+        '${fillerWords.isNotEmpty ? ' (${fillerWords.take(4).join(', ')})' : ''}'
+        ' — practice pausing instead of filling silence.',
       if (fillerWordCount == 0)
         'Great job — no filler words detected. Your speech was clean and direct.',
+      if (pronunciation > 0 && pronunciation < 65)
+        'Your pronunciation score was $pronunciation% — focus on clear articulation '
+        'and slowing down at key moments so every word lands clearly.',
     ];
 
     return FeedbackConfig(
@@ -150,9 +180,15 @@ class SessionReport {
           score: vocabGrammar,
           tags: _tagsForScore(vocabGrammar),
         ),
+        if (pronunciation > 0)
+          SkillCard(
+            title: 'Pronunciation',
+            score: pronunciation,
+            tags: _tagsForScore(pronunciation),
+          ),
       ],
-      insights: insights.take(3).toList(),
-      improvements: improvements.take(3).toList(),
+      insights: insights,
+      improvements: improvements,
     );
   }
 }

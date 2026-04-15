@@ -356,11 +356,19 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                   _buildSheetLabel('SKILL SCORES'),
                   const SizedBox(height: 12),
                   if (report != null) ...[
-                    _buildScoreRow('Clarity', report.clarity),
-                    _buildScoreRow('Fluency', report.fluency),
-                    _buildScoreRow('Confidence', report.confidence),
-                    _buildScoreRow('Vocabulary', report.vocabulary),
-                    _buildScoreRow('Grammar', report.grammar),
+                    ...report.scores.entries.map((e) {
+                      const displayNames = {
+                        'clarity':       'Clarity',
+                        'fluency':       'Fluency',
+                        'confidence':    'Confidence',
+                        'vocabulary':    'Vocabulary',
+                        'grammar':       'Grammar',
+                        'pronunciation': 'Pronunciation',
+                      };
+                      final label = displayNames[e.key] ??
+                          '${e.key[0].toUpperCase()}${e.key.substring(1)}';
+                      return _buildScoreRow(label, e.value);
+                    }),
                   ] else
                     ...widget.config.skills.map((s) => _buildScoreRow(s.title, s.score)),
                   const SizedBox(height: 24),

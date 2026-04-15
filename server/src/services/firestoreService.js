@@ -87,6 +87,21 @@ async function appendTurnsToSession(sessionId, userTurn, aiTurn) {
   });
 }
 
+/** Persist the Colab-parity opening line (AI only, no user turn yet). */
+async function appendAiTurnOnly(sessionId, aiTurn) {
+  await db.collection('sessions').doc(sessionId).update({
+    turns: FieldValue.arrayUnion(aiTurn),
+  });
+}
+
+/** Append one or more turns from the Pipecat live-voice pipeline (same shape as HTTP /turn). */
+async function appendLiveVoiceTurns(sessionId, turnDocs) {
+  if (!turnDocs || turnDocs.length === 0) return;
+  await db.collection('sessions').doc(sessionId).update({
+    turns: FieldValue.arrayUnion(...turnDocs),
+  });
+}
+
 async function completeSession(sessionId, durationSeconds, overallScore) {
   await db.collection('sessions').doc(sessionId).update({
     status: 'completed',
@@ -207,6 +222,8 @@ module.exports = {
   createSession,
   getSessionById,
   appendTurnsToSession,
+  appendAiTurnOnly,
+  appendLiveVoiceTurns,
   completeSession,
   abandonSession,
   countCompletedSessions,

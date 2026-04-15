@@ -5,7 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/models/scenario_model.dart';
-import 'package:communiq/models/session_result_model.dart';
+import 'package:communiq/models/session_result_model.dart'
+    show OpeningResult, SessionEndResult, TurnResult;
 import 'package:communiq/models/user_profile.dart';
 
 /// Handles all session-related API calls to the Node backend.
@@ -95,6 +96,30 @@ class SessionService {
     }
   }
 
+  /// Fetches the first AI line + audio before any user recording (Colab parity).
+  Future<OpeningResult> fetchOpening({required String sessionId}) async {
+    try {
+      debugPrint('[SessionService] fetchOpening → sessionId=$sessionId');
+      final response = await _dio.post(
+        ApiConstants.sessionsOpening,
+        data: {'sessionId': sessionId},
+        options: Options(
+          receiveTimeout: const Duration(seconds: 120),
+        ),
+      );
+      final result =
+          OpeningResult.fromJson(response.data as Map<String, dynamic>);
+      debugPrint('[SessionService] fetchOpening ✓');
+      return result;
+    } on DioException catch (e) {
+      debugPrint('[SessionService] fetchOpening ✗ DioException: $e');
+      throw Exception(_dioMessage(e, 'Could not load opening'));
+    } catch (e) {
+      debugPrint('[SessionService] fetchOpening ✗ $e');
+      rethrow;
+    }
+  }
+
   /// Sends one conversation turn (audio bytes + history) to the Node server.
   /// Returns the AI's text reply, the user's transcription, and the AI's
   /// base64-encoded MP3 audio.
@@ -120,12 +145,16 @@ class SessionService {
 
       // Do NOT set contentType in Options — Dio auto-sets multipart/form-data
       // with the correct boundary when FormData is passed as data.
+      // sendTimeout covers the audio upload; 120 s handles recordings up to
+      // ~4 min at the default 16 kHz / mono / WAV bitrate (~256 kbps).
       final response = await _dio.post(
         ApiConstants.sessionsTurn,
         data: formData,
         options: Options(
-          sendTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 75), // Whisper+LLM+TTS can take up to 60s
+          sendTimeout: const Duration(seconds: 120),
+          // 120 s: 90 s Node→AI timeout + 30 s buffer for cold-start wake-up on
+          // Render's free tier (services spin down after 15 min of inactivity).
+          receiveTimeout: const Duration(seconds: 120),
         ),
       );
 
