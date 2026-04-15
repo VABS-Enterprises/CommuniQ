@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/common_widgets/gradient_button.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
-import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
 import 'package:communiq/core/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -37,11 +36,8 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await AuthService.signInWithGoogle();
       if (mounted) {
-        debugPrint('🎯 [Auth/Login] ── Root Navigation to Main App ───────');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainNavigationView()),
-          (route) => false,
-        );
+        debugPrint('🎯 [Auth/Login] ── Popping back to AuthGuard ───────');
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } on CancelledException {
       // User dismissed the picker — stay on screen.
@@ -65,11 +61,8 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
       if (mounted) {
-        debugPrint('🎯 [Auth/Login] ── Root Navigation to Main App ───────');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainNavigationView()),
-          (route) => false,
-        );
+        debugPrint('🎯 [Auth/Login] ── Popping back to AuthGuard ───────');
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       _showError(e.toString().replaceFirst('Exception: ', ''));
@@ -234,22 +227,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 56,
                   child: OutlinedButton.icon(
                     onPressed: _handleGoogleLogin,
-                    icon: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'G',
-                        style: TextStyle(
-                          color: Color(0xFF4285F4),
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    icon: Image.asset(
+                      'assets/icons/google_logo.png',
+                      width: 22,
+                      height: 22,
                     ),
                     label: const Text('Continue with Google',
                         style: TextStyle(

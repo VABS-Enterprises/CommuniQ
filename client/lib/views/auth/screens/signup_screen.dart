@@ -6,7 +6,6 @@ import 'package:communiq/core/services/onboarding_service.dart';
 import 'package:communiq/common_widgets/gradient_button.dart';
 import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/views/auth/screens/login_screen.dart';
-import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
 
 class SignupScreen extends StatefulWidget {
   /// Onboarding data collected before authentication.
@@ -59,11 +58,8 @@ class _SignupScreenState extends State<SignupScreen> {
       debugPrint('[Auth/Signup] ✅ Google sign-up succeeded');
       await _syncOnboarding();
       if (mounted) {
-        debugPrint('🎯 [Auth/Signup] ── Root Navigation to Main App ───────');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainNavigationView()),
-          (route) => false,
-        );
+        debugPrint('🎯 [Auth/Signup] ── Popping back to AuthGuard ───────');
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } on CancelledException {
       debugPrint('[Auth/Signup] Google sign-up cancelled by user');
@@ -101,11 +97,8 @@ class _SignupScreenState extends State<SignupScreen> {
       debugPrint('[Auth/Signup] ✅ Email sign-up succeeded for "$email"');
       await _syncOnboarding();
       if (mounted) {
-        debugPrint('🎯 [Auth/Signup] ── Root Navigation to Main App ───────');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainNavigationView()),
-          (route) => false,
-        );
+        debugPrint('🎯 [Auth/Signup] ── Popping back to AuthGuard ───────');
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       debugPrint('[Auth/Signup] ❌ Email sign-up error: $e');
@@ -238,22 +231,10 @@ class _SignupScreenState extends State<SignupScreen> {
                   height: 56,
                   child: OutlinedButton.icon(
                     onPressed: _handleGoogleSignup,
-                    icon: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'G',
-                        style: TextStyle(
-                          color: Color(0xFF4285F4),
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    icon: Image.asset(
+                      'assets/icons/google_logo.png',
+                      width: 22,
+                      height: 22,
                     ),
                     label: const Text(
                       'Continue with Google',

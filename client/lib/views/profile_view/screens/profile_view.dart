@@ -76,8 +76,6 @@ class _ProfileViewState extends State<ProfileView> {
     );
     if (confirm == true && mounted) {
       await AuthService.signOut();
-      if (!mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 
