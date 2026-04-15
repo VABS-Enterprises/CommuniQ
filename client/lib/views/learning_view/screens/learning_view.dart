@@ -137,6 +137,9 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
   }
 
   _NodeState _stateOf(int id) {
+    final ji = (id - 1) ~/ _kPerJourney;
+    if (_isJourneyLocked(ji)) return _NodeState.locked;
+
     if (_completedIds.contains(id)) return _NodeState.completed;
     if (id == _currentId)           return _NodeState.current;
     return _NodeState.locked;
@@ -146,6 +149,30 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
     if (!_completedIds.contains(id)) return 0;
     // mock deterministic score for gamified UI testing
     return 30 + ((id * 47) % 71); // generates score between 30 and 100
+  }
+
+  int _starsForScore(int score) {
+    if (score > 80) return 3;
+    if (score > 50) return 2;
+    if (score > 35) return 1;
+    return 0;
+  }
+
+  int _starsInJourney(int ji) {
+    final start = ji * _kPerJourney;
+    final end   = (start + _kPerJourney).clamp(0, _levels.length);
+    if (start >= _levels.length) return 0;
+    
+    int stars = 0;
+    for (int i = start; i < end; i++) {
+        stars += _starsForScore(_scoreFor(_levels[i].id));
+    }
+    return stars;
+  }
+
+  bool _isJourneyLocked(int ji) {
+    if (ji == 0) return false;
+    return _starsInJourney(ji - 1) < 20;
   }
 
   int _completedInJourney(int ji) {
@@ -168,6 +195,27 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
   // ─── Tap handling ──────────────────────────────────────────────────────────
 
   void _onTap(CommuniqLevel level) {
+    final ji = (level.id - 1) ~/ _kPerJourney;
+    if (_isJourneyLocked(ji)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(children: [
+            const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Get 20 stars in Journey $ji to unlock this section!',
+                  style: const TextStyle(color: AppColors.textPrimary)),
+            ),
+          ]),
+          backgroundColor: AppColors.surface,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     if (_stateOf(level.id) == _NodeState.locked) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -390,6 +438,9 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
               index: j,
               subtitle: _kJourneySubtitles[j],
               completedInJourney: _completedInJourney(j),
+              starsInJourney: _starsInJourney(j),
+              isLocked: _isJourneyLocked(j),
+              prevJourneyStars: j > 0 ? _starsInJourney(j - 1) : null,
               xpBarKey: _journeyXPKeys[j],
             ),
           ),
@@ -620,12 +671,18 @@ class _JourneyHeader extends StatefulWidget {
   final int index;
   final String subtitle;
   final int completedInJourney;
+  final int starsInJourney;
+  final bool isLocked;
+  final int? prevJourneyStars;
   final GlobalKey<_JourneyXPBarState> xpBarKey;
 
   const _JourneyHeader({
     required this.index,
     required this.subtitle,
     required this.completedInJourney,
+    required this.starsInJourney,
+    required this.isLocked,
+    this.prevJourneyStars,
     required this.xpBarKey,
   });
 
@@ -696,18 +753,26 @@ class _JourneyHeaderState extends State<_JourneyHeader> with SingleTickerProvide
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'JOURNEY ${widget.index + 1}',
-                                  style: const TextStyle(
-                                      color: AppColors.primaryLight,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 2.0),
+                                Row(
+                                  children: [
+                                    if (widget.isLocked) ...[
+                                      const Icon(Icons.lock_rounded, size: 12, color: AppColors.textMuted),
+                                      const SizedBox(width: 4),
+                                    ],
+                                    Text(
+                                      'JOURNEY ${widget.index + 1}',
+                                      style: TextStyle(
+                                          color: widget.isLocked ? AppColors.textMuted : AppColors.primaryLight,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 2.0),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 2),
                                 Text(widget.subtitle,
-                                    style: const TextStyle(
-                                        color: AppColors.textPrimary,
+                                    style: TextStyle(
+                                        color: widget.isLocked ? AppColors.textMuted : AppColors.textPrimary,
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold)),
                               ],
@@ -717,25 +782,55 @@ class _JourneyHeaderState extends State<_JourneyHeader> with SingleTickerProvide
                             duration: const Duration(milliseconds: 600),
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.12),
+                              color: widget.isLocked ? AppColors.surface : AppColors.primary.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text(
-                              '${widget.completedInJourney} / 10',
-                              style: const TextStyle(
-                                  color: AppColors.primaryLight,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${widget.starsInJourney} / 30',
+                                  style: TextStyle(
+                                      color: widget.isLocked ? AppColors.textMuted : AppColors.primaryLight,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      // ── Per-journey XP progress bar ──
-                      _JourneyXPBar(
-                        key: widget.xpBarKey,
-                        completed: widget.completedInJourney,
-                      ),
+                      if (widget.isLocked)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.only(left: 4, right: 12),
+                                child: Icon(Icons.lock_rounded, size: 24, color: AppColors.textMuted),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Get 20 stars in Journey ${widget.index} to unlock this path (Current: ${widget.prevJourneyStars}/20)',
+                                  style: const TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.3),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        // ── Per-journey XP progress bar ──
+                        _JourneyXPBar(
+                          key: widget.xpBarKey,
+                          completed: widget.completedInJourney,
+                        ),
                     ],
                   ),
                 ),
@@ -1082,18 +1177,18 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
           offset: const Offset(8, -2),
           child: Transform.rotate(
             angle: -0.25,
-            child: starIcon(activeStars >= 1, 20),
+            child: starIcon(activeStars >= 1, 18),
           ),
         ),
         Transform.translate(
           offset: const Offset(0, 2),
-          child: starIcon(activeStars >= 2, 26),
+          child: starIcon(activeStars >= 2, 24),
         ),
         Transform.translate(
           offset: const Offset(-8, -2),
           child: Transform.rotate(
             angle: 0.25,
-            child: starIcon(activeStars >= 3, 20),
+            child: starIcon(activeStars >= 3, 18),
           ),
         ),
       ],
@@ -1108,9 +1203,12 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
     required Color shadowColor,
     required Color borderColor,
     bool showSparkles = false,
+    double reflectionAlpha = 0.5,
+    Widget? topBadge,
+    Widget? baseBadge,
   }) {
-    final double depth = _isPressed ? 2.0 : 8.0;
-    final double nodeHeight = _kNodeSize + 10;
+    final double depth = _isPressed ? 2.0 : 9.0;
+    final double nodeHeight = _kNodeSize + 12;
     
     return SizedBox(
       width: _kNodeSize,
@@ -1119,25 +1217,34 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
         alignment: Alignment.bottomCenter,
         clipBehavior: Clip.none,
         children: [
-          // Shadow / Depth
-          Positioned(
-            bottom: 2,
+          // 3D Cylinder Body (Shadow)
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 80),
+            curve: Curves.easeOut,
+            bottom: 0,
             child: Container(
               width: _kNodeSize,
-              height: _kNodeSize,
+              height: _kNodeSize + depth - 1, // Stretches to connect bottom and top seamlessly
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(_kNodeSize / 2),
                 color: shadowColor,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
+                    color: Colors.black.withValues(alpha: 0.5),
                     blurRadius: 8,
-                    offset: const Offset(0, 4),
+                    offset: const Offset(0, 5),
                   )
                 ]
               ),
             ),
           ),
+          
+          if (baseBadge != null)
+            Positioned(
+              bottom: -6,
+              child: baseBadge,
+            ),
+
           // Top face
           AnimatedPositioned(
             duration: const Duration(milliseconds: 80),
@@ -1148,17 +1255,63 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
               height: _kNodeSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
+                gradient: RadialGradient(
+                  center: const Alignment(0, -0.2),
+                  radius: 0.75, // slightly tighter highlight
                   colors: [
-                    primaryColor.withValues(alpha: 0.85),
+                    primaryColor.withValues(alpha: 0.85), // Lighter center
                     primaryColor,
                   ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
                 ),
-                border: Border.all(color: borderColor, width: 2.5),
+                border: Border.all(color: borderColor, width: 2.0),
               ),
-              child: child,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                   // Glossy candy inner top reflection (elliptical for a more organic shine)
+                   Positioned(
+                     top: 3,
+                     child: Container(
+                       width: _kNodeSize * 0.6,
+                       height: _kNodeSize * 0.3,
+                       decoration: BoxDecoration(
+                         borderRadius: BorderRadius.all(Radius.elliptical(_kNodeSize * 0.3, _kNodeSize * 0.15)),
+                         gradient: LinearGradient(
+                           colors: [Colors.white.withValues(alpha: reflectionAlpha), Colors.white.withValues(alpha: 0.0)],
+                           begin: Alignment.topCenter,
+                           end: Alignment.bottomCenter,
+                         )
+                       ),
+                     ),
+                   ),
+                   // Bottom inner shadow for stronger 3D depth
+                   Positioned(
+                     bottom: 2,
+                     child: Container(
+                       width: _kNodeSize * 0.7,
+                       height: _kNodeSize * 0.22,
+                       decoration: BoxDecoration(
+                         borderRadius: BorderRadius.all(Radius.elliptical(_kNodeSize * 0.35, _kNodeSize * 0.11)),
+                         gradient: LinearGradient(
+                           colors: [Colors.black.withValues(alpha: 0.0), Colors.black.withValues(alpha: 0.3)],
+                           begin: Alignment.topCenter,
+                           end: Alignment.bottomCenter,
+                         )
+                       ),
+                     ),
+                   ),
+                   child,
+                   
+                   // Top badge securely bound to the moving face
+                   if (topBadge != null)
+                     Positioned(
+                       right: -4,
+                       bottom: 4,
+                       child: topBadge,
+                     ),
+                ]
+              ),
             ),
           ),
           if (showSparkles)
@@ -1224,6 +1377,7 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
               shadowColor: const Color(0xFF1336B5), // Deep blue shadow
               borderColor: _kCyan.withValues(alpha: 0.5),
               showSparkles: true,
+              reflectionAlpha: 0.6,
               child: const Center(
                 child: Text('START',
                     style: TextStyle(
@@ -1235,53 +1389,38 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
 
       // ── Completed node ────────────────────────────────────────────────────
       case _NodeState.completed:
-        return Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            _build3DButton(
-              primaryColor: const Color(0xFF282A3A),
-              shadowColor: const Color(0xFF12131A),
-              borderColor: AppColors.primary.withValues(alpha: 0.7),
-              child: Center(
-                child: Text(widget.level.categoryEmoji, style: const TextStyle(fontSize: 28, shadows: [Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))])),
-              ),
+        return _build3DButton(
+          primaryColor: const Color(0xFF2A2346), // A gorgeous deep amethyst
+          shadowColor: const Color(0xFF120E21),
+          borderColor: const Color(0xFF63569D).withValues(alpha: 0.8), // A vivid violet/indigo border
+          reflectionAlpha: 0.25, // Subtler softer gloss reflection
+          child: Center(
+            child: Text(widget.level.categoryEmoji, style: const TextStyle(fontSize: 28, shadows: [Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))])),
+          ),
+          topBadge: Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: AppColors.success,
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFF2A2346), width: 2), // matching border
+              boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))],
             ),
-            // Ticked Badge Overlay
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 80),
-              curve: Curves.easeOut,
-              right: -4,
-              top: _isPressed ? _kNodeSize - 20 : _kNodeSize - 26,
-              child: Container(
-                width: 26,
-                height: 26,
-                decoration: BoxDecoration(
-                  color: AppColors.success,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.background, width: 2.5),
-                  boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(0, 2))],
-                ),
-                child: const Icon(Icons.check_rounded, color: Colors.white, size: 16),
-              ),
-            ),
-            // Stars Overlay
-            Positioned(
-              bottom: -4,
-              child: _buildStars(widget.score),
-            ),
-          ],
+            child: const Icon(Icons.check_rounded, color: Colors.white, size: 14),
+          ),
+          baseBadge: _buildStars(widget.score),
         );
 
       // ── Locked node ───────────────────────────────────────────────────────
       case _NodeState.locked:
         return _build3DButton(
-          primaryColor: AppColors.surface,
-          shadowColor: const Color(0xFF0A0A0E),
-          borderColor: AppColors.border.withValues(alpha: 0.5),
+          primaryColor: const Color(0xFF1B1925), // Ultra dark deep slate
+          shadowColor: const Color(0xFF09080C),
+          borderColor: const Color(0xFF332F42),
+          reflectionAlpha: 0.08, // Barely there matte finish
           child: Center(
             child: Opacity(
-              opacity: 0.6,
+              opacity: 0.35,
               child: Text(widget.level.categoryEmoji, style: const TextStyle(fontSize: 24)),
             ),
           ),
