@@ -75,28 +75,39 @@ class TodaysProgressCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.local_fire_department,
-                      color: AppColors.primaryLight,
-                      size: 20,
-                    ),
-                    const SizedBox(width: AppSpacing.s8),
-                    Text(
-                      streakLabel,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ],
-                ),
-                Text(
-                  rewardText,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textMuted,
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department,
+                        color: AppColors.primaryLight,
+                        size: 20,
                       ),
+                      const SizedBox(width: AppSpacing.s8),
+                      Flexible(
+                        child: Text(
+                          streakLabel,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s8),
+                Flexible(
+                  child: Text(
+                    rewardText,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                  ),
                 ),
               ],
             ),

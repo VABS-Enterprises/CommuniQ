@@ -54,6 +54,9 @@ dependencies:
   # On-device real-time speech recognition for live captions
   speech_to_text: ^7.0.0
 
+  # CP2: LiveKit SDK for WebRTC live voice mode
+  livekit_client: ^2.4.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -77,6 +80,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/icons/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

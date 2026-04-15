@@ -1,0 +1,19 @@
+# Pipecat worker — real-time LiveKit voice agent for CommuniQ
+# Run:  pip install -r requirements.txt
+# Start: uvicorn worker:app --port 9000
+
+# Pipecat core + service extras
+#   groq    — GroqSTTService, GroqLLMService, GroqTTSService
+#   livekit — LiveKitTransport (WebRTC room)
+#   silero  — SileroVADAnalyzer (voice activity detection)
+pipecat-ai[groq,livekit,silero]>=0.0.105
+
+# HTTP server
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# HTTP client — used to POST turn transcripts to the Node backend
+httpx>=0.27.0
+
+# Environment variables
+python-dotenv>=1.0.0

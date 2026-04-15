@@ -14,10 +14,13 @@ import 'package:speech_to_text/speech_to_text.dart';
 
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/spacing.dart';
+import 'package:communiq/core/services/api_service.dart';
+import 'package:communiq/core/services/live_voice_service.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/roleplay_config.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_feedback_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── State machine ─────────────────────────────────────────────────────────────
 //
@@ -26,6 +29,9 @@ import 'package:communiq/views/roleplay_view/screens/roleplay_feedback_screen.da
 //      └──────────────────[AI finishes or INTERRUPT]─────────────┘
 //
 enum _ConvState { user_turn, processing, ai_speaking, ending }
+
+/// Colab parity: opening plays once; after each turn the AI clip plays twice before mic.
+enum _AiPlaybackStage { none, afterOpening, afterTurnFirstPlay, afterTurnReplay }
 
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
@@ -36,11 +42,17 @@ class RoleplayConversationScreen extends StatefulWidget {
   final String sessionId;
   final bool isOnboarding;
 
+  /// When supplied (from the learning path), the level is written to
+  /// SharedPreferences as "completed" the moment the user ends the call so
+  /// the learning view can fire the XP animation and unlock the next node.
+  final int? levelId;
+
   const RoleplayConversationScreen({
     super.key,
     required this.config,
     this.sessionId = 'demo',
     this.isOnboarding = false,
+    this.levelId,
   });
 
   @override
@@ -55,8 +67,11 @@ class _RoleplayConversationScreenState
   late AnimationController _waveformController;
 
   // ─── Session state ────────────────────────────────────────────────────────────
-  _ConvState _state = _ConvState.user_turn;
+  _ConvState _state = _ConvState.processing;
   final List<Map<String, String>> _conversationHistory = [];
+  _AiPlaybackStage _aiPlaybackStage = _AiPlaybackStage.none;
+  /// Last turn’s AI audio bytes (base64) — replayed once before the next mic (Colab).
+  String? _lastAiAudioForReplay;
 
   // The text shown in the large conversation card and who is speaking.
   // Updated on every meaningful state change.
@@ -95,15 +110,38 @@ class _RoleplayConversationScreenState
         "Shall we wrap up the practice?",
   ];
 
+  /// Total spoken seconds including the currently-running mic session.
+  /// In live voice mode _stopMic() is never called mid-session, so
+  /// _totalSpokenSeconds stays 0 — we add the elapsed time since mic start.
+  int get _effectiveSpokenSeconds {
+    if (_micStartTime == null) return _totalSpokenSeconds;
+    return _totalSpokenSeconds +
+        DateTime.now().difference(_micStartTime!).inSeconds;
+  }
+
   /// End-call enabled after ≥ 10 s of speaking + not mid-processing.
+  /// In live voice mode the state alternates between user_turn and ai_speaking,
+  /// so we allow ending in ai_speaking as well (user heard the AI and wants to stop).
   bool get _canEndCall =>
-      _totalSpokenSeconds >= 10 && _state == _ConvState.user_turn;
+      _effectiveSpokenSeconds >= 10 &&
+      (_state == _ConvState.user_turn ||
+          (_isLiveVoiceActive && _state == _ConvState.ai_speaking));
 
   // ─── Audio ────────────────────────────────────────────────────────────────────
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
   String? _recordingPath;
   final List<String> _tempFiles = [];
+
+  // ─── CP2: Live voice (LiveKit WebRTC) ─────────────────────────────────────────
+  // Created lazily when the user opts into live voice mode.
+  // Null when using classic HTTP mode (press-Send, upload WAV).
+  LiveVoiceService? _liveVoiceService;
+  bool _isLiveVoiceActive = false;
+  StreamSubscription<dynamic>? _liveVoiceDataSub;
+
+  /// Server said opening response included LiveKit — we connect after the HTTP opening audio finishes.
+  bool _serverLiveVoiceEnabled = false;
 
   // ─── Init / Dispose ───────────────────────────────────────────────────────────
 
@@ -117,6 +155,13 @@ class _RoleplayConversationScreenState
     debugPrint('   scenario:   ${widget.config.scenarioTitle}');
     debugPrint('   persona:    ${widget.config.persona}');
     debugPrint('   difficulty: ${widget.config.difficulty}');
+    debugPrint('   tone:       ${widget.config.tone}');
+    debugPrint('   role:       ${widget.config.role}');
+    debugPrint('   traits:     ${widget.config.traits}');
+    if (widget.config.backstory.isNotEmpty) {
+      debugPrint('   backstory:  ${widget.config.backstory}');
+    }
+    debugPrint('   demo mode:  $_isDemoMode');
     debugPrint('   onboarding: ${widget.isOnboarding}');
 
     _pulseController = AnimationController(
@@ -132,7 +177,11 @@ class _RoleplayConversationScreenState
     _initStt();
     _startTimer();
     _audioPlayer.playerStateStream.listen(_onPlayerStateChange);
-    _startMic();
+    if (_isDemoMode) {
+      _bootstrapDemoOpening();
+    } else {
+      _bootstrapRealOpening();
+    }
   }
 
   @override
@@ -146,8 +195,86 @@ class _RoleplayConversationScreenState
     _recorder.dispose();
     _audioPlayer.dispose();
     _stt.cancel();
+    _liveVoiceDataSub?.cancel();
+    _liveVoiceService?.dispose();
     _cleanupTempFiles();
     super.dispose();
+  }
+
+  // ─── CP2: Live voice helpers ──────────────────────────────────────────────────
+
+  /// Connect to LiveKit for the current session.
+  /// Falls back to classic HTTP mode silently if the server does not support it.
+  Future<void> _connectLiveVoice() async {
+    if (_isDemoMode || widget.sessionId.isEmpty) return;
+    if (_isLiveVoiceActive) return;
+    try {
+      final svc = LiveVoiceService(ApiService.instance.dio);
+      await svc.connect(widget.sessionId);
+
+      // Subscribe to real-time captions from the Pipecat bot.
+      _liveVoiceDataSub = svc.messages.listen(_onLiveVoiceMessage);
+
+      if (mounted) {
+        setState(() {
+          _liveVoiceService = svc;
+          _isLiveVoiceActive = true;
+        });
+      }
+      debugPrint('[LiveVoice] Live voice mode active — session=${widget.sessionId}');
+    } on LiveVoiceException catch (e) {
+      debugPrint('[LiveVoice] Falling back to classic HTTP mode: $e');
+      // Non-fatal — classic HTTP mode continues as before.
+    }
+  }
+
+  /// Handle real-time state messages from the Pipecat bot.
+  ///
+  ///  "user_transcript" → saved to history for evaluation (no UI caption).
+  ///  "ai_transcript"   → switch to ai_speaking state; text saved for evaluation only.
+  ///  "ai_done"         → switch back to user_turn so the user can speak again.
+  void _onLiveVoiceMessage(LiveVoiceMessage msg) {
+    if (!mounted) return;
+    switch (msg.type) {
+      case 'user_transcript':
+        if (msg.text.isEmpty) return;
+        // Save for evaluation — no caption displayed in live voice mode.
+        _conversationHistory.add({'role': 'user', 'transcript': msg.text});
+        debugPrint('[LiveVoice] User said: "${msg.text}"');
+
+      case 'ai_transcript':
+        if (msg.text.isEmpty) return;
+        // Save for evaluation, trigger ai_speaking state — text NOT shown.
+        _conversationHistory.add({'role': 'ai', 'transcript': msg.text});
+        setState(() {
+          _state = _ConvState.ai_speaking;
+          _cardAnimKey++;
+        });
+        debugPrint('[LiveVoice] AI says: "${msg.text.length > 60 ? '${msg.text.substring(0, 60)}…' : msg.text}"');
+
+      case 'ai_done':
+        setState(() {
+          _state = _ConvState.user_turn;
+          _cardAnimKey++;
+        });
+        debugPrint('[LiveVoice] AI finished speaking — user turn');
+
+      default:
+        debugPrint('[LiveVoice] Unknown data message type: ${msg.type}');
+    }
+  }
+
+  /// Disconnect from LiveKit at session end or on dispose.
+  Future<void> _disconnectLiveVoice() async {
+    if (!_isLiveVoiceActive) return;
+    await _liveVoiceDataSub?.cancel();
+    _liveVoiceDataSub = null;
+    await _liveVoiceService?.disconnect();
+    if (mounted) {
+      setState(() {
+        _isLiveVoiceActive = false;
+      });
+    }
   }
 
   // ─── Speech-to-text ───────────────────────────────────────────────────────────
@@ -192,6 +319,77 @@ class _RoleplayConversationScreenState
     if (_sttAvailable) {
       _stt.stop();
     }
+  }
+
+  int get _completedUserTurns =>
+      _conversationHistory.where((m) => m['role'] == 'user').length;
+
+  /// Demo: scripted opener on card, then mic (no backend, no Colab replay).
+  void _bootstrapDemoOpening() {
+    setState(() {
+      _state = _ConvState.processing;
+      _cardText = '';
+      _cardAnimKey++;
+    });
+    Future<void>.microtask(() async {
+      await Future.delayed(const Duration(milliseconds: 900));
+      if (!mounted) return;
+      final opener = _demoReplies.first;
+      _conversationHistory.add({'role': 'ai', 'transcript': opener});
+      setState(() {
+        _state = _ConvState.ai_speaking;
+        _cardText = opener;
+        _cardAnimKey++;
+      });
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return;
+      _aiPlaybackStage = _AiPlaybackStage.none;
+      await _startMic();
+    });
+  }
+
+  void _bootstrapRealOpening() {
+    Future<void>.microtask(() async {
+      debugPrint('🔄 [Conversation] Fetching AI opening...');
+      final sw = Stopwatch()..start();
+      try {
+        final opening = await SessionService.instance
+            .fetchOpening(sessionId: widget.sessionId);
+        sw.stop();
+        if (!mounted) return;
+
+        debugPrint('✅ [Conversation] Opening received in ${sw.elapsedMilliseconds}ms');
+        debugPrint('   aiReply:         "${opening.aiReply.length > 80 ? '${opening.aiReply.substring(0, 80)}...' : opening.aiReply}"');
+        debugPrint('   audio size:      ${(opening.aiAudioBase64.length * 3 / 4).round()} bytes (base64)');
+        debugPrint('   liveVoiceEnabled: ${opening.liveVoiceEnabled}');
+
+        _serverLiveVoiceEnabled = opening.liveVoiceEnabled;
+        _conversationHistory.add({
+          'role': 'ai',
+          'transcript': opening.aiReply,
+        });
+        setState(() {
+          _state = _ConvState.ai_speaking;
+          _cardText = opening.aiReply;
+          _cardAnimKey++;
+        });
+        _aiPlaybackStage = _AiPlaybackStage.afterOpening;
+        await _playBase64Audio(opening.aiAudioBase64);
+      } catch (e) {
+        sw.stop();
+        debugPrint('❌ [Conversation] Opening failed after ${sw.elapsedMilliseconds}ms: $e');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_friendlyError(e.toString())),
+            backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        _aiPlaybackStage = _AiPlaybackStage.none;
+        await _startMic();
+      }
+    });
   }
 
   // ─── Timer ────────────────────────────────────────────────────────────────────
@@ -254,6 +452,23 @@ class _RoleplayConversationScreenState
       return;
     }
 
+    // LiveKit is already publishing the mic — do not start the file recorder
+    // (Android: record + WebRTC mic together breaks audio focus).
+    if (_isLiveVoiceActive) {
+      _micStartTime = DateTime.now();
+      _liveTranscript = '';
+      if (!mounted) return;
+      setState(() {
+        _state = _ConvState.user_turn;
+        _cardText = '';   // empty → shows "Speak now…" placeholder
+        _cardAnimKey++;
+      });
+      _pulseController.duration = const Duration(milliseconds: 800);
+      _pulseController.repeat(reverse: true);
+      debugPrint('🎙 [Conversation] Live voice user turn (no file recorder)');
+      return;
+    }
+
     final dir = await getTemporaryDirectory();
     _recordingPath =
         '${dir.path}/turn_${DateTime.now().millisecondsSinceEpoch}.wav';
@@ -269,7 +484,7 @@ class _RoleplayConversationScreenState
     );
 
     _micStartTime = DateTime.now();
-    debugPrint('✅ [Conversation] Mic active — turn #${_conversationHistory.length ~/ 2 + 1}, '
+    debugPrint('✅ [Conversation] Mic active — user turn #${_completedUserTurns + 1}, '
         'recording to ${_recordingPath!.split('/').last}');
 
     // NOTE: speech_to_text and the `record` package both compete for Android's
@@ -328,6 +543,20 @@ class _RoleplayConversationScreenState
   Future<void> _onSend() async {
     if (_state != _ConvState.user_turn) return;
 
+    if (_isLiveVoiceActive) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Live mode: you are talking to the AI over the network. '
+            'Tap End call when you are done.',
+          ),
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     HapticFeedback.mediumImpact();
     debugPrint('📤 [Conversation] SEND pressed — stopping recording...');
     _stopMic();
@@ -385,6 +614,7 @@ class _RoleplayConversationScreenState
     if (_state != _ConvState.ai_speaking) return;
     debugPrint('✋ [Conversation] INTERRUPT — stopping AI audio');
     HapticFeedback.lightImpact();
+    _aiPlaybackStage = _AiPlaybackStage.none;
     await _audioPlayer.stop();
     await _startMic();
   }
@@ -392,7 +622,7 @@ class _RoleplayConversationScreenState
   // ─── API: process turn ────────────────────────────────────────────────────────
 
   Future<void> _sendTurn(String audioPath) async {
-    final turnNumber = _conversationHistory.length ~/ 2 + 1;
+    final turnNumber = _completedUserTurns + 1;
     debugPrint('🔄 [Conversation] Processing turn #$turnNumber...');
 
     // ── Demo mode ──────────────────────────────────────────────────────────────
@@ -403,7 +633,7 @@ class _RoleplayConversationScreenState
       final fakeUserTranscript =
           'Great to be here — let me tell you a bit about myself.';
       final replyIndex =
-          (_conversationHistory.length ~/ 2).clamp(0, _demoReplies.length - 1);
+          (_completedUserTurns + 1).clamp(0, _demoReplies.length - 1);
       final aiReply = _demoReplies[replyIndex];
 
       _conversationHistory.addAll([
@@ -425,6 +655,7 @@ class _RoleplayConversationScreenState
         _cardText = aiReply;
         _cardAnimKey++;
       });
+      _aiPlaybackStage = _AiPlaybackStage.none;
       await _onAudioFinished();
       return;
     }
@@ -434,22 +665,28 @@ class _RoleplayConversationScreenState
       final bytes = await File(audioPath).readAsBytes();
       final filename = audioPath.split(Platform.pathSeparator).last;
 
+      debugPrint('📤 [Conversation] Turn #$turnNumber → ${bytes.length}B audio, '
+          'history=${_conversationHistory.length} turns');
+      final sw = Stopwatch()..start();
+
       final result = await SessionService.instance.processTurn(
         sessionId: widget.sessionId,
         audioBytes: Uint8List.fromList(bytes),
         filename: filename,
         conversationHistory: List.from(_conversationHistory),
       );
+      sw.stop();
 
       _conversationHistory.addAll([
         {'role': 'user', 'transcript': result.userTranscript},
         {'role': 'ai', 'transcript': result.aiReply},
       ]);
 
-      debugPrint('✅ [Conversation] Turn #$turnNumber complete');
+      debugPrint('✅ [Conversation] Turn #$turnNumber complete in ${sw.elapsedMilliseconds}ms');
       debugPrint('   User: "${result.userTranscript}"');
       debugPrint(
           '   AI:   "${result.aiReply.length > 80 ? '${result.aiReply.substring(0, 80)}...' : result.aiReply}"');
+      debugPrint('   audio: ${(result.aiAudioBase64.length * 3 / 4).round()} bytes, turnCount=${result.turnCount}');
 
       if (!mounted) return;
 
@@ -471,6 +708,8 @@ class _RoleplayConversationScreenState
         _cardAnimKey++;
       });
 
+      _lastAiAudioForReplay = result.aiAudioBase64;
+      _aiPlaybackStage = _AiPlaybackStage.afterTurnFirstPlay;
       await _playBase64Audio(result.aiAudioBase64);
     } catch (e) {
       debugPrint('❌ [Conversation] Turn #$turnNumber failed: $e');
@@ -524,6 +763,7 @@ class _RoleplayConversationScreenState
 
   void _onPlayerStateChange(PlayerState state) {
     if (state.processingState == ProcessingState.completed) {
+      if (_state != _ConvState.ai_speaking) return;
       debugPrint(
           '🔊 [Conversation] AI audio finished — returning mic to user');
       _onAudioFinished();
@@ -532,7 +772,32 @@ class _RoleplayConversationScreenState
 
   Future<void> _onAudioFinished() async {
     if (!mounted) return;
-    await _startMic();
+    switch (_aiPlaybackStage) {
+      case _AiPlaybackStage.afterOpening:
+        _aiPlaybackStage = _AiPlaybackStage.none;
+        if (_serverLiveVoiceEnabled) {
+          await _connectLiveVoice();
+        }
+        await _startMic();
+        return;
+      case _AiPlaybackStage.afterTurnFirstPlay:
+        final b64 = _lastAiAudioForReplay;
+        if (b64 == null || b64.isEmpty || _isMuted) {
+          _aiPlaybackStage = _AiPlaybackStage.none;
+          await _startMic();
+          return;
+        }
+        _aiPlaybackStage = _AiPlaybackStage.afterTurnReplay;
+        await _playBase64Audio(b64);
+        return;
+      case _AiPlaybackStage.afterTurnReplay:
+        _aiPlaybackStage = _AiPlaybackStage.none;
+        await _startMic();
+        return;
+      case _AiPlaybackStage.none:
+        await _startMic();
+        return;
+    }
   }
 
   // ─── Mute ─────────────────────────────────────────────────────────────────────
@@ -554,17 +819,23 @@ class _RoleplayConversationScreenState
     if (!force && !_canEndCall) return;
     HapticFeedback.heavyImpact();
 
+    await _disconnectLiveVoice();
+
     debugPrint('');
     debugPrint('🏁 [Conversation] Ending session ─────────────────────');
     debugPrint('   sessionId:    ${widget.sessionId}');
-    debugPrint(
-        '   turns:        ${_conversationHistory.length ~/ 2}');
+    debugPrint('   user turns:   $_completedUserTurns');
     debugPrint('   total time:   ${_secondsElapsed}s');
     debugPrint('   spoken time:  ${_totalSpokenSeconds}s');
 
     _stopMic();
     await _recorder.stop();
     _sessionTimer?.cancel();
+
+    // ── Mark level complete in SharedPreferences ───────────────────────────────
+    // This fires before any async AI call so the learning view always receives
+    // a completion signal when it reads prefs on return, even if the AI fails.
+    await _markLevelComplete();
 
     setState(() {
       _state = _ConvState.ending;
@@ -696,6 +967,25 @@ class _RoleplayConversationScreenState
     }
   }
 
+  // ─── Mark level complete (SharedPreferences) ──────────────────────────────
+
+  /// Saves [widget.levelId] into the 'completed_level_ids' SharedPreferences
+  /// list so the learning view can detect completion on return and fire the
+  /// XP flying animation plus unlock the next node.
+  Future<void> _markLevelComplete() async {
+    final id = widget.levelId;
+    if (id == null) return; // not launched from the learning path
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = (prefs.getStringList('completed_level_ids') ?? []).toSet();
+      existing.add(id.toString());
+      await prefs.setStringList('completed_level_ids', existing.toList());
+      debugPrint('✅ [LevelComplete] Level $id saved to SharedPreferences');
+    } catch (e) {
+      debugPrint('❌ [LevelComplete] Failed to save level $id: $e');
+    }
+  }
+
   // ─── Back / abandon session ───────────────────────────────────────────────────
 
   Future<void> _onWillPop() async {
@@ -732,9 +1022,10 @@ class _RoleplayConversationScreenState
     if (confirm == true) {
       debugPrint(
           '🗑  [Conversation] User chose to abandon — '
-          'turns completed: ${_conversationHistory.length ~/ 2}, '
+          'user turns completed: $_completedUserTurns, '
           'time: ${_secondsElapsed}s');
       _sessionTimer?.cancel();
+      await _disconnectLiveVoice();
       await _recorder.stop();
       await _audioPlayer.stop();
       SessionService.instance.abandonSession(widget.sessionId).ignore();
@@ -793,7 +1084,7 @@ class _RoleplayConversationScreenState
         await _onWillPop();
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFF080B14),
         body: Stack(
           children: [
             _buildAmbientGlow(),
@@ -826,28 +1117,8 @@ class _RoleplayConversationScreenState
   // ─── Ambient glow ─────────────────────────────────────────────────────────────
 
   Widget _buildAmbientGlow() {
-    final glowColor = _state == _ConvState.ai_speaking
-        ? const Color(0xFF3B82F6)
-        : AppColors.primary;
-    return Positioned(
-      top: MediaQuery.of(context).size.height * 0.15,
-      left: MediaQuery.of(context).size.width * 0.5 - 160,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 600),
-        width: 320,
-        height: 320,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: glowColor.withValues(alpha: 0.08),
-              blurRadius: 140,
-              spreadRadius: 40,
-            ),
-          ],
-        ),
-      ),
-    );
+    // Removed — no ambient glow blobs or bright effects.
+    return const SizedBox.shrink();
   }
 
   // ─── Top bar ──────────────────────────────────────────────────────────────────
@@ -860,8 +1131,19 @@ class _RoleplayConversationScreenState
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            icon: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFF141D2C),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.textPrimary, size: 16),
+            ),
             onPressed: _onWillPop,
+            padding: EdgeInsets.zero,
           ),
           Column(
             children: [
@@ -909,7 +1191,7 @@ class _RoleplayConversationScreenState
 
   Widget _buildTimerPill() {
     final remaining = _secondsRemaining;
-    Color pillBg = AppColors.surface;
+    Color pillBg = const Color(0xFF141D2C);
     Color pillBorder = AppColors.border;
     Color textColor = AppColors.textPrimary;
 
@@ -978,31 +1260,16 @@ class _RoleplayConversationScreenState
           alignment: Alignment.center,
           children: [
             Transform.scale(
-              scale: scale * 1.4,
+              scale: scale * 1.35,
               child: Container(
-                width: 96,
-                height: 96,
+                width: 88,
+                height: 88,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: orbColor.withValues(
-                        alpha: 0.12 * (1.0 - pulse)),
-                    width: 2,
-                  ),
-                ),
-              ),
-            ),
-            Transform.scale(
-              scale: scale * 1.2,
-              child: Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: orbColor.withValues(
-                        alpha: 0.25 * (1.0 - pulse)),
-                    width: 2,
+                        alpha: 0.10 * (1.0 - pulse)),
+                    width: 1.5,
                   ),
                 ),
               ),
@@ -1010,16 +1277,16 @@ class _RoleplayConversationScreenState
             Transform.scale(
               scale: scale,
               child: Container(
-                width: 96,
-                height: 96,
+                width: 88,
+                height: 88,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: orbColor,
                   boxShadow: [
                     BoxShadow(
-                      color: glowColor.withValues(alpha: 0.45),
-                      blurRadius: 24 + 16 * pulse,
-                      spreadRadius: 3 * pulse,
+                      color: orbColor.withValues(alpha: 0.2),
+                      blurRadius: 16,
+                      spreadRadius: 2,
                     ),
                   ],
                 ),
@@ -1082,15 +1349,12 @@ class _RoleplayConversationScreenState
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF0D1119),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: borderColor, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: accentColor.withValues(alpha: 0.06),
-            blurRadius: 32,
-          ),
-        ],
+        border: Border.all(
+          color: borderColor,
+          width: 1,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -1103,8 +1367,8 @@ class _RoleplayConversationScreenState
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  width: 8,
-                  height: 8,
+                  width: 7,
+                  height: 7,
                   decoration: BoxDecoration(
                       shape: BoxShape.circle, color: accentColor),
                 ),
@@ -1119,7 +1383,11 @@ class _RoleplayConversationScreenState
                   ),
                 ),
                 const Spacer(),
-                if (_state == _ConvState.user_turn) _buildRecordingBadge(),
+                // REC badge only in classic HTTP mode
+                if (_state == _ConvState.user_turn && !_isLiveVoiceActive)
+                  _buildRecordingBadge(),
+                // Live indicator in live voice mode
+                if (_isLiveVoiceActive) _buildLivePill(),
               ],
             ),
 
@@ -1127,15 +1395,15 @@ class _RoleplayConversationScreenState
             AnimatedContainer(
               duration: const Duration(milliseconds: 400),
               height: 1,
-              color: borderColor,
+              color: borderColor.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
 
-            // ── Main text content ─────────────────────────────────────────────
+            // ── Main content ──────────────────────────────────────────────────
             Expanded(child: _buildCardContent()),
 
-            // ── Waveform (only when recording) ────────────────────────────────
-            if (_state == _ConvState.user_turn) ...[
+            // ── Waveform (classic HTTP mode only) ─────────────────────────────
+            if (_state == _ConvState.user_turn && !_isLiveVoiceActive) ...[
               const SizedBox(height: 12),
               _buildWaveformRow(),
               const SizedBox(height: 4),
@@ -1217,7 +1485,130 @@ class _RoleplayConversationScreenState
     );
   }
 
+  // ── Small "LIVE" pill shown in the card header during live voice ─────────────
+  Widget _buildLivePill() {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (_, __) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFF22C55E).withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: const Color(0xFF22C55E).withValues(
+                  alpha: 0.3 + 0.2 * _pulseController.value)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF22C55E).withValues(
+                    alpha: 0.6 + 0.4 * _pulseController.value),
+              ),
+            ),
+            const SizedBox(width: 5),
+            const Text(
+              'LIVE',
+              style: TextStyle(
+                color: Color(0xFF22C55E),
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Animated bars shown when AI is speaking in live voice ────────────────────
+  Widget _buildAiSpeakingBars() {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (_, __) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(5, (i) {
+          final phase =
+              (_pulseController.value + i * 0.18) % 1.0;
+          final h = 6.0 + 20.0 * math.sin(phase * math.pi).abs();
+          return Container(
+            width: 4,
+            height: h,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B82F6)
+                  .withValues(alpha: 0.5 + 0.4 * math.sin(phase * math.pi)),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
   Widget _buildCardContent() {
+    // ── Live voice mode: no text captions, clean status only ──────────────────
+    if (_isLiveVoiceActive) {
+      switch (_state) {
+        case _ConvState.user_turn:
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildWaveformRow(),
+                const SizedBox(height: 20),
+                AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (_, __) => Text(
+                    'Listening...',
+                    style: TextStyle(
+                      color: AppColors.textMuted.withValues(
+                          alpha: 0.45 + 0.3 * _pulseController.value),
+                      fontSize: 15,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+
+        case _ConvState.ai_speaking:
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildAiSpeakingBars(),
+                const SizedBox(height: 20),
+                AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (_, __) => Text(
+                    '${widget.config.persona} is speaking...',
+                    style: TextStyle(
+                      color: AppColors.textMuted.withValues(
+                          alpha: 0.45 + 0.3 * _pulseController.value),
+                      fontSize: 15,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+
+        case _ConvState.processing:
+        case _ConvState.ending:
+          break; // falls through to shared logic below
+      }
+    }
+
+    // ── Classic / shared states ────────────────────────────────────────────────
     switch (_state) {
       case _ConvState.user_turn:
         // Show live transcript from STT if available; otherwise placeholder.
@@ -1420,7 +1811,7 @@ class _RoleplayConversationScreenState
             onTap: _canEndCall ? _endSession : null,
             tooltip: _canEndCall
                 ? 'End & get feedback'
-                : 'Speak for ${math.max(0, 10 - _totalSpokenSeconds)}s more to end',
+                : 'Speak for ${math.max(0, 10 - _effectiveSpokenSeconds)}s more to end',
           ),
         ],
       ),
@@ -1433,18 +1824,18 @@ class _RoleplayConversationScreenState
       case _ConvState.ending:
         return Container(
           width: 140,
-          height: 60,
+          height: 56,
           decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(30),
+            color: const Color(0xFF141D2C),
+            borderRadius: BorderRadius.circular(28),
             border: Border.all(color: AppColors.border),
           ),
           child: const Center(
             child: SizedBox(
-              width: 22,
-              height: 22,
+              width: 20,
+              height: 20,
               child: CircularProgressIndicator(
-                  color: AppColors.primary, strokeWidth: 2.5),
+                  color: AppColors.primary, strokeWidth: 2),
             ),
           ),
         );
@@ -1537,7 +1928,7 @@ class _RoleplayConversationScreenState
         height: 54,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: backgroundColor ?? AppColors.surface,
+          color: backgroundColor ?? const Color(0xFF141D2C),
           border: Border.all(color: borderColor ?? AppColors.border),
           boxShadow: glow != null
               ? [BoxShadow(color: glow, blurRadius: 12, spreadRadius: 1)]

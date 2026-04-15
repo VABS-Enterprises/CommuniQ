@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/common_widgets/gradient_button.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
-import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
 import 'package:communiq/core/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -37,11 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await AuthService.signInWithGoogle();
       if (mounted) {
-        debugPrint('🎯 [Auth/Login] ── Root Navigation to Main App ───────');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainNavigationView()),
-          (route) => false,
-        );
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } on CancelledException {
       // User dismissed the picker — stay on screen.
@@ -65,11 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
       if (mounted) {
-        debugPrint('🎯 [Auth/Login] ── Root Navigation to Main App ───────');
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const MainNavigationView()),
-          (route) => false,
-        );
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       _showError(e.toString().replaceFirst('Exception: ', ''));
@@ -79,19 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleForgotPassword() async {
-    if (_isLoading) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              const Text('Please wait for the current action to complete.'),
-          backgroundColor: AppColors.surface,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-      return;
-    }
+    if (_isLoading) return;
     final email = _emailController.text.trim();
     if (email.isEmpty) {
       _showError('Enter your email address first, then tap Forgot Password.');
@@ -214,42 +193,30 @@ class _LoginScreenState extends State<LoginScreen> {
                       text: 'Sign In', onPressed: _handleEmailLogin),
 
               if (!_isLoading) ...[
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                      child: Divider(color: AppColors.border, thickness: 1)),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Or continue with',
-                        style: TextStyle(
-                            color: AppColors.textMuted, fontSize: 13)),
-                  ),
-                  Expanded(
-                      child: Divider(color: AppColors.border, thickness: 1)),
-                ],
-              ),
-              const SizedBox(height: 32),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                        child: Divider(color: AppColors.border, thickness: 1)),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('Or continue with',
+                          style: TextStyle(
+                              color: AppColors.textMuted, fontSize: 13)),
+                    ),
+                    Expanded(
+                        child: Divider(color: AppColors.border, thickness: 1)),
+                  ],
+                ),
+                const SizedBox(height: 32),
                 SizedBox(
                   height: 56,
                   child: OutlinedButton.icon(
                     onPressed: _handleGoogleLogin,
-                    icon: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'G',
-                        style: TextStyle(
-                          color: Color(0xFF4285F4),
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    icon: Image.asset(
+                      'assets/icons/google_logo.png',
+                      width: 22,
+                      height: 22,
                     ),
                     label: const Text('Continue with Google',
                         style: TextStyle(

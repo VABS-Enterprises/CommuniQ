@@ -10,6 +10,7 @@ import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/models/user_profile.dart';
 import 'package:communiq/views/onboarding/screens/welcome_screen.dart';
+import 'package:communiq/views/premium_view/screens/premium_screen.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -76,8 +77,6 @@ class _ProfileViewState extends State<ProfileView> {
     );
     if (confirm == true && mounted) {
       await AuthService.signOut();
-      if (!mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 
@@ -119,6 +118,8 @@ class _ProfileViewState extends State<ProfileView> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       slivers: [
                         SliverToBoxAdapter(child: _buildHeader()),
+                        if (_profile?.isPremium != true)
+                          SliverToBoxAdapter(child: _buildPremiumBanner()),
                         SliverToBoxAdapter(child: _buildStatsRow()),
                         SliverToBoxAdapter(child: _buildXpBar()),
                         if (_onboarding != null)
@@ -141,10 +142,13 @@ class _ProfileViewState extends State<ProfileView> {
                                   ? Icons.workspace_premium_rounded
                                   : Icons.stars_outlined,
                               'Plan',
-                              subtitle: _profile?.isPremium == true ? 'Premium' : 'Free',
+                              subtitle: _profile?.isPremium == true ? 'Premium' : 'Free (Tap to upgrade)',
                               trailingColor: _profile?.isPremium == true
                                   ? const Color(0xFFFFD700)
-                                  : AppColors.textMuted,
+                                  : AppColors.primary,
+                              onTap: _profile?.isPremium == true ? null : () {
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
+                              },
                             ),
                           ],
                         )),
@@ -313,6 +317,61 @@ class _ProfileViewState extends State<ProfileView> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Premium Banner ────────────────────────────────────────────────────────
+  
+  Widget _buildPremiumBanner() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, Color(0xFF9D00FF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              )
+            ]
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: Colors.white24,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Upgrade to Premium', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4),
+                    Text('Unlock advanced AI roleplays.', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white),
+            ],
+          ),
+        ),
       ),
     );
   }

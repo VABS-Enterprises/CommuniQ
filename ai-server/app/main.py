@@ -19,11 +19,34 @@ logger = logging.getLogger("communiq")
 async def lifespan(app: FastAPI):
     """Initialise shared resources at startup, clean up at shutdown."""
     settings.validate()
-    app.state.groq_client = AsyncGroq(api_key=settings.groq_api_key)
-    logger.info("Groq client initialised.")
+
+    needs_groq = (
+        settings.asr_backend == "groq"
+        or settings.llm_backend == "groq"
+        or settings.eval_llm_backend == "groq"
+    )
+    if needs_groq:
+        app.state.groq_client = AsyncGroq(api_key=settings.groq_api_key)
+        logger.info(
+            "Groq client initialised (ASR=%s, LLM=%s, eval=%s).",
+            settings.asr_backend,
+            settings.llm_backend,
+            settings.eval_llm_backend,
+        )
+    else:
+        app.state.groq_client = None
+        logger.info(
+            "Groq client skipped (ASR=%s, LLM=%s, eval=%s, TTS=%s).",
+            settings.asr_backend,
+            settings.llm_backend,
+            settings.eval_llm_backend,
+            settings.tts_backend,
+        )
+
     yield
+
     app.state.groq_client = None
-    logger.info("Groq client released.")
+    logger.info("Shutdown complete.")
 
 
 app = FastAPI(

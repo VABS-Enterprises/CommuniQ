@@ -1,0 +1,1208 @@
+{
+  "app": "CommuniQ",
+  "version": "3.0",
+  "total_levels": 150,
+  "_internal_note": "Levels 1-50: Easy | Levels 51-100: Intermediate | Levels 101-150: Hard \u2014 Not exposed to users. All 150 topics are unique with zero repetition.",
+  "levels": [
+    {
+      "id": 1,
+      "title": "Introducing yourself",
+      "category": "Social",
+      "scenario": "Introduce yourself in class",
+      "prompt": "You're a new student. Tell the class your name, where you're from, and one hobby.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 2,
+      "title": "Greeting people",
+      "category": "Social",
+      "scenario": "Greet a new classmate",
+      "prompt": "Say hello to someone sitting next to you for the first time. Start a short, friendly conversation.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 3,
+      "title": "Small talk",
+      "category": "Social",
+      "scenario": "Chat about the weather with a neighbour",
+      "prompt": "You bump into your neighbour. Keep a light conversation going for at least one minute.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 4,
+      "title": "Asking for help",
+      "category": "Social",
+      "scenario": "Ask a classmate to explain a topic",
+      "prompt": "You didn't understand a concept in class. Politely ask a peer to explain it to you.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 5,
+      "title": "Saying thank you",
+      "category": "Social",
+      "scenario": "Thank a friend for a favour",
+      "prompt": "A friend helped you move flats. Express genuine gratitude in a short conversation.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 6,
+      "title": "Apologising",
+      "category": "Social",
+      "scenario": "Apologise for being late to class",
+      "prompt": "You walk in 10 minutes late. Apologise to your teacher and classmates briefly but sincerely.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 7,
+      "title": "Giving directions",
+      "category": "Social",
+      "scenario": "Direct someone to the library on campus",
+      "prompt": "A new student asks you how to get to the library. Give clear spoken directions.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 8,
+      "title": "Making requests",
+      "category": "Social",
+      "scenario": "Ask a classmate to share notes",
+      "prompt": "You missed a lecture. Politely ask a classmate if you can borrow their notes.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 9,
+      "title": "Disagreeing politely",
+      "category": "Professional",
+      "scenario": "Disagree with a classmate's opinion",
+      "prompt": "Your classmate says something you don't agree with. Respectfully share your different view.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 10,
+      "title": "Giving opinions",
+      "category": "Communication",
+      "scenario": "Share your opinion on a book in class",
+      "prompt": "Your teacher asks what you thought of the assigned reading. Give a clear, structured opinion.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 11,
+      "title": "Making phone calls",
+      "category": "Professional",
+      "scenario": "Call to check your exam results",
+      "prompt": "You need to call the admin office to ask about your results. What do you say?",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 12,
+      "title": "Writing emails",
+      "category": "Professional",
+      "scenario": "Email your professor about an absence",
+      "prompt": "You missed class due to illness. Write a short, polite email to your professor explaining why.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 13,
+      "title": "Job interviews",
+      "category": "Professional",
+      "scenario": "Answer 'Tell me about yourself'",
+      "prompt": "You're in an interview. Give a clear, engaging answer to the classic opener.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 14,
+      "title": "Presentations",
+      "category": "Professional",
+      "scenario": "Present a 2-minute summary to your class",
+      "prompt": "Give a brief presentation on a topic of your choice to your classmates.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 15,
+      "title": "Active listening",
+      "category": "Communication",
+      "scenario": "Listen and summarise a classmate's story",
+      "prompt": "Your classmate tells you about their weekend. Listen carefully and summarise it back to them.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 16,
+      "title": "Negotiating",
+      "category": "Professional",
+      "scenario": "Negotiate a group project role",
+      "prompt": "Your group is dividing tasks and you want a specific role. Make your case fairly.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 17,
+      "title": "Giving a compliment",
+      "category": "Social",
+      "scenario": "Compliment a friend's new look",
+      "prompt": "Your friend has a new haircut. Give a genuine, natural compliment.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 18,
+      "title": "Refusing politely",
+      "category": "Social",
+      "scenario": "Decline an invitation from a friend",
+      "prompt": "A friend invites you to a party you can't attend. Say no politely without hurting their feelings.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 19,
+      "title": "Talking about your day",
+      "category": "Social",
+      "scenario": "Tell a friend how your day went",
+      "prompt": "Recount your day to a friend in a natural, engaging way \u2014 highs and lows included.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 20,
+      "title": "Telling stories",
+      "category": "Communication",
+      "scenario": "Tell a funny story to friends",
+      "prompt": "Share a funny thing that happened to you recently. Keep your audience engaged throughout.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 21,
+      "title": "Asking questions",
+      "category": "Communication",
+      "scenario": "Ask questions to understand a new concept",
+      "prompt": "You're confused by something in class. Ask your teacher two clear, specific questions.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 22,
+      "title": "Expressing emotions",
+      "category": "Social",
+      "scenario": "Tell a friend you're feeling stressed",
+      "prompt": "You're overwhelmed with exams. Open up to a trusted friend about how you're feeling.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 23,
+      "title": "Describing things",
+      "category": "Communication",
+      "scenario": "Describe your hometown to someone who's never been",
+      "prompt": "Paint a picture of your city or town for someone hearing about it for the first time.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 24,
+      "title": "Handling criticism",
+      "category": "Professional",
+      "scenario": "Receive feedback on a class assignment",
+      "prompt": "Your teacher gives you critical feedback on your work. Respond gracefully and ask how to improve.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 25,
+      "title": "Motivating others",
+      "category": "Leadership",
+      "scenario": "Encourage a friend who's feeling low",
+      "prompt": "Your friend is discouraged and thinking of quitting something important to them. Lift their spirits.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 26,
+      "title": "Leading a meeting",
+      "category": "Leadership",
+      "scenario": "Chair a study group session",
+      "prompt": "You're leading a group revision session. Open it, keep everyone on track, and close it effectively.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 27,
+      "title": "Resolving conflict",
+      "category": "Leadership",
+      "scenario": "Resolve a disagreement between friends",
+      "prompt": "Two friends in your group are in conflict. Mediate the situation calmly and fairly.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 28,
+      "title": "Persuading others",
+      "category": "Communication",
+      "scenario": "Persuade your friends to try a new restaurant",
+      "prompt": "Convince your group of friends to try a cuisine they're hesitant about.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 29,
+      "title": "Giving instructions",
+      "category": "Professional",
+      "scenario": "Explain a game's rules to a friend",
+      "prompt": "Teach someone a game or activity they've never tried. Give clear, step-by-step instructions.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 30,
+      "title": "Talking about goals",
+      "category": "Communication",
+      "scenario": "Share your goals with a friend",
+      "prompt": "Tell a close friend what you want to achieve in the next year and why it matters to you.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 31,
+      "title": "Discussing current events",
+      "category": "Social",
+      "scenario": "Talk about a news story with a friend",
+      "prompt": "Share your thoughts on a recent news event. Keep it balanced and invite the other person's views.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 32,
+      "title": "Talking about hobbies",
+      "category": "Social",
+      "scenario": "Tell a classmate about your favourite hobby",
+      "prompt": "Describe something you love doing in your free time in an engaging way.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 33,
+      "title": "Using formal language",
+      "category": "Professional",
+      "scenario": "Write a formal request to your college admin",
+      "prompt": "You need a letter confirming your enrolment. Write a formal request email.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 34,
+      "title": "Using informal language",
+      "category": "Social",
+      "scenario": "Chat casually with a new classmate",
+      "prompt": "Strike up a relaxed, friendly conversation with someone new in class.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 35,
+      "title": "Interviewing someone",
+      "category": "Professional",
+      "scenario": "Interview a classmate for a class project",
+      "prompt": "You need to gather information from a peer. Conduct a short structured interview.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 36,
+      "title": "Talking on panels",
+      "category": "Professional",
+      "scenario": "Answer a question on a student panel",
+      "prompt": "You're on a panel at a college event. Answer a question confidently in front of an audience.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 37,
+      "title": "Talking about achievements",
+      "category": "Professional",
+      "scenario": "Tell a friend about something you're proud of",
+      "prompt": "Share a recent achievement with a friend. Be proud but not boastful.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 38,
+      "title": "Welcoming guests",
+      "category": "Social",
+      "scenario": "Welcome a guest to your home",
+      "prompt": "A friend is visiting your place for the first time. Make them feel warm and comfortable.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 39,
+      "title": "Making suggestions",
+      "category": "Communication",
+      "scenario": "Suggest a movie to watch with friends",
+      "prompt": "Your group can't decide what to watch. Make a recommendation and explain why they'll enjoy it.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 40,
+      "title": "Clarifying misunderstandings",
+      "category": "Communication",
+      "scenario": "Clarify what you meant after being misunderstood by a friend",
+      "prompt": "Your friend took something you said the wrong way. Calmly explain what you actually meant.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 41,
+      "title": "Networking",
+      "category": "Professional",
+      "scenario": "Connect with someone at a college career fair",
+      "prompt": "You're at a career fair. Approach a recruiter, introduce yourself, and ask about opportunities.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 42,
+      "title": "Delivering bad news",
+      "category": "Professional",
+      "scenario": "Tell a friend disappointing news",
+      "prompt": "You have to tell a friend something they won't want to hear. Do it with care and empathy.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 43,
+      "title": "Following up",
+      "category": "Professional",
+      "scenario": "Follow up with a classmate on a shared task",
+      "prompt": "A group task is overdue and one person hasn't delivered. Follow up politely but clearly.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 44,
+      "title": "Discussing money",
+      "category": "Professional",
+      "scenario": "Split a bill with friends",
+      "prompt": "You're out at dinner and sorting who owes what. Handle the conversation naturally and without awkwardness.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 45,
+      "title": "Talking about culture",
+      "category": "Social",
+      "scenario": "Share something interesting about your culture with a classmate",
+      "prompt": "A foreign exchange student wants to learn about where you're from. What do you share?",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 46,
+      "title": "Public speaking",
+      "category": "Communication",
+      "scenario": "Speak for 1 minute on any topic in class",
+      "prompt": "Your teacher gives you one minute to speak on anything you like. Fill it confidently.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 47,
+      "title": "Handling silence",
+      "category": "Communication",
+      "scenario": "Recover from a pause in casual conversation",
+      "prompt": "The conversation dies out for a moment. Restart it naturally without it being awkward.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 48,
+      "title": "Talking about failure",
+      "category": "Communication",
+      "scenario": "Share a time you failed at something with a friend",
+      "prompt": "Tell a friend about a time things didn't go to plan. Be honest and show what you learned.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 49,
+      "title": "Wrapping up conversations",
+      "category": "Social",
+      "scenario": "End a chat with a classmate politely",
+      "prompt": "You need to head to your next class. Close the conversation naturally without being abrupt.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 50,
+      "title": "Building rapport",
+      "category": "Social",
+      "scenario": "Build a quick connection with a new classmate",
+      "prompt": "You have 5 minutes before class. Build genuine rapport with someone you've never spoken to.",
+      "_difficulty": "Easy"
+    },
+    {
+      "id": 51,
+      "title": "Asking for clarification",
+      "category": "Communication",
+      "scenario": "Ask your manager to clarify vague instructions on a task",
+      "prompt": "Your manager gave you instructions that aren't entirely clear. Ask for clarification without seeming incompetent or annoying.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 52,
+      "title": "Giving a status update",
+      "category": "Professional",
+      "scenario": "Update a client on project progress mid-way through delivery",
+      "prompt": "A client emails asking where things stand. Give a clear, professional status update that reassures them.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 53,
+      "title": "Talking about stress",
+      "category": "Social",
+      "scenario": "Open up to a close friend about feeling overwhelmed at work",
+      "prompt": "You've been under a lot of pressure lately. Talk to a trusted friend about your stress without oversharing.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 54,
+      "title": "Making a complaint",
+      "category": "Professional",
+      "scenario": "Complain to a restaurant manager about poor service",
+      "prompt": "Your meal was delayed and incorrect. Raise the issue with the manager calmly but assertively.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 55,
+      "title": "Explaining a process",
+      "category": "Communication",
+      "scenario": "Walk a new intern through your team's onboarding process",
+      "prompt": "A new intern joins today. Walk them step-by-step through the first-week process in a clear and welcoming way.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 56,
+      "title": "Asking for feedback",
+      "category": "Professional",
+      "scenario": "Request constructive feedback from your manager after a presentation",
+      "prompt": "You just finished presenting to your team. Ask your manager for honest, specific feedback on your delivery.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 57,
+      "title": "Talking about career plans",
+      "category": "Professional",
+      "scenario": "Discuss your next career move with a mentor",
+      "prompt": "You're at a crossroads in your career. Have an open conversation with your mentor about your options and goals.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 58,
+      "title": "Inviting someone to an event",
+      "category": "Social",
+      "scenario": "Invite a colleague to a team social gathering",
+      "prompt": "You're organising a team outing. Invite a quieter colleague in a way that makes them feel genuinely included.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 59,
+      "title": "Explaining a mistake",
+      "category": "Professional",
+      "scenario": "Explain to your manager why a report was submitted incorrectly",
+      "prompt": "You made an error on an important report. Explain what happened, take responsibility, and outline how you'll fix it.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 60,
+      "title": "Giving a tour",
+      "category": "Social",
+      "scenario": "Show a visiting relative around your college campus",
+      "prompt": "Your cousin is visiting your college. Give them an engaging tour and share what you love about the place.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 61,
+      "title": "Talking about your background",
+      "category": "Social",
+      "scenario": "Share your personal story with a new friend",
+      "prompt": "Someone new wants to know more about you. Share your background in an interesting and natural way.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 62,
+      "title": "Checking in on someone",
+      "category": "Social",
+      "scenario": "Check in on a friend who has been going through a tough time",
+      "prompt": "A friend has been quiet lately and you're concerned. Reach out and check in sincerely without being intrusive.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 63,
+      "title": "Setting expectations",
+      "category": "Professional",
+      "scenario": "Set clear expectations with a new team member on deliverables",
+      "prompt": "A new teammate is joining your project. Clearly communicate what is expected of them without sounding bossy.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 64,
+      "title": "Discussing work-life balance",
+      "category": "Professional",
+      "scenario": "Talk to your manager about boundaries around after-hours work",
+      "prompt": "You've been receiving messages late at night. Raise the topic of work-life balance with your manager professionally.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 65,
+      "title": "Making a recommendation",
+      "category": "Communication",
+      "scenario": "Recommend a tool or software to your team",
+      "prompt": "You've discovered a tool that could improve your team's workflow. Present your recommendation clearly and persuasively.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 66,
+      "title": "Talking about a project",
+      "category": "Professional",
+      "scenario": "Describe your current project to someone outside your field",
+      "prompt": "A family member asks what you've been working on. Explain your project in a way a non-expert would find interesting and clear.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 67,
+      "title": "Joining a conversation",
+      "category": "Social",
+      "scenario": "Join a group conversation at a social event",
+      "prompt": "You're at a gathering and a group is already deep in conversation. Enter the conversation naturally without interrupting rudely.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 68,
+      "title": "Saying goodbye",
+      "category": "Social",
+      "scenario": "Say goodbye to a colleague who is leaving the company",
+      "prompt": "A teammate you've worked closely with is moving on. Send them off warmly and meaningfully in person.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 69,
+      "title": "Discussing a book or film",
+      "category": "Social",
+      "scenario": "Talk about a recently watched film with a classmate",
+      "prompt": "You and a classmate both watched the same film. Have a genuine back-and-forth conversation sharing your reactions and opinions.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 70,
+      "title": "Talking about health",
+      "category": "Social",
+      "scenario": "Discuss a health concern with a doctor",
+      "prompt": "You have a health concern you've been putting off. Describe your symptoms clearly and ask the right questions.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 71,
+      "title": "Handling interruptions",
+      "category": "Communication",
+      "scenario": "Manage being interrupted repeatedly during a meeting",
+      "prompt": "You keep getting cut off while speaking in a team meeting. Handle the interruptions assertively but professionally.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 72,
+      "title": "Expressing disagreement via email",
+      "category": "Professional",
+      "scenario": "Push back on a decision made by a colleague over email",
+      "prompt": "A colleague sent an email proposing something you disagree with. Write a professional response that challenges their position constructively.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 73,
+      "title": "Talking about diversity",
+      "category": "Social",
+      "scenario": "Discuss inclusion and diversity with a colleague from a different background",
+      "prompt": "A conversation at work naturally moves toward diversity and inclusion. Navigate it thoughtfully, respectfully, and openly.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 74,
+      "title": "Handling a misquote",
+      "category": "Professional",
+      "scenario": "Correct someone who misquoted what you said in a meeting",
+      "prompt": "A colleague referenced something you said \u2014 but got it wrong. Politely correct the record in front of others.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 75,
+      "title": "Making introductions",
+      "category": "Social",
+      "scenario": "Introduce two people who don't know each other at an event",
+      "prompt": "You're with two people from different parts of your life. Introduce them to each other in a way that gives them something to connect over.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 76,
+      "title": "Declining an offer gracefully",
+      "category": "Professional",
+      "scenario": "Turn down a job offer you've received",
+      "prompt": "You've been offered a role but have decided not to take it. Decline in a way that leaves a good impression.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 77,
+      "title": "Asking about someone's work",
+      "category": "Social",
+      "scenario": "Show genuine interest in what a new acquaintance does for a living",
+      "prompt": "You've just met someone at a gathering. Ask about their work in a way that's curious and engaging, not interrogative.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 78,
+      "title": "Talking about travel",
+      "category": "Social",
+      "scenario": "Share your travel experiences with a group of new friends",
+      "prompt": "The conversation turns to travel. Share a memorable trip in a way that's vivid and draws others in.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 79,
+      "title": "Navigating office politics",
+      "category": "Professional",
+      "scenario": "Handle a politically sensitive topic in a team discussion",
+      "prompt": "A sensitive internal topic comes up in a meeting. Navigate it diplomatically without taking sides or causing tension.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 80,
+      "title": "Expressing enthusiasm",
+      "category": "Communication",
+      "scenario": "Show genuine excitement about a new project opportunity",
+      "prompt": "You've been assigned an exciting new project. Express your enthusiasm to your team in a way that energises the room.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 81,
+      "title": "Providing a reference",
+      "category": "Professional",
+      "scenario": "Speak as a reference for a former colleague applying for a job",
+      "prompt": "A past colleague has listed you as a reference. Give a structured, honest, and positive verbal reference over the phone.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 82,
+      "title": "Discussing learning and growth",
+      "category": "Professional",
+      "scenario": "Talk about your learning goals with a manager during a check-in",
+      "prompt": "Your manager asks what skills you want to develop. Have a thoughtful conversation about your professional growth plan.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 83,
+      "title": "Giving a toast",
+      "category": "Social",
+      "scenario": "Give a short toast at a friend's birthday dinner",
+      "prompt": "You've been asked to say a few words at your friend's birthday. Give a heartfelt, engaging 1-minute toast.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 84,
+      "title": "Resolving a billing issue",
+      "category": "Professional",
+      "scenario": "Dispute an incorrect charge with a service provider",
+      "prompt": "Your invoice has an error. Call customer service and dispute the charge calmly and effectively.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 85,
+      "title": "Sharing an unpopular opinion",
+      "category": "Communication",
+      "scenario": "Voice a minority viewpoint in a group discussion",
+      "prompt": "Everyone in the room seems to agree on something you disagree with. Share your opposing view diplomatically.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 86,
+      "title": "Leaving a voicemail",
+      "category": "Professional",
+      "scenario": "Leave a professional voicemail for a client you couldn't reach",
+      "prompt": "Your client didn't pick up. Leave a clear, concise voicemail that prompts them to call back.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 87,
+      "title": "Talking about money problems",
+      "category": "Social",
+      "scenario": "Discuss financial stress with a trusted family member",
+      "prompt": "You're going through a tough financial period. Open up to a family member and ask for advice or support.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 88,
+      "title": "Managing expectations",
+      "category": "Professional",
+      "scenario": "Tell a client that their expectations are unrealistic",
+      "prompt": "A client expects results that aren't achievable in their given timeline or budget. Reset their expectations professionally.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 89,
+      "title": "Responding to a rumour",
+      "category": "Professional",
+      "scenario": "Address a rumour about yourself that's circulating at work",
+      "prompt": "A false rumour is going around about you at the office. Address it directly with the person most likely spreading it.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 90,
+      "title": "Explaining a delay",
+      "category": "Professional",
+      "scenario": "Inform a client that a deliverable will be late",
+      "prompt": "Something unexpected has pushed back your delivery date. Call the client, explain the situation, and propose a new timeline.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 91,
+      "title": "Talking about education",
+      "category": "Social",
+      "scenario": "Discuss your academic journey with a younger student looking for advice",
+      "prompt": "A first-year student asks you about your college experience. Share genuinely useful advice and personal insights.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 92,
+      "title": "Helping someone in distress",
+      "category": "Social",
+      "scenario": "Support a stranger who seems lost or upset in a public space",
+      "prompt": "You notice someone nearby who seems distressed. Approach and offer help sensitively without overstepping.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 93,
+      "title": "Disagreeing with a group decision",
+      "category": "Leadership",
+      "scenario": "Speak up against a team consensus you believe is wrong",
+      "prompt": "Your team has reached a conclusion you think is mistaken. Challenge the group decision thoughtfully without dismissing others.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 94,
+      "title": "Talking about remote work",
+      "category": "Professional",
+      "scenario": "Discuss remote work preferences with your manager",
+      "prompt": "You prefer working from home but your manager wants people in the office. Make your case respectfully.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 95,
+      "title": "Giving credit to others",
+      "category": "Leadership",
+      "scenario": "Acknowledge your team's contribution during a project wrap-up",
+      "prompt": "Your project was a success. Publicly recognise each team member's specific contribution in a sincere, meaningful way.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 96,
+      "title": "Discussing ethical dilemmas",
+      "category": "Professional",
+      "scenario": "Talk through a workplace ethical conflict with a trusted colleague",
+      "prompt": "You've witnessed something at work that doesn't sit right with you ethically. Talk it through with a colleague you trust.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 97,
+      "title": "Making small talk in a lift",
+      "category": "Social",
+      "scenario": "Have a brief, friendly exchange with someone in an elevator",
+      "prompt": "You step into a lift with a colleague you barely know. Fill 30 seconds with natural, easy small talk.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 98,
+      "title": "Pitching a side project",
+      "category": "Professional",
+      "scenario": "Pitch a personal side project to a potential collaborator",
+      "prompt": "You have a side project idea and want someone to join you. Pitch it compellingly to a peer in under 2 minutes.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 99,
+      "title": "Discussing team dynamics",
+      "category": "Leadership",
+      "scenario": "Talk honestly with your manager about a team friction issue",
+      "prompt": "There's a noticeable tension in your team affecting productivity. Bring it up with your manager constructively.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 100,
+      "title": "Reconnecting with someone",
+      "category": "Social",
+      "scenario": "Reach out to an old friend you haven't spoken to in years",
+      "prompt": "You want to reconnect with someone from your past. Start the conversation in a way that's warm, natural, and not awkward.",
+      "_difficulty": "Intermediate"
+    },
+    {
+      "id": 101,
+      "title": "Managing up",
+      "category": "Leadership",
+      "scenario": "Influence your manager's decision without overstepping",
+      "prompt": "You believe your manager is about to make a poor call. Influence the outcome through persuasion and tact, not authority.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 102,
+      "title": "Crisis communication",
+      "category": "Professional",
+      "scenario": "Address a team during a company-wide crisis",
+      "prompt": "Your company is facing a serious public crisis. Address your team \u2014 acknowledge the situation, reassure them, and outline next steps.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 103,
+      "title": "Navigating a hostile interview",
+      "category": "Professional",
+      "scenario": "Perform under pressure in an aggressive panel interview",
+      "prompt": "The interview panel is deliberately confrontational. Remain composed, assertive, and articulate under sustained pressure.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 104,
+      "title": "Delivering a eulogy",
+      "category": "Communication",
+      "scenario": "Speak at a memorial service for a respected mentor",
+      "prompt": "You've been asked to give a eulogy. Write and deliver a 2-minute tribute that is heartfelt, composed, and honourable.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 105,
+      "title": "Confronting a peer",
+      "category": "Professional",
+      "scenario": "Address a colleague who is taking credit for your work",
+      "prompt": "A colleague has been presenting your ideas as their own in meetings. Confront them directly but without causing a scene.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 106,
+      "title": "Communicating under uncertainty",
+      "category": "Leadership",
+      "scenario": "Update your team when you don't have all the answers",
+      "prompt": "Your organisation is going through major changes and your team is anxious. Lead a team meeting where you acknowledge uncertainty while maintaining confidence.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 107,
+      "title": "Negotiating a partnership deal",
+      "category": "Professional",
+      "scenario": "Negotiate terms of a strategic partnership with another company",
+      "prompt": "You're in a high-stakes partnership negotiation. Represent your organisation's interests firmly while finding mutually beneficial ground.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 108,
+      "title": "Responding to a media question",
+      "category": "Communication",
+      "scenario": "Answer a journalist's difficult question on behalf of your organisation",
+      "prompt": "A reporter asks you a sharp, uncomfortable question about your company. Give a composed, measured response that protects your organisation's reputation.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 109,
+      "title": "Handling a whistleblower situation",
+      "category": "Leadership",
+      "scenario": "Navigate a conversation with an employee who has raised a serious concern",
+      "prompt": "A team member has come to you with a serious allegation against another colleague. Handle the conversation with gravity, sensitivity, and process.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 110,
+      "title": "Giving a TED-style talk",
+      "category": "Communication",
+      "scenario": "Deliver a 5-minute idea-driven talk to a live audience",
+      "prompt": "You've been given 5 minutes on a stage to share an idea worth spreading. Structure and deliver a compelling, memorable talk.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 111,
+      "title": "Cross-cultural negotiation",
+      "category": "Professional",
+      "scenario": "Negotiate a deal with a partner from a very different cultural background",
+      "prompt": "You're in a business negotiation with someone whose cultural communication norms differ significantly from yours. Navigate it with awareness and respect.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 112,
+      "title": "Talking to the board",
+      "category": "Leadership",
+      "scenario": "Present a difficult recommendation to your board of directors",
+      "prompt": "You need to recommend a major strategic shift that not all board members will like. Present it with clarity, evidence, and confidence.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 113,
+      "title": "Handling a PR crisis on social media",
+      "category": "Communication",
+      "scenario": "Respond to a viral negative post about your organisation",
+      "prompt": "A post criticising your company has gone viral. Draft and deliver a public response that is transparent, calm, and credible.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 114,
+      "title": "Leading change",
+      "category": "Leadership",
+      "scenario": "Announce a major organisational change to a resistant team",
+      "prompt": "Your team must adopt a significant new process they didn't ask for. Communicate the change in a way that gets buy-in, not pushback.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 115,
+      "title": "Speaking truth to power",
+      "category": "Leadership",
+      "scenario": "Challenge a senior leader's strategy directly",
+      "prompt": "You have data suggesting your CEO's strategy is flawed. Make your case respectfully but boldly in a leadership meeting.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 116,
+      "title": "Facilitating a difficult workshop",
+      "category": "Leadership",
+      "scenario": "Run a workshop where participants are disengaged or combative",
+      "prompt": "You're facilitating a session and the room isn't cooperating \u2014 people are disengaged or argumentative. Regain control and redirect the energy.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 117,
+      "title": "Survivor interview",
+      "category": "Professional",
+      "scenario": "Conduct a sensitive exit interview with a valued employee who is leaving due to burnout",
+      "prompt": "A high-performing team member is leaving because they burned out under your leadership. Conduct the exit interview with honesty, accountability, and care.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 118,
+      "title": "Accepting an apology",
+      "category": "Social",
+      "scenario": "Respond to a sincere apology from someone who wronged you seriously",
+      "prompt": "Someone who genuinely hurt you is now apologising. Respond in a way that is honest about your feelings while choosing how to move forward.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 119,
+      "title": "Giving a difficult performance review",
+      "category": "Leadership",
+      "scenario": "Deliver a negative performance review to an employee who thinks they're doing well",
+      "prompt": "Your team member expects a glowing review, but their performance has been below par. Deliver the truth with kindness and a clear improvement plan.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 120,
+      "title": "Debating a policy publicly",
+      "category": "Communication",
+      "scenario": "Argue your position in a structured public policy debate",
+      "prompt": "You're in a formal debate on a complex policy issue. Present your argument, counter your opponent's points, and close persuasively \u2014 all in front of an audience.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 121,
+      "title": "Communicating grief",
+      "category": "Social",
+      "scenario": "Talk to your employer about needing time off following a bereavement",
+      "prompt": "You've just lost someone close to you. Communicate your need for compassionate leave to your manager with dignity.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 122,
+      "title": "Handling a hostile audience",
+      "category": "Communication",
+      "scenario": "Continue speaking when an audience becomes openly critical",
+      "prompt": "You're mid-presentation and the audience starts pushing back aggressively. Hold your ground, listen actively, and redirect the room.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 123,
+      "title": "Announcing a strategic failure",
+      "category": "Leadership",
+      "scenario": "Tell your company's stakeholders that a key strategy didn't work",
+      "prompt": "A major initiative you championed has failed. Communicate this to stakeholders honestly while maintaining credibility and proposing a path forward.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 124,
+      "title": "Managing a star performer",
+      "category": "Leadership",
+      "scenario": "Give honest developmental feedback to your best employee",
+      "prompt": "Your top performer has a blind spot that's holding them back. Give them feedback they're not expecting in a way they can actually hear.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 125,
+      "title": "Navigating taboo topics",
+      "category": "Social",
+      "scenario": "Handle a conversation that drifts into a sensitive personal topic",
+      "prompt": "A social conversation moves toward a topic \u2014 religion, politics, personal tragedy \u2014 that makes you uncomfortable. Navigate away from it gracefully.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 126,
+      "title": "Emergency communication",
+      "category": "Professional",
+      "scenario": "Communicate critical safety information quickly and clearly in a crisis",
+      "prompt": "An unexpected emergency arises in your building. Communicate instructions to a group of panicked people calmly, quickly, and clearly.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 127,
+      "title": "Making a difficult ask",
+      "category": "Leadership",
+      "scenario": "Ask a senior stakeholder for a significant favour",
+      "prompt": "You need something substantial from someone with far more power than you. Make the ask confidently, with a clear value exchange.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 128,
+      "title": "Cold outreach to a high-profile contact",
+      "category": "Professional",
+      "scenario": "Reach out to a well-known industry figure you've never met",
+      "prompt": "You want to connect with someone influential who gets hundreds of messages. Craft an outreach that stands out and gets a response.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 129,
+      "title": "Mediating between leadership and staff",
+      "category": "Leadership",
+      "scenario": "Bridge the gap between frustrated employees and senior management",
+      "prompt": "Staff morale is low and leadership is out of touch. You're caught in the middle. Mediate between the two sides fairly and constructively.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 130,
+      "title": "Closing a high-value deal",
+      "category": "Professional",
+      "scenario": "Close a major sales deal in a final negotiation meeting",
+      "prompt": "You're in the final meeting to close a deal worth a lot to your company. Seal it with confidence, address last-minute objections, and get the yes.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 131,
+      "title": "Communicating a vision",
+      "category": "Leadership",
+      "scenario": "Inspire a sceptical team with a long-term vision",
+      "prompt": "You have a bold vision for where your team should go, but many are cynical. Make them believe in it \u2014 and in you.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 132,
+      "title": "Talking a friend through a crisis",
+      "category": "Social",
+      "scenario": "Support a friend who is on the verge of making a destructive decision",
+      "prompt": "A close friend is about to do something you believe will seriously harm them. Intervene with care, honesty, and love \u2014 not control.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 133,
+      "title": "Navigating a high-conflict conversation",
+      "category": "Communication",
+      "scenario": "De-escalate a conversation that has become heated and personal",
+      "prompt": "A professional conversation has turned emotional and hostile. De-escalate it without dismissing either party's concerns.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 134,
+      "title": "Legacy communication",
+      "category": "Leadership",
+      "scenario": "Communicate what you stand for to a new generation of your organisation",
+      "prompt": "You're stepping back from a long-held leadership role. Leave behind a statement \u2014 spoken or written \u2014 that captures the values you built the team around.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 135,
+      "title": "Responding to a job rejection",
+      "category": "Professional",
+      "scenario": "Reply professionally and gracefully to a job rejection email",
+      "prompt": "You didn't get the job you really wanted. Respond to the rejection in a way that leaves the door open for future opportunities.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 136,
+      "title": "Raising a safeguarding concern",
+      "category": "Professional",
+      "scenario": "Report a concern about a vulnerable person's welfare to the appropriate authority",
+      "prompt": "You've noticed warning signs that a colleague or student may be in an unsafe situation. Report your concern clearly, factually, and sensitively.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 137,
+      "title": "Handling false accusations",
+      "category": "Professional",
+      "scenario": "Defend yourself against a false accusation made in a professional setting",
+      "prompt": "You've been falsely accused of something serious at work. Respond with composure, facts, and dignity \u2014 not defensiveness.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 138,
+      "title": "Talking about mental health at work",
+      "category": "Professional",
+      "scenario": "Disclose a mental health challenge to your manager",
+      "prompt": "You're struggling with your mental health and it's affecting your work. Tell your manager in a way that is honest, professional, and asks for what you need.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 139,
+      "title": "Challenging groupthink",
+      "category": "Leadership",
+      "scenario": "Break a cycle of groupthink in a leadership team meeting",
+      "prompt": "Your leadership team keeps agreeing with each other without real debate. Disrupt the pattern constructively by challenging assumptions and inviting dissent.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 140,
+      "title": "Giving feedback upward",
+      "category": "Leadership",
+      "scenario": "Give honest feedback to your own manager about their leadership",
+      "prompt": "Your manager has a pattern that's negatively affecting the team. Give them constructive upward feedback with tact and courage.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 141,
+      "title": "Communicating across generations",
+      "category": "Communication",
+      "scenario": "Bridge a communication gap between older and younger team members",
+      "prompt": "Your team has a noticeable generational divide causing friction. Address it openly and help both sides communicate more effectively.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 142,
+      "title": "Accepting public criticism gracefully",
+      "category": "Communication",
+      "scenario": "Respond to public criticism of your work at a conference Q&A",
+      "prompt": "During a Q&A at a public event, someone challenges your work sharply in front of an audience. Respond with poise and intellectual honesty.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 143,
+      "title": "Navigating a power imbalance",
+      "category": "Professional",
+      "scenario": "Advocate for yourself in a conversation with someone who has authority over you",
+      "prompt": "You need to push back on a decision made by someone with significant power over your career. Do it firmly, professionally, and without burning bridges.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 144,
+      "title": "Leading a post-mortem",
+      "category": "Leadership",
+      "scenario": "Facilitate a project post-mortem after a high-profile failure",
+      "prompt": "A major project went badly wrong. Lead a post-mortem meeting that is honest, blame-free, and genuinely focused on learning.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 145,
+      "title": "Storytelling for fundraising",
+      "category": "Communication",
+      "scenario": "Use a personal story to inspire donors at a fundraising event",
+      "prompt": "You're speaking at a charity gala. Use a real or compelling narrative to move your audience to donate generously.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 146,
+      "title": "Refusing an unethical request",
+      "category": "Professional",
+      "scenario": "Decline a request from a senior figure that crosses an ethical line",
+      "prompt": "Someone with authority over you asks you to do something you believe is unethical. Refuse clearly, professionally, and without backing down.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 147,
+      "title": "Communicating during layoffs",
+      "category": "Leadership",
+      "scenario": "Deliver the news of role eliminations to affected employees individually",
+      "prompt": "You must tell individuals one-on-one that their role has been made redundant. Handle each conversation with humanity, clarity, and respect.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 148,
+      "title": "Building consensus across teams",
+      "category": "Leadership",
+      "scenario": "Align multiple departments on a shared decision",
+      "prompt": "Three departments have conflicting priorities around a key initiative. Facilitate alignment and bring them to a shared decision.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 149,
+      "title": "Recovering from a public mistake",
+      "category": "Communication",
+      "scenario": "Address a significant error you made publicly and move forward",
+      "prompt": "You made a notable mistake that others witnessed. Acknowledge it fully, take ownership, and redirect the narrative constructively.",
+      "_difficulty": "Hard"
+    },
+    {
+      "id": 150,
+      "title": "Communicating values under pressure",
+      "category": "Leadership",
+      "scenario": "Hold firm on your principles in a high-pressure business meeting",
+      "prompt": "You're being pushed hard to compromise on something that goes against your values. Articulate your position clearly and hold your ground with composure.",
+      "_difficulty": "Hard"
+    }
+  ]
+}

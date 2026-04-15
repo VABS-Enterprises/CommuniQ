@@ -5,7 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/models/scenario_model.dart';
-import 'package:communiq/models/session_result_model.dart';
+import 'package:communiq/models/session_result_model.dart'
+    show OpeningResult, SessionEndResult, TurnResult;
 import 'package:communiq/models/user_profile.dart';
 
 /// Handles all session-related API calls to the Node backend.
@@ -60,25 +61,44 @@ class SessionService {
 
   // ─── Session lifecycle ─────────────────────────────────────────────────────
 
-  /// Creates a new session for the given scenario. Returns the sessionId.
-  /// Optionally sends [persona], [tone], and [languageLevel] so the backend
-  /// can inject them into the AI system prompt.
+  /// Creates a new session. Returns the sessionId.
+  ///
+  /// Provide [scenarioId] to use a Firestore-backed scenario, **or** provide
+  /// [scenarioPrompt] (a plain-text system prompt) for a custom / preset session.
+  /// At least one of the two must be non-empty.
   Future<String> startSession(
     String scenarioId, {
+    String? scenarioPrompt,
+    String? scenarioTitle,
     String? persona,
     String? tone,
     String? languageLevel,
+    String? role,
+    String? traits,
+    String? backstory,
   }) async {
+    assert(
+      scenarioId.isNotEmpty || (scenarioPrompt != null && scenarioPrompt.isNotEmpty),
+      'Provide either scenarioId or scenarioPrompt',
+    );
     try {
-      debugPrint('[SessionService] startSession → scenarioId=$scenarioId '
-          'persona=$persona tone=$tone level=$languageLevel');
+      debugPrint('[SessionService] startSession → '
+          '${scenarioId.isNotEmpty ? "scenarioId=$scenarioId" : "scenarioPrompt (custom)"} '
+          'persona=$persona tone=$tone level=$languageLevel role=$role traits=$traits');
       final response = await _dio.post(
         ApiConstants.sessionsStart,
         data: {
-          'scenarioId': scenarioId,
+          if (scenarioId.isNotEmpty) 'scenarioId': scenarioId,
+          if (scenarioPrompt != null && scenarioPrompt.isNotEmpty)
+            'scenarioPrompt': scenarioPrompt,
+          if (scenarioTitle != null && scenarioTitle.isNotEmpty)
+            'scenarioTitle': scenarioTitle,
           if (persona != null) 'persona': persona,
           if (tone != null) 'tone': tone,
           if (languageLevel != null) 'languageLevel': languageLevel,
+          if (role != null && role.isNotEmpty) 'role': role,
+          if (traits != null && traits.isNotEmpty) 'traits': traits,
+          if (backstory != null && backstory.isNotEmpty) 'backstory': backstory,
         },
       );
       final sessionId =
@@ -91,6 +111,30 @@ class SessionService {
       throw Exception(_dioMessage(e, 'Could not start session'));
     } catch (e) {
       debugPrint('[SessionService] startSession ✗ $e');
+      rethrow;
+    }
+  }
+
+  /// Fetches the first AI line + audio before any user recording (Colab parity).
+  Future<OpeningResult> fetchOpening({required String sessionId}) async {
+    try {
+      debugPrint('[SessionService] fetchOpening → sessionId=$sessionId');
+      final response = await _dio.post(
+        ApiConstants.sessionsOpening,
+        data: {'sessionId': sessionId},
+        options: Options(
+          receiveTimeout: const Duration(seconds: 120),
+        ),
+      );
+      final result =
+          OpeningResult.fromJson(response.data as Map<String, dynamic>);
+      debugPrint('[SessionService] fetchOpening ✓');
+      return result;
+    } on DioException catch (e) {
+      debugPrint('[SessionService] fetchOpening ✗ DioException: $e');
+      throw Exception(_dioMessage(e, 'Could not load opening'));
+    } catch (e) {
+      debugPrint('[SessionService] fetchOpening ✗ $e');
       rethrow;
     }
   }

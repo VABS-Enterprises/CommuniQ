@@ -66,7 +66,10 @@ def test_health() -> bool:
         print(f"  Response: {data}")
         assert data.get("status") == "ok", "Expected status: ok"
         assert "groq_ready" in data, "Missing 'groq_ready' field"
-        assert "model" in data, "Missing 'model' field"
+        assert "backends" in data, "Missing 'backends' field"
+        b = data["backends"]
+        assert "asr" in b and "llm" in b and "tts" in b, "Incomplete backends"
+        assert "local_models" in data, "Missing 'local_models' field"
         print("  PASS")
         return True
     except Exception as e:

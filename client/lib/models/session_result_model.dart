@@ -1,5 +1,30 @@
 import 'package:communiq/models/feedback_config.dart';
 
+// ─── Opening Response ──────────────────────────────────────────────────────────
+
+/// Maps the response from POST /sessions/opening (AI speaks first, no user audio).
+class OpeningResult {
+  final String aiReply;
+  final String aiAudioBase64;
+
+  /// True when Node has `LIVEKIT_ENABLED=true` — Flutter joins the LiveKit room after the opening clip.
+  final bool liveVoiceEnabled;
+
+  const OpeningResult({
+    required this.aiReply,
+    required this.aiAudioBase64,
+    this.liveVoiceEnabled = false,
+  });
+
+  factory OpeningResult.fromJson(Map<String, dynamic> json) {
+    return OpeningResult(
+      aiReply: json['aiReply'] as String? ?? '',
+      aiAudioBase64: json['aiAudioBase64'] as String? ?? '',
+      liveVoiceEnabled: json['liveVoiceEnabled'] as bool? ?? false,
+    );
+  }
+}
+
 // ─── Turn Response ─────────────────────────────────────────────────────────────
 
 /// Maps the response from POST /sessions/turn.
