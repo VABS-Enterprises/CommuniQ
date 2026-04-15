@@ -8,6 +8,7 @@ Input JSON: either
 
 Each session object may contain:
   - system_prompt | systemPrompt | scenarioSystemPrompt
+  - scenarioType (optional) — e.g. hr_interview, technical, gd, sales; prepended to system for training
   - turns: [{ "role": "user"|"ai"|"assistant", "transcript"|"content": "..." }, ...]
 """
 
@@ -44,6 +45,10 @@ def session_to_record(doc: dict[str, Any]) -> dict[str, Any] | None:
         or doc.get("scenarioSystemPrompt")
         or ""
     ).strip()
+    st = doc.get("scenarioType") or doc.get("scenario_type")
+    if isinstance(st, str) and st.strip():
+        tag = st.strip()
+        system = f"[scenarioType:{tag}]\n\n{system}" if system else f"[scenarioType:{tag}]"
     turns = doc.get("turns") or doc.get("conversation") or []
     if not isinstance(turns, list):
         return None
