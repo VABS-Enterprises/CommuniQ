@@ -1,0 +1,42 @@
+# LiveKit server configuration for CommuniQ
+# Used by: docker-compose.yml in this directory
+#
+# Dev (laptop, LAN only):
+#   - use_external_ip: false
+#   - Access Flutter app and Pipecat worker via LAN IP (e.g. 192.168.x.x:7880)
+#
+# Production (VPS / cloud):
+#   - Set use_external_ip: true
+#   - Replace turn.domain with your actual public IP or domain
+#   - Replace API key+secret with strong random strings
+
+port: 7880
+
+# WebRTC media port range — keep at least 100 ports open
+rtc:
+  port_range_start: 50000
+  port_range_end: 50200
+  # true = LiveKit reports its external IP to WebRTC clients (required on a VPS)
+  # false = use LAN IP only (fine for dev on the same laptop/network)
+  use_external_ip: false
+
+# API keys — the Node backend uses these to mint access tokens.
+# LiveKit 1.10+ requires the secret to be at least 32 characters.
+# Must match server/.env LIVEKIT_API_KEY and LIVEKIT_API_SECRET.
+keys:
+  devkey: communiq-local-dev-livekit-secret-min-32ch
+
+# Built-in TURN relay (UDP only for local dev).
+# Do not set tls_port here unless you provide TLS cert paths — LiveKit 1.10+
+# exits with "TURN tls cert required" if tls_port is set without certs.
+turn:
+  enabled: true
+  # Replace with your public IP when deploying to a VPS.
+  # For laptop dev, the LAN IP works (phone must be on same Wi-Fi).
+  domain: 127.0.0.1
+  udp_port: 3478
+
+# Logging (info is verbose enough for dev; use warn in production)
+logging:
+  level: info
+  pion_level: error

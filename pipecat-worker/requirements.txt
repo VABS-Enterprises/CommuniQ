@@ -1,0 +1,28 @@
+# CommuniQ Pipecat Worker — local STT + local TTS + OpenAI-compatible LLM
+#
+#   pip install -r requirements.txt
+#
+# Requires:
+#   - ffmpeg on PATH (Dockerfile installs it)
+#   - CUDA-capable GPU driver for faster-whisper on GPU (ctranslate2 wheel must match
+#     driver; see GET /health -> cp3_stack and scripts/verify-cp3.ps1)
+#   - Set WHISPER_DEVICE=cpu if no GPU or mismatched CUDA
+#   - Ollama or vLLM running for LLM_BASE_URL
+
+# Core: LiveKit transport + OpenAI-compatible LLM client
+pipecat-ai[livekit,openai]
+
+# HTTP trigger server
+fastapi
+uvicorn[standard]
+
+# Local STT / TTS (same stack as ai-server facades)
+# Pin ctranslate2 to a wheel matching your NVIDIA driver CUDA (see GET /health cp3_stack).
+# Example (Linux): faster-whisper==1.0.3 ctranslate2==4.4.0
+faster-whisper
+kokoro
+soundfile
+numpy
+
+python-dotenv
+httpx

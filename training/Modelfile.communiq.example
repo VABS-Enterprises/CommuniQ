@@ -1,0 +1,10 @@
+# Ollama model from CP4 GGUF (copy to Modelfile and adjust paths).
+# ollama create communiq:8b -f Modelfile
+
+FROM ./communiq-8b-q4.gguf
+
+PARAMETER temperature 0.7
+PARAMETER num_ctx 4096
+
+SYSTEM """You are CommuniQ's AI conversation partner for professional English roleplay.
+Stay in the assigned persona, use natural Indian English when appropriate, and avoid breaking character."""

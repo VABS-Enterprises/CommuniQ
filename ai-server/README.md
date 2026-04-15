@@ -57,9 +57,14 @@ python tests/test_pipeline.py
 
 | Variable | Required | Description |
 |---|---|---|
-| `GROQ_API_KEY` | Yes | Groq API key — get one free at console.groq.com |
+| `GROQ_API_KEY` | If any backend is `groq` | Groq STT/LLM — console.groq.com |
+| `LLM_BACKEND` | No | Default `groq`. Use `openai_compat` for Together / OpenRouter / hosted chat APIs. |
+| `OPENAI_COMPAT_BASE_URL` | If `LLM_BACKEND` or `EVAL_LLM_BACKEND` is `openai_compat` | API root (e.g. `https://api.openai.com` or `https://api.together.xyz/v1`) |
+| `OPENAI_COMPAT_API_KEY` | Same | Bearer token for that API |
 | `GOOGLE_APPLICATION_CREDENTIALS` | No | Path to Google Cloud service account JSON (optional TTS upgrade) |
 | `PORT` | No | Server port, default 8000 |
+
+See `.env.example` for the full list (`ASR_BACKEND`, `TTS_BACKEND`, local GPU options).
 
 ## TTS Engine
 

@@ -1,3 +1,13 @@
+"""
+Evaluator prompts for POST /session/evaluate.
+
+Colab reference (Block 9): if the notebook used different dimension names, score
+semantics, or JSON keys, treat **this file** as the production source of truth.
+The Node/Firestore contract expects camelCase in API responses (mapped in
+session.py). Transcripts now include the **AI opening** line when present
+(`User:` / `AI:` lines built in Node from Firestore `turns`).
+"""
+
 # Maps Node's scenarioType values to human-readable descriptions
 # injected into the evaluator prompt for context-aware feedback.
 SCENARIO_TYPE_DESCRIPTIONS: dict[str, str] = {

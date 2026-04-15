@@ -21,7 +21,10 @@ class ApiService {
   late final Dio _dio = Dio(
     BaseOptions(
       baseUrl: _kServerUrl,
-      connectTimeout: const Duration(seconds: 30),
+      // 90 s: Render free-tier Node server can take 50–80 s to cold-start.
+      // 30 s was too short; bumped to 90 s so the first post-sleep request
+      // always succeeds instead of timing out before the server accepts it.
+      connectTimeout: const Duration(seconds: 90),
       receiveTimeout: const Duration(seconds: 90),
       // NOTE: No global Content-Type header — Dio sets it automatically with
       // the correct multipart boundary when FormData is used.

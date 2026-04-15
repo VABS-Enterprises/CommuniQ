@@ -6,6 +6,8 @@ const {
   getSessionById,
   getScenarioById,
   appendTurnsToSession,
+  appendAiTurnOnly,
+  appendLiveVoiceTurns,
   completeSession,
   abandonSession: abandonSessionInDb,
   writeEvaluationReport,
@@ -17,8 +19,13 @@ const {
   upsertGoogleUser,
   createUser,
 } = require('../services/firestoreService');
-const { sendTurnToFastApi, evaluateSession } = require('../services/fastApiService');
+const {
+  sendTurnToFastApi,
+  sendOpeningToFastApi,
+  evaluateSession,
+} = require('../services/fastApiService');
 const { computeXpAward, computeLevel, computeStreak, computeNewBadges } = require('../services/xpService');
+const livekit = require('../services/livekitService');
 
 /**
  * Shared auto-recovery helper: if the Firestore user doc is missing (e.g. server
@@ -69,10 +76,72 @@ async function startSession(req, res) {
       tone: tone || null,
       languageLevel: languageLevel || null,
     });
+
+    // CP2: create the LiveKit room now so it exists before Flutter joins.
+    // No-op when LIVEKIT_ENABLED=false (classic HTTP mode).
+    await livekit.createRoom(sessionId);
+
     return res.status(201).json({ sessionId });
   } catch (err) {
     console.error('startSession error:', err.message);
     return res.status(500).json({ error: 'Could not start session' });
+  }
+}
+
+// POST /sessions/opening — AI speaks first (no user audio); Colab parity.
+async function sessionOpening(req, res) {
+  const { sessionId } = req.body;
+  const userId = req.uid;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: 'sessionId is required' });
+  }
+
+  try {
+    const session = await getSessionById(sessionId);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+    if (session.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    if (session.status !== 'in_progress') {
+      return res.status(400).json({ error: 'Session is not in progress' });
+    }
+    if (session.turns && session.turns.length > 0) {
+      return res.status(400).json({ error: 'Opening already recorded for this session' });
+    }
+
+    const scenario = await getScenarioById(session.scenarioId);
+    if (!scenario) return res.status(404).json({ error: 'Scenario not found' });
+    if (!scenario.systemPrompt) {
+      return res.status(422).json({ error: 'Scenario is missing a system prompt — cannot generate opening' });
+    }
+
+    let finalSystemPrompt = scenario.systemPrompt;
+    const modifiers = [];
+    if (session.persona) modifiers.push(`You are roleplaying as: ${session.persona}.`);
+    if (session.tone) modifiers.push(`Maintain a ${session.tone} tone throughout the conversation.`);
+    if (session.languageLevel) modifiers.push(`Use ${session.languageLevel}-level language complexity.`);
+    if (modifiers.length > 0) {
+      finalSystemPrompt = modifiers.join(' ') + '\n\n' + scenario.systemPrompt;
+    }
+
+    const fastApiResult = await sendOpeningToFastApi(sessionId, finalSystemPrompt);
+    const { aiReply, aiAudioBase64 } = fastApiResult;
+
+    await appendAiTurnOnly(sessionId, createTurnDoc('ai', aiReply));
+
+    // CP2: dispatch the Pipecat agent into the LiveKit room so it is ready
+    // to receive audio as soon as Flutter joins.
+    // No-op when LIVEKIT_ENABLED=false (classic HTTP mode).
+    await livekit.dispatchAgent(sessionId, finalSystemPrompt);
+
+    return res.status(200).json({
+      aiReply,
+      aiAudioBase64,
+      liveVoiceEnabled: livekit.ENABLED,
+    });
+  } catch (err) {
+    console.error('sessionOpening error:', err.message);
+    const status = err.statusCode || 500;
+    return res.status(status).json({ error: err.message || 'Failed to generate opening' });
   }
 }
 
@@ -105,9 +174,9 @@ async function processTurn(req, res) {
       return res.status(400).json({ error: 'Session is not in progress' });
     }
 
-    // Robustness5: enforce turn limit
-    const currentTurnCount = (session.turns || []).length;
-    if (currentTurnCount >= MAX_TURNS_PER_SESSION * 2) {
+    // Robustness5: max user turns (opener is AI-only and does not count).
+    const userTurnCount = (session.turns || []).filter((t) => t.role === 'user').length;
+    if (userTurnCount >= MAX_TURNS_PER_SESSION) {
       return res.status(400).json({ error: `Session has reached the maximum of ${MAX_TURNS_PER_SESSION} turns` });
     }
 
@@ -143,8 +212,8 @@ async function processTurn(req, res) {
       createTurnDoc('ai', aiReply)
     );
 
-    // Feature6: return turnCount so Flutter knows how many turns have happened
-    const turnCount = Math.floor(currentTurnCount / 2) + 1;
+    // Feature6: completed user turns after this request = userTurnCount + 1
+    const turnCount = userTurnCount + 1;
     return res.status(200).json({ userTranscript, aiReply, aiAudioBase64, turnCount });
   } catch (err) {
     console.error('processTurn error:', err.message);
@@ -170,7 +239,7 @@ async function endSession(req, res) {
       return res.status(400).json({ error: 'Session is not in progress' });
     }
 
-    // Bug4 fix: reject empty sessions before calling FastAPI
+    // Reject sessions with nothing to evaluate (no opener, no exchanges).
     if (!session.turns || session.turns.length === 0) {
       await abandonSessionInDb(sessionId);
       return res.status(400).json({ error: 'No turns recorded — session abandoned' });
@@ -248,6 +317,10 @@ async function endSession(req, res) {
     // Return a clean report object — do NOT forward the Firestore document directly
     // because it contains FieldValue.serverTimestamp() which serialises as a raw
     // internal object rather than a real timestamp.
+    // CP2: clean up the LiveKit room after the session is fully evaluated.
+    // No-op when LIVEKIT_ENABLED=false (classic HTTP mode).
+    await livekit.deleteRoom(sessionId);
+
     return res.status(200).json({
       report: {
         scores: evaluation.scores,
@@ -344,4 +417,85 @@ async function getSession(req, res) {
   }
 }
 
-module.exports = { startSession, processTurn, endSession, getReport, abandonSession, getSessionHistory, getSession };
+// POST /sessions/internal/live-voice-turn (Pipecat worker only, X-Communiq-Worker-Secret)
+// Appends user and/or AI transcript turns so /sessions/end evaluation sees live voice.
+async function appendLiveVoiceTurn(req, res) {
+  const { sessionId, userTranscript, aiTranscript } = req.body || {};
+
+  if (!sessionId) {
+    return res.status(400).json({ error: 'sessionId is required' });
+  }
+  const u = userTranscript != null ? String(userTranscript).trim() : '';
+  const a = aiTranscript != null ? String(aiTranscript).trim() : '';
+  if (!u && !a) {
+    return res.status(400).json({ error: 'Provide userTranscript and/or aiTranscript' });
+  }
+
+  try {
+    const session = await getSessionById(sessionId);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+    if (session.status !== 'in_progress') {
+      return res.status(400).json({ error: 'Session is not in progress' });
+    }
+
+    const userTurnCount = (session.turns || []).filter((t) => t.role === 'user').length;
+    if (u && userTurnCount >= MAX_TURNS_PER_SESSION) {
+      return res.status(400).json({
+        error: `Session has reached the maximum of ${MAX_TURNS_PER_SESSION} user turns`,
+      });
+    }
+
+    const turns = [];
+    if (u) turns.push(createTurnDoc('user', u));
+    if (a) turns.push(createTurnDoc('ai', a));
+
+    await appendLiveVoiceTurns(sessionId, turns);
+    return res.status(200).json({ ok: true, appended: turns.length });
+  } catch (err) {
+    console.error('appendLiveVoiceTurn error:', err.message);
+    return res.status(500).json({ error: 'Could not append live voice turn' });
+  }
+}
+
+// POST /sessions/livekit-token
+// Returns a LiveKit access token so Flutter can join the session's WebRTC room.
+// Called by Flutter after startSession, before joining the LiveKit room.
+async function getLivekitToken(req, res) {
+  const { sessionId } = req.body;
+  const userId = req.uid;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: 'sessionId is required' });
+  }
+
+  if (!livekit.ENABLED) {
+    return res.status(503).json({
+      error: 'Live voice mode is not enabled. Set LIVEKIT_ENABLED=true on the server.',
+    });
+  }
+
+  try {
+    const session = await getSessionById(sessionId);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+    if (session.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+    const { token, livekitUrl } = livekit.createUserToken(sessionId, userId);
+    return res.status(200).json({ token, livekitUrl });
+  } catch (err) {
+    console.error('getLivekitToken error:', err.message);
+    return res.status(500).json({ error: 'Could not generate LiveKit token' });
+  }
+}
+
+module.exports = {
+  startSession,
+  sessionOpening,
+  processTurn,
+  endSession,
+  getReport,
+  abandonSession,
+  getSessionHistory,
+  getSession,
+  getLivekitToken,
+  appendLiveVoiceTurn,
+};
