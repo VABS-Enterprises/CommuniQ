@@ -1,28 +1,19 @@
-# CommuniQ Pipecat Worker — local STT + local TTS + OpenAI-compatible LLM
-#
-#   pip install -r requirements.txt
-#
-# Requires:
-#   - ffmpeg on PATH (Dockerfile installs it)
-#   - CUDA-capable GPU driver for faster-whisper on GPU (ctranslate2 wheel must match
-#     driver; see GET /health -> cp3_stack and scripts/verify-cp3.ps1)
-#   - Set WHISPER_DEVICE=cpu if no GPU or mismatched CUDA
-#   - Ollama or vLLM running for LLM_BASE_URL
+# Pipecat worker — real-time LiveKit voice agent for CommuniQ
+# Run:  pip install -r requirements.txt
+# Start: uvicorn worker:app --port 9000
 
-# Core: LiveKit transport + OpenAI-compatible LLM client
-pipecat-ai[livekit,openai]
+# Pipecat core + service extras
+#   groq    — GroqSTTService, GroqLLMService, GroqTTSService
+#   livekit — LiveKitTransport (WebRTC room)
+#   silero  — SileroVADAnalyzer (voice activity detection)
+pipecat-ai[groq,livekit,silero]>=0.0.105
 
-# HTTP trigger server
-fastapi
-uvicorn[standard]
+# HTTP server
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
 
-# Local STT / TTS (same stack as ai-server facades)
-# Pin ctranslate2 to a wheel matching your NVIDIA driver CUDA (see GET /health cp3_stack).
-# Example (Linux): faster-whisper==1.0.3 ctranslate2==4.4.0
-faster-whisper
-kokoro
-soundfile
-numpy
+# HTTP client — used to POST turn transcripts to the Node backend
+httpx>=0.27.0
 
-python-dotenv
-httpx
+# Environment variables
+python-dotenv>=1.0.0

@@ -102,7 +102,7 @@ class Settings:
                 f"Choose one of: {', '.join(sorted(valid_asr))}"
             )
 
-        valid_tts = {"edge", "local"}
+        valid_tts = {"groq", "edge", "local"}
         if self.tts_backend not in valid_tts:
             raise RuntimeError(
                 f"TTS_BACKEND={self.tts_backend!r} is not recognised. "

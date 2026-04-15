@@ -101,7 +101,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFF080B14),
       body: SafeArea(
         child: Column(
           children: [
@@ -157,23 +157,35 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
 
   Widget _buildTopBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.s8, vertical: AppSpacing.s8),
+      padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
+            icon: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFF141D2C),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.textPrimary, size: 16),
+            ),
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+            padding: EdgeInsets.zero,
           ),
-          Expanded(
+          const Expanded(
             child: Text(
-              'CommuniQ',
+              'Session Complete',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                letterSpacing: -0.2,
+              ),
             ),
           ),
           const SizedBox(width: 48),
@@ -188,16 +200,28 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'SESSION PERFORMANCE',
-          style: TextStyle(
-            color: AppColors.primaryLight,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.6,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [
+              AppColors.primary.withValues(alpha: 0.18),
+              AppColors.primaryLight.withValues(alpha: 0.08),
+            ]),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.3)),
+          ),
+          child: const Text(
+            'SESSION PERFORMANCE',
+            style: TextStyle(
+              color: AppColors.primaryLight,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.3,
+            ),
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 12),
         Text(
           widget.config.scenarioTitle,
           style: const TextStyle(
@@ -205,6 +229,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
             fontSize: 26,
             fontWeight: FontWeight.bold,
             height: 1.2,
+            letterSpacing: -0.5,
           ),
         ),
       ],
@@ -225,11 +250,21 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     return Colors.red.shade200;
   }
 
+  String _scoreLabel(int score) {
+    if (score >= 90) return 'Outstanding';
+    if (score >= 75) return 'Great Job';
+    if (score >= 60) return 'Good Start';
+    if (score >= 45) return 'Keep Practicing';
+    return 'Room to Grow';
+  }
+
   Widget _buildScoreSection(BuildContext context) {
     final scoreColor = _scoreColor(widget.config.overallScore);
+    final scoreLightColor = _scoreLightColor(widget.config.overallScore);
     return Center(
       child: Column(
         children: [
+          // Score ring with glow shadow
           AnimatedBuilder(
             animation: _scoreAnimation,
             builder: (_, __) {
@@ -239,56 +274,104 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                   ? 0
                   : (value * overallScore / (overallScore / 100)).round();
 
-              return SizedBox(
-                width: 180,
-                height: 180,
-                child: CustomPaint(
-                  painter: _ScoreRingPainter(
-                    progress: value,
-                    color: scoreColor,
-                    lightColor: _scoreLightColor(overallScore),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '$displayScore',
-                          style: TextStyle(
-                            color: scoreColor,
-                            fontSize: 52,
-                            fontWeight: FontWeight.bold,
-                            height: 1,
-                          ),
-                        ),
-                        Text(
-                          '%',
-                          style: TextStyle(
-                            color: scoreColor.withValues(alpha: 0.7),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Outer glow
+                  Container(
+                    width: 196,
+                    height: 196,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: scoreColor.withValues(
+                              alpha: 0.12 + 0.06 * value),
+                          blurRadius: 40,
+                          spreadRadius: 8,
                         ),
                       ],
                     ),
                   ),
-                ),
+                  SizedBox(
+                    width: 180,
+                    height: 180,
+                    child: CustomPaint(
+                      painter: _ScoreRingPainter(
+                        progress: value,
+                        color: scoreColor,
+                        lightColor: scoreLightColor,
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '$displayScore',
+                              style: TextStyle(
+                                color: scoreColor,
+                                fontSize: 52,
+                                fontWeight: FontWeight.bold,
+                                height: 1,
+                              ),
+                            ),
+                            Text(
+                              '%',
+                              style: TextStyle(
+                                color: scoreColor.withValues(alpha: 0.65),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           ),
-          const SizedBox(height: AppSpacing.s20),
-          OutlinedButton.icon(
-            onPressed: () => _showAnalysisSheet(context),
-            icon: const Icon(Icons.bar_chart_rounded,
-                size: 16, color: AppColors.primaryLight),
-            label: const Text(
-              'View Analysis',
-              style: TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w600),
+          const SizedBox(height: 12),
+          // Score label
+          Text(
+            _scoreLabel(widget.config.overallScore),
+            style: TextStyle(
+              color: _scoreColor(widget.config.overallScore),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.3,
             ),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.primaryLight, width: 1.5),
+          ),
+          const SizedBox(height: AppSpacing.s20),
+          // View analysis button
+          GestureDetector(
+            onTap: () => _showAnalysisSheet(context),
+            child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    width: 1.5),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.bar_chart_rounded,
+                      size: 16, color: AppColors.primaryLight),
+                  SizedBox(width: 8),
+                  Text(
+                    'View Analysis',
+                    style: TextStyle(
+                      color: AppColors.primaryLight,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           if (widget.xpAwarded > 0 ||
@@ -670,26 +753,53 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
   // ─── Section Label ───────────────────────────────────────────────────────────
 
   Widget _buildSectionLabel(String label) {
-    return Text(
-      label,
-      style: const TextStyle(
-        color: AppColors.textMuted,
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.4,
-      ),
+    return Row(
+      children: [
+        Container(
+          width: 3,
+          height: 14,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryLight],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.4,
+          ),
+        ),
+      ],
     );
   }
 
   // ─── Skill Card ──────────────────────────────────────────────────────────────
 
   Widget _buildSkillCard(SkillCard skill, Animation<double> barAnim) {
+    final barColor = _scoreColor(skill.score);
+    final barLightColor = _scoreLightColor(skill.score);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        color: const Color(0xFF0F1520),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+            color: barColor.withValues(alpha: 0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: barColor.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -703,59 +813,89 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600,
                   fontSize: 15,
+                  letterSpacing: -0.2,
                 ),
               ),
-              Text(
-                '${skill.score}%',
-                style: TextStyle(
-                  color: _scoreColor(skill.score),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: barColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: barColor.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  '${skill.score}%',
+                  style: TextStyle(
+                    color: barColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.s12),
-          // Animated progress bar
           AnimatedBuilder(
             animation: barAnim,
-            builder: (_, __) => ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: barAnim.value,
-                minHeight: 6,
-                backgroundColor: AppColors.border,
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(AppColors.primary),
+            builder: (_, __) => Container(
+              height: 8,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: FractionallySizedBox(
+                widthFactor: barAnim.value,
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [barColor, barLightColor],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: barColor.withValues(alpha: 0.4),
+                        blurRadius: 6,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.s12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: skill.tags
-                .map(
-                  (tag) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.25)),
-                    ),
-                    child: Text(
-                      tag,
-                      style: const TextStyle(
-                        color: AppColors.primaryLight,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+          if (skill.tags.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: skill.tags
+                  .map(
+                    (tag) => Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.2)),
+                      ),
+                      child: Text(
+                        tag,
+                        style: const TextStyle(
+                          color: AppColors.primaryLight,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                  ),
-                )
-                .toList(),
-          ),
+                  )
+                  .toList(),
+            ),
+          ],
         ],
       ),
     );
@@ -768,23 +908,23 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
       return Container(
         padding: const EdgeInsets.all(AppSpacing.s16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
+          color: const Color(0xFF0F1520),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppColors.border),
         ),
         child: const Center(
           child: Text('—',
-              style: TextStyle(
-                  color: AppColors.textMuted, fontSize: 14)),
+              style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
         ),
       );
     }
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        color: const Color(0xFF0F1520),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -830,23 +970,23 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
       return Container(
         padding: const EdgeInsets.all(AppSpacing.s16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
+          color: const Color(0xFF0F1520),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppColors.border),
         ),
         child: const Center(
           child: Text('—',
-              style: TextStyle(
-                  color: AppColors.textMuted, fontSize: 14)),
+              style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
         ),
       );
     }
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        color: const Color(0xFF0F1520),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+            color: AppColors.primaryLight.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: widget.config.improvements.map((tip) {
@@ -902,9 +1042,16 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.s16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+          color: const Color(0xFF0F1520),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -961,62 +1108,79 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Primary
-        SizedBox(
-          height: 52,
-          child: ElevatedButton(
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              if (widget.isOnboarding) {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const GoalConfirmationScreen(
-                            data: OnboardingData(),
-                          )),
-                  (_) => false,
-                );
-              } else {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const RoleplaySetupScreen(mode: 'custom')),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
-              elevation: 0,
+        // Primary — gradient button
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            if (widget.isOnboarding) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const GoalConfirmationScreen(
+                          data: OnboardingData(),
+                        )),
+                (_) => false,
+              );
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const RoleplaySetupScreen(mode: 'custom')),
+              );
+            }
+          },
+          child: Container(
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.primaryLight],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.35),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            child: Text(
-              widget.isOnboarding ? 'Continue' : 'Practice Again',
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 15),
+            child: Center(
+              child: Text(
+                widget.isOnboarding ? 'Continue' : 'Practice Again',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
             ),
           ),
         ),
         const SizedBox(height: AppSpacing.s12),
         // Secondary
-        SizedBox(
-          height: 52,
-          child: OutlinedButton(
-            onPressed: () {
-              HapticFeedback.lightImpact();
-              Navigator.popUntil(context, (route) => route.isFirst);
-            },
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textPrimary,
-              side: const BorderSide(color: AppColors.border, width: 1.5),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            Navigator.popUntil(context, (route) => route.isFirst);
+          },
+          child: Container(
+            height: 56,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F1520),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border, width: 1.5),
             ),
-            child: const Text(
-              'Try New Scenario',
-              style:
-                  TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            child: const Center(
+              child: Text(
+                'Try New Scenario',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
             ),
           ),
         ),

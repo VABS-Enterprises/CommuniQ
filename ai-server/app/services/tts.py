@@ -4,7 +4,12 @@ import re
 
 import edge_tts
 
-DEFAULT_VOICE = "en-IN-NeerjaNeural"
+DEFAULT_VOICE = "en-IN-PrabhatNeural"  # matches pipecat-worker voice — same AI voice throughout
+
+# Strips AI parenthesis stage-directions like (nervously), (pauses).
+# Square-bracket [directions] are intentionally kept because Orpheus TTS uses
+# them as vocal direction controls (e.g. [cheerful], [whisper]).
+_STAGE_DIRECTION = re.compile(r"\s*[（(][^)）]{1,60}[)）]\s*")
 
 # Supported Indian English + fallback voices.
 SUPPORTED_VOICES = {
@@ -89,11 +94,17 @@ async def synthesize_sentence(text: str, voice: str | None = None) -> bytes:
             ) from err
 
 
+def strip_stage_directions(text: str) -> str:
+    """Remove parenthesised/bracketed stage directions before TTS synthesis."""
+    return _STAGE_DIRECTION.sub(" ", text).strip()
+
+
 async def synthesize_full(text: str, voice: str | None = None) -> bytes:
     """
     Synthesize a full text block to a single concatenated MP3.
     Used by /tts and /session/turn endpoints.
     """
+    text = strip_stage_directions(text)
     sentences = split_sentences(text)
     if not sentences:
         return b""

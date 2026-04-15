@@ -36,7 +36,6 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await AuthService.signInWithGoogle();
       if (mounted) {
-        debugPrint('🎯 [Auth/Login] ── Popping back to AuthGuard ───────');
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } on CancelledException {
@@ -61,7 +60,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
       if (mounted) {
-        debugPrint('🎯 [Auth/Login] ── Popping back to AuthGuard ───────');
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
@@ -72,19 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleForgotPassword() async {
-    if (_isLoading) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              const Text('Please wait for the current action to complete.'),
-          backgroundColor: AppColors.surface,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-      return;
-    }
+    if (_isLoading) return;
     final email = _emailController.text.trim();
     if (email.isEmpty) {
       _showError('Enter your email address first, then tap Forgot Password.');
@@ -207,22 +193,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       text: 'Sign In', onPressed: _handleEmailLogin),
 
               if (!_isLoading) ...[
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                      child: Divider(color: AppColors.border, thickness: 1)),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Or continue with',
-                        style: TextStyle(
-                            color: AppColors.textMuted, fontSize: 13)),
-                  ),
-                  Expanded(
-                      child: Divider(color: AppColors.border, thickness: 1)),
-                ],
-              ),
-              const SizedBox(height: 32),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                        child: Divider(color: AppColors.border, thickness: 1)),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('Or continue with',
+                          style: TextStyle(
+                              color: AppColors.textMuted, fontSize: 13)),
+                    ),
+                    Expanded(
+                        child: Divider(color: AppColors.border, thickness: 1)),
+                  ],
+                ),
+                const SizedBox(height: 32),
                 SizedBox(
                   height: 56,
                   child: OutlinedButton.icon(

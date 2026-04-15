@@ -7,6 +7,18 @@ import 'package:livekit_client/livekit_client.dart';
 
 import '../constants/api_constants.dart';
 
+/// Data messages sent by the Pipecat bot over the LiveKit data channel.
+///
+/// Possible [type] values:
+///   "user_transcript" — user finished a turn; [text] is the STT result.
+///   "ai_transcript"   — AI finished generating; [text] is the LLM reply.
+///   "ai_done"         — AI audio playback finished; no [text].
+class LiveVoiceMessage {
+  final String type;
+  final String text;
+  const LiveVoiceMessage({required this.type, this.text = ''});
+}
+
 /// Manages the LiveKit WebRTC room for one CommuniQ live voice session.
 ///
 /// Lifecycle:
@@ -29,12 +41,19 @@ class LiveVoiceService extends ChangeNotifier {
   final Dio _dio;
   Room? _room;
   EventsListener<RoomEvent>? _roomListener;
+  bool _disposed = false;
+
+  final StreamController<LiveVoiceMessage> _msgController =
+      StreamController.broadcast();
 
   LiveVoiceService(this._dio);
 
   bool get isConnected => _room?.connectionState == ConnectionState.connected;
 
   Room? get room => _room;
+
+  /// Stream of real-time captions and state signals from the Pipecat bot.
+  Stream<LiveVoiceMessage> get messages => _msgController.stream;
 
   // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -71,10 +90,11 @@ class LiveVoiceService extends ChangeNotifier {
       // Publish local microphone.
       await _room!.localParticipant?.setMicrophoneEnabled(true);
 
-      // Subscribe to AI audio tracks from remote participants (the Pipecat agent).
+      // Subscribe to AI audio tracks and data messages from the Pipecat agent.
       _roomListener!.on<TrackSubscribedEvent>(_onTrackSubscribed);
       _roomListener!.on<TrackUnsubscribedEvent>(_onTrackUnsubscribed);
       _roomListener!.on<RoomDisconnectedEvent>(_onDisconnected);
+      _roomListener!.on<DataReceivedEvent>(_onDataReceived);
 
       notifyListeners();
       debugPrint('[LiveVoice] Connected — session=$sessionId');
@@ -97,12 +117,16 @@ class LiveVoiceService extends ChangeNotifier {
     await _room?.disconnect();
     _room?.dispose();
     _room = null;
-    notifyListeners();
+    if (!_disposed) {
+      await _msgController.close();
+      notifyListeners();
+    }
     debugPrint('[LiveVoice] Disconnected');
   }
 
   @override
   void dispose() {
+    _disposed = true;
     unawaited(disconnect());
     super.dispose();
   }
@@ -132,9 +156,24 @@ class LiveVoiceService extends ChangeNotifier {
     debugPrint('[LiveVoice] Track unsubscribed — ${event.track.sid}');
   }
 
+  void _onDataReceived(DataReceivedEvent event) {
+    try {
+      final jsonStr = utf8.decode(event.data);
+      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+      final type = map['type'] as String? ?? '';
+      final text = map['text'] as String? ?? '';
+      debugPrint('[LiveVoice] Data message — type=$type text=${text.length > 60 ? '${text.substring(0, 60)}…' : text}');
+      if (!_msgController.isClosed) {
+        _msgController.add(LiveVoiceMessage(type: type, text: text));
+      }
+    } catch (e) {
+      debugPrint('[LiveVoice] Could not decode data message: $e');
+    }
+  }
+
   void _onDisconnected(RoomDisconnectedEvent event) {
     debugPrint('[LiveVoice] Room disconnected — reason=${event.reason}');
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 }
 

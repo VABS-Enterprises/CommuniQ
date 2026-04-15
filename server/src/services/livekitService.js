@@ -34,7 +34,7 @@ const LIVEKIT_HTTP_URL = LIVEKIT_URL.replace(/^wss?:\/\//, (m) =>
  * @param {string} userId    - Firebase UID; used as LiveKit participant identity.
  * @returns {{ token: string, livekitUrl: string }}
  */
-function createUserToken(sessionId, userId) {
+async function createUserToken(sessionId, userId) {
   const token = new AccessToken(API_KEY, API_SECRET, {
     identity: `user-${userId}`,
     ttl: '2h',
@@ -46,7 +46,7 @@ function createUserToken(sessionId, userId) {
     canSubscribe: true,
   });
   return {
-    token: token.toJwt(),
+    token: await token.toJwt(),
     livekitUrl: LIVEKIT_URL,
   };
 }
@@ -56,9 +56,9 @@ function createUserToken(sessionId, userId) {
  * Agent can publish (AI audio) and subscribe (user mic).
  *
  * @param {string} sessionId
- * @returns {string} JWT token
+ * @returns {Promise<string>} JWT token
  */
-function createAgentToken(sessionId) {
+async function createAgentToken(sessionId) {
   const token = new AccessToken(API_KEY, API_SECRET, {
     identity: `agent-${sessionId}`,
     ttl: '4h',
@@ -69,7 +69,7 @@ function createAgentToken(sessionId) {
     canPublish: true,
     canSubscribe: true,
   });
-  return token.toJwt();
+  return await token.toJwt();
 }
 
 /**
@@ -112,10 +112,13 @@ async function deleteRoom(sessionId) {
  *
  * @param {string} sessionId
  * @param {string} systemPrompt - Full scenario system prompt (with modifiers applied)
+ * @param {string} [openingText] - The opening AI line already spoken; seeded into
+ *   the Pipecat LLM context as the first assistant message so the bot doesn't
+ *   re-introduce itself on the first user turn.
  */
-async function dispatchAgent(sessionId, systemPrompt) {
+async function dispatchAgent(sessionId, systemPrompt, openingText = '') {
   if (!ENABLED) return;
-  const agentToken = createAgentToken(sessionId);
+  const agentToken = await createAgentToken(sessionId);
   try {
     const res = await fetch(`${PIPECAT_WORKER_URL}/start-agent`, {
       method: 'POST',
@@ -125,6 +128,7 @@ async function dispatchAgent(sessionId, systemPrompt) {
         livekit_url: LIVEKIT_URL,
         agent_token: agentToken,
         system_prompt: systemPrompt,
+        opening_text: openingText,
       }),
       signal: AbortSignal.timeout(10_000),
     });

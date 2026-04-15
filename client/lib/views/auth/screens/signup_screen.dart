@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/services/auth_service.dart';
@@ -10,8 +9,7 @@ import 'package:communiq/views/auth/screens/login_screen.dart';
 class SignupScreen extends StatefulWidget {
   /// Onboarding data collected before authentication.
   /// When provided it is synced to the server immediately after account
-  /// creation. If null (e.g. navigated from LoginScreen), any pending local
-  /// data is still checked and synced.
+  /// creation. If null, any pending locally-saved data is checked and synced.
   const SignupScreen({super.key, this.onboardingData});
 
   final OnboardingData? onboardingData;
@@ -37,34 +35,24 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   /// After successful auth, flush onboarding data to the server.
-  /// Uses data passed as a constructor argument first, then falls back to any
-  /// data saved locally during the onboarding flow.
   Future<void> _syncOnboarding() async {
-    debugPrint('[Auth/Signup] Auth complete — looking for onboarding data to sync...');
     final data = widget.onboardingData ?? await OnboardingService.loadLocal();
-    if (data == null) {
-      debugPrint('[Auth/Signup] No onboarding data found — skipping sync');
-    } else {
-      debugPrint('[Auth/Signup] Onboarding data found — syncing to Firestore...');
+    if (data != null) {
       await OnboardingService.syncToServer(data);
     }
   }
 
   Future<void> _handleGoogleSignup() async {
-    debugPrint('[Auth/Signup] Google sign-up tapped');
     setState(() => _isLoading = true);
     try {
       await AuthService.signInWithGoogle();
-      debugPrint('[Auth/Signup] ✅ Google sign-up succeeded');
       await _syncOnboarding();
       if (mounted) {
-        debugPrint('🎯 [Auth/Signup] ── Popping back to AuthGuard ───────');
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } on CancelledException {
-      debugPrint('[Auth/Signup] Google sign-up cancelled by user');
+      // User dismissed the Google picker — stay on screen.
     } catch (e) {
-      debugPrint('[Auth/Signup] ❌ Google sign-up error: $e');
       _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -90,18 +78,14 @@ class _SignupScreenState extends State<SignupScreen> {
       return _showError('Passwords do not match.');
     }
 
-    debugPrint('[Auth/Signup] Email sign-up — registering "$email"');
     setState(() => _isLoading = true);
     try {
       await AuthService.registerWithEmailPassword(name, email, password);
-      debugPrint('[Auth/Signup] ✅ Email sign-up succeeded for "$email"');
       await _syncOnboarding();
       if (mounted) {
-        debugPrint('🎯 [Auth/Signup] ── Popping back to AuthGuard ───────');
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      debugPrint('[Auth/Signup] ❌ Email sign-up error: $e');
       _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
