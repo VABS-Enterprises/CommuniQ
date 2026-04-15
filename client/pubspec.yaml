@@ -51,6 +51,9 @@ dependencies:
   # Temp file directory for audio files
   path_provider: ^2.1.4
 
+  # On-device real-time speech recognition for live captions
+  speech_to_text: ^7.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -120,12 +120,16 @@ class SessionService {
 
       // Do NOT set contentType in Options — Dio auto-sets multipart/form-data
       // with the correct boundary when FormData is passed as data.
+      // sendTimeout covers the audio upload; 120 s handles recordings up to
+      // ~4 min at the default 16 kHz / mono / WAV bitrate (~256 kbps).
       final response = await _dio.post(
         ApiConstants.sessionsTurn,
         data: formData,
         options: Options(
-          sendTimeout: const Duration(seconds: 30),
-          receiveTimeout: const Duration(seconds: 75), // Whisper+LLM+TTS can take up to 60s
+          sendTimeout: const Duration(seconds: 120),
+          // 120 s: 90 s Node→AI timeout + 30 s buffer for cold-start wake-up on
+          // Render's free tier (services spin down after 15 min of inactivity).
+          receiveTimeout: const Duration(seconds: 120),
         ),
       );
 

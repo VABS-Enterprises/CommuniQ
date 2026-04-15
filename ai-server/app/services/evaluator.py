@@ -1,7 +1,7 @@
 import json
 import re
 
-REQUIRED_SCORE_KEYS = {"clarity", "fluency", "confidence", "vocabulary", "grammar"}
+REQUIRED_SCORE_KEYS = {"clarity", "fluency", "confidence", "vocabulary", "grammar", "pronunciation"}
 
 # Matches scenarioType_level format e.g. hr_interview_intermediate, sales_advanced
 _RECOMMENDED_NEXT_PATTERN = re.compile(r"^[a-z][a-z0-9_]*_[a-z]+$")
@@ -107,32 +107,31 @@ def _validate(data: dict) -> None:
     if not isinstance(fc, int) or fc < 0:
         raise ValueError(f"'filler_count' must be a non-negative integer, got: {fc!r}")
 
-    # strengths
+    # strengths — clamp/pad to exactly 2 rather than hard-failing
     strengths = data.get("strengths")
-    if not isinstance(strengths, list) or len(strengths) != 2:
-        raise ValueError(
-            f"'strengths' must be a list of exactly 2 items, got: {strengths!r}"
-        )
-    for i, s in enumerate(strengths):
-        if not isinstance(s, str) or not s.strip():
-            raise ValueError(f"'strengths[{i}]' must be a non-empty string.")
+    if not isinstance(strengths, list):
+        strengths = []
+    strengths = [s for s in strengths if isinstance(s, str) and s.strip()]
+    while len(strengths) < 2:
+        strengths.append("Maintained engagement throughout the session.")
+    data["strengths"] = strengths[:2]
 
-    # improvements
+    # improvements — clamp/pad to exactly 2 rather than hard-failing
     improvements = data.get("improvements")
-    if not isinstance(improvements, list) or len(improvements) != 2:
-        raise ValueError(
-            f"'improvements' must be a list of exactly 2 items, got: {improvements!r}"
-        )
-    for i, s in enumerate(improvements):
-        if not isinstance(s, str) or not s.strip():
-            raise ValueError(f"'improvements[{i}]' must be a non-empty string.")
+    if not isinstance(improvements, list):
+        improvements = []
+    improvements = [s for s in improvements if isinstance(s, str) and s.strip()]
+    while len(improvements) < 2:
+        improvements.append("Focus on reducing filler words and speaking at a measured pace.")
+    data["improvements"] = improvements[:2]
 
-    # recommended_next
+    # recommended_next — sanitize rather than hard-fail so a non-compliant LLM
+    # response never prevents the user from seeing their evaluation results.
     rec = data.get("recommended_next")
-    if not isinstance(rec, str) or not rec.strip():
-        raise ValueError("'recommended_next' must be a non-empty string.")
-    if not _RECOMMENDED_NEXT_PATTERN.match(rec.strip()):
-        raise ValueError(
-            f"'recommended_next' must follow the format 'scenarioType_level' "
-            f"(e.g. 'hr_interview_intermediate'), got: {rec!r}"
-        )
+    if isinstance(rec, str) and rec.strip():
+        # Normalise: lowercase, replace hyphens/spaces with underscores, strip edges
+        rec = re.sub(r"[\s\-]+", "_", rec.strip().lower())
+        rec = re.sub(r"[^a-z0-9_]", "", rec)
+    if not isinstance(rec, str) or not rec.strip() or not _RECOMMENDED_NEXT_PATTERN.match(rec):
+        rec = "general_intermediate"
+    data["recommended_next"] = rec
