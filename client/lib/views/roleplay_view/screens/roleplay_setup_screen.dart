@@ -11,6 +11,10 @@ class RoleplaySetupScreen extends StatefulWidget {
   final String? persona;
   final String? difficulty;
   final String? category;
+  /// Optional level ID from the learning path. When set, completing or
+  /// force-ending the session writes this ID to SharedPreferences so the
+  /// learning view can detect the completion and fire the XP animation.
+  final int? levelId;
 
   const RoleplaySetupScreen({
     super.key,
@@ -19,6 +23,7 @@ class RoleplaySetupScreen extends StatefulWidget {
     this.persona,
     this.difficulty,
     this.category,
+    this.levelId,
   });
 
   @override
@@ -171,6 +176,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
           builder: (_) => RoleplayConversationScreen(
             config: config,
             sessionId: sessionId,
+            levelId: widget.levelId,
           ),
         ),
       );

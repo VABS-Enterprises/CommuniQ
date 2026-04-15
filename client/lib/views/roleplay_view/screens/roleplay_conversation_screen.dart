@@ -20,6 +20,7 @@ import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/roleplay_config.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_feedback_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── State machine ─────────────────────────────────────────────────────────────
 //
@@ -41,11 +42,17 @@ class RoleplayConversationScreen extends StatefulWidget {
   final String sessionId;
   final bool isOnboarding;
 
+  /// When supplied (from the learning path), the level is written to
+  /// SharedPreferences as "completed" the moment the user ends the call so
+  /// the learning view can fire the XP animation and unlock the next node.
+  final int? levelId;
+
   const RoleplayConversationScreen({
     super.key,
     required this.config,
     this.sessionId = 'demo',
     this.isOnboarding = false,
+    this.levelId,
   });
 
   @override
@@ -745,6 +752,11 @@ class _RoleplayConversationScreenState
     await _recorder.stop();
     _sessionTimer?.cancel();
 
+    // ── Mark level complete in SharedPreferences ───────────────────────────────
+    // This fires before any async AI call so the learning view always receives
+    // a completion signal when it reads prefs on return, even if the AI fails.
+    await _markLevelComplete();
+
     setState(() {
       _state = _ConvState.ending;
       _cardText = '';
@@ -872,6 +884,25 @@ class _RoleplayConversationScreenState
         if (mounted) setState(() => _secondsElapsed++);
       });
       await _startMic();
+    }
+  }
+
+  // ─── Mark level complete (SharedPreferences) ──────────────────────────────
+
+  /// Saves [widget.levelId] into the 'completed_level_ids' SharedPreferences
+  /// list so the learning view can detect completion on return and fire the
+  /// XP flying animation plus unlock the next node.
+  Future<void> _markLevelComplete() async {
+    final id = widget.levelId;
+    if (id == null) return; // not launched from the learning path
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = (prefs.getStringList('completed_level_ids') ?? []).toSet();
+      existing.add(id.toString());
+      await prefs.setStringList('completed_level_ids', existing.toList());
+      debugPrint('✅ [LevelComplete] Level $id saved to SharedPreferences');
+    } catch (e) {
+      debugPrint('❌ [LevelComplete] Failed to save level $id: $e');
     }
   }
 
