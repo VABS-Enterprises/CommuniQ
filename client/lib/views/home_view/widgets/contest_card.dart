@@ -21,12 +21,19 @@ class ContestCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF151C2C),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.25),
+            color: AppColors.primary.withValues(alpha: 0.15),
+            width: 1.5,
           ),
-          boxShadow: AppGlow.mixedGlow(blurRadius: 18, spreadRadius: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -44,7 +51,7 @@ class ContestCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    "You're ranked #24",
+                    "You're ranked #8",
                     style: TextStyle(
                       color: AppColors.primaryLight,
                       fontSize: 13,

@@ -7,36 +7,42 @@ const _kCategoryItems = [
   {
     'key': 'assertiveness',
     'title': 'Assertiveness',
+    'subtitle': 'Say no politely to extra work',
     'icon': Icons.bolt_rounded,
     'colors': [Color(0xFFFF6B35), Color(0xFFFF9A62)],
   },
   {
     'key': 'job_interview',
     'title': 'Job Interview',
+    'subtitle': 'Answer tough HR questions',
     'icon': Icons.work_outline_rounded,
     'colors': [Color(0xFF4FACFE), Color(0xFF00D4FF)],
   },
   {
     'key': 'negotiation',
     'title': 'Negotiation',
+    'subtitle': 'Negotiate a raise or budget',
     'icon': Icons.handshake_rounded,
     'colors': [Color(0xFF43E97B), Color(0xFF38F9D7)],
   },
   {
     'key': 'leadership',
     'title': 'Leadership',
+    'subtitle': 'Coach a struggling team member',
     'icon': Icons.groups_rounded,
     'colors': [Color(0xFF667EEA), Color(0xFFA78BFA)],
   },
   {
     'key': 'conflict',
     'title': 'Conflict Resolution',
+    'subtitle': 'De-escalate a workplace dispute',
     'icon': Icons.balance_rounded,
     'colors': [Color(0xFFFC466B), Color(0xFFFF6B6B)],
   },
   {
     'key': 'small_talk',
     'title': 'Small Talk',
+    'subtitle': 'Network at a corporate event',
     'icon': Icons.chat_bubble_outline_rounded,
     'colors': [Color(0xFF7B61FF), Color(0xFF9D7BFF)],
   },
@@ -112,7 +118,7 @@ class CategoriesSection extends StatelessWidget {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.3,
+            childAspectRatio: 1.15,
           ),
           itemCount: items.length,
           itemBuilder: (_, index) {
@@ -120,6 +126,7 @@ class CategoriesSection extends StatelessWidget {
             final key = item['key'] as String;
             return _ScenarioCategoryCard(
               title: item['title'] as String,
+              subtitle: item['subtitle'] as String,
               icon: item['icon'] as IconData,
               colors: item['colors'] as List<Color>,
               isSelected: selectedPresetKey == key,
@@ -134,6 +141,7 @@ class CategoriesSection extends StatelessWidget {
 
 class _ScenarioCategoryCard extends StatelessWidget {
   final String title;
+  final String subtitle;
   final IconData icon;
   final List<Color> colors;
   final bool isSelected;
@@ -141,6 +149,7 @@ class _ScenarioCategoryCard extends StatelessWidget {
 
   const _ScenarioCategoryCard({
     required this.title,
+    required this.subtitle,
     required this.icon,
     required this.colors,
     required this.isSelected,
@@ -261,19 +270,38 @@ class _ScenarioCategoryCard extends StatelessWidget {
                         ),
                     ],
                   ),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: isSelected
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.w600,
-                      fontSize: 13,
-                      letterSpacing: -0.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: isSelected
+                              ? AppColors.textPrimary
+                              : AppColors.textSecondary,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.w700,
+                          fontSize: 14,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: isSelected
+                              ? AppColors.textPrimary.withValues(alpha: 0.7)
+                              : AppColors.textMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ],
               ),

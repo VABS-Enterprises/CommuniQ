@@ -472,12 +472,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
               const SizedBox(height: 20),
               _buildHeader(),
               const SizedBox(height: 28),
-              _buildModeToggle(),
-              const SizedBox(height: 28),
-              if (_mode == _Mode.preset) ...[
-                _buildPresetGrid(),
-                const SizedBox(height: 32),
-              ] else ...[
+              if (_mode == _Mode.custom) ...[
                 _buildCustomInput(),
                 const SizedBox(height: 32),
               ],
@@ -548,185 +543,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
     );
   }
 
-  Widget _buildModeToggle() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F1520),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        children: [
-          _ModeTab(
-            label: 'Preset Scenarios',
-            icon: Icons.auto_awesome_rounded,
-            isActive: _mode == _Mode.preset,
-            onTap: () => setState(() => _mode = _Mode.preset),
-          ),
-          _ModeTab(
-            label: 'Custom',
-            icon: Icons.edit_note_rounded,
-            isActive: _mode == _Mode.custom,
-            onTap: () => setState(() => _mode = _Mode.custom),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildPresetGrid() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Choose a Scenario'),
-        const SizedBox(height: 14),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.35,
-          ),
-          itemCount: _kPresets.length,
-          itemBuilder: (_, i) {
-            final preset = _kPresets[i];
-            final isSelected = _selectedPreset?['key'] == preset['key'];
-            final key = preset['key'] as String;
-            final colors = _kScenarioColors[key] ??
-                [AppColors.primary, AppColors.primaryLight];
-            return GestureDetector(
-              onTap: () => setState(() => _applyPreset(preset)),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  gradient: isSelected
-                      ? LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            colors[0].withValues(alpha: 0.22),
-                            colors[1].withValues(alpha: 0.08),
-                          ],
-                        )
-                      : null,
-                  color: isSelected ? null : const Color(0xFF0F1520),
-                  border: Border.all(
-                    color: isSelected
-                        ? colors[0].withValues(alpha: 0.5)
-                        : AppColors.border,
-                    width: isSelected ? 1.5 : 1,
-                  ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: colors[0].withValues(alpha: 0.2),
-                            blurRadius: 18,
-                            offset: const Offset(0, 4),
-                          )
-                        ]
-                      : null,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                colors[0].withValues(
-                                    alpha: isSelected ? 0.3 : 0.15),
-                                colors[1].withValues(
-                                    alpha: isSelected ? 0.15 : 0.07),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: colors[0].withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Icon(
-                            preset['icon'] as IconData,
-                            color: colors[0],
-                            size: 18,
-                          ),
-                        ),
-                        if (isSelected)
-                          Container(
-                            width: 22,
-                            height: 22,
-                            decoration: BoxDecoration(
-                              color: colors[0],
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: colors[0].withValues(alpha: 0.4),
-                                  blurRadius: 8,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(Icons.check_rounded,
-                                color: Colors.white, size: 13),
-                          ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          preset['title'] as String,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: isSelected
-                                ? AppColors.textPrimary
-                                : AppColors.textSecondary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          preset['subtitle'] as String,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.textMuted,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-        if (_selectedPreset == null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8, left: 4),
-            child: Text(
-              'Tap a scenario to select it',
-              style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textMuted),
-            ),
-          ),
-      ],
-    );
-  }
 
   Widget _buildCustomInput() {
     final isEmpty = _scenarioController.text.trim().isEmpty;
@@ -959,7 +776,10 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
         decoration: BoxDecoration(
           gradient: active
               ? LinearGradient(
-                  colors: [AppColors.primary, AppColors.primaryLight],
+                  colors: [
+                    AppColors.primaryDark,
+                    AppColors.primary,
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
@@ -968,7 +788,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: active
-                ? AppColors.primaryLight.withValues(alpha: 0.3)
+                ? AppColors.primary.withValues(alpha: 0.4)
                 : AppColors.border,
           ),
           boxShadow: active
@@ -1021,11 +841,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
           width: 3,
           height: 16,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.primaryLight],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+            color: AppColors.primary,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -1043,69 +859,11 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mode tab widget
-// ─────────────────────────────────────────────────────────────────────────────
 
-class _ModeTab extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isActive;
-  final VoidCallback onTap;
 
-  const _ModeTab({
-    required this.label,
-    required this.icon,
-    required this.isActive,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            gradient: isActive
-                ? LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryLight],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: isActive ? Colors.white : AppColors.textMuted,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: isActive ? Colors.white : AppColors.textMuted,
-                  fontWeight:
-                      isActive ? FontWeight.bold : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // Config card widget
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 
 class _ConfigCard extends StatelessWidget {
   final String label;

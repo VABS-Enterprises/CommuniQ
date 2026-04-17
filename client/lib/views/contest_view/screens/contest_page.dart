@@ -28,7 +28,7 @@ class _ContestPageState extends State<ContestPage>
   _ContestPageState() {
     _state.hasAttempted = true;
     _state.bestScore = 78;
-    _state.rank = 24;
+    _state.rank = 8;
     _state.xpEarned = 100;
     _state.attempts.addAll([
       const ContestAttempt(number: 1, score: 65, isBest: false),
@@ -340,42 +340,30 @@ class _MiniLeaderboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        color: const Color(0xFF151C2C),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.15),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // Top 3
-          ...List.generate(3, (i) {
-            final item = top3[i];
-            return LeaderboardItem(
-              rank: i + 1,
-              name: item['name'] as String,
-              score: item['score'] as int,
-              isCurrentUser: false,
-            );
-          }),
-
-          // Divider with "..." indicator
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                Expanded(child: Divider(color: AppColors.border)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('···',
-                      style: TextStyle(
-                          color: AppColors.textMuted, fontSize: 16)),
-                ),
-                Expanded(child: Divider(color: AppColors.border)),
-              ],
-            ),
-          ),
-
+          // Mini Podium
+          _MiniPodiumRow(top3: top3),
+          
+          const SizedBox(height: 24),
+          
           // Current user row (glowing)
           LeaderboardItem(
             rank: userRank,
@@ -385,6 +373,134 @@ class _MiniLeaderboard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MiniPodiumRow extends StatelessWidget {
+  final List<Map<String, dynamic>> top3;
+
+  const _MiniPodiumRow({required this.top3});
+
+  @override
+  Widget build(BuildContext context) {
+    if (top3.length < 3) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _MiniPodiumItem(rank: 2, name: top3[1]['name'], score: top3[1]['score']),
+        _MiniPodiumItem(rank: 1, name: top3[0]['name'], score: top3[0]['score'], isCenter: true),
+        _MiniPodiumItem(rank: 3, name: top3[2]['name'], score: top3[2]['score']),
+      ],
+    );
+  }
+}
+
+class _MiniPodiumItem extends StatelessWidget {
+  final int rank;
+  final String name;
+  final int score;
+  final bool isCenter;
+
+  const _MiniPodiumItem({
+    required this.rank,
+    required this.name,
+    required this.score,
+    this.isCenter = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final medal = rank == 1 ? '🥇' : rank == 2 ? '🥈' : '🥉';
+    final avatarSize = isCenter ? 60.0 : 48.0;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Medal & Avatar
+        Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: avatarSize,
+              height: avatarSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: rank == 1 
+                      ? const Color(0xFFFFD700) 
+                      : rank == 2 
+                          ? const Color(0xFFC0C0C0) 
+                          : const Color(0xFFCD7F32),
+                  width: 2,
+                ),
+                boxShadow: isCenter ? [
+                  BoxShadow(
+                    color: const Color(0xFFFFD700).withValues(alpha: 0.25),
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                  )
+                ] : null,
+              ),
+              child: ClipOval(
+                child: Container(
+                  color: const Color(0xFF1F2937),
+                  child: Center(
+                    child: Text(
+                      name.isNotEmpty ? name[0].toUpperCase() : '?',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: isCenter ? 24 : 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -10,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1F2937),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.border, width: 1),
+                ),
+                child: Text(medal, style: const TextStyle(fontSize: 16)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        Text(
+          name.split(' ')[0],
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: isCenter ? 14 : 12,
+            fontWeight: isCenter ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '$score%',
+            style: TextStyle(
+              color: AppColors.primaryLight,
+              fontSize: isCenter ? 12 : 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

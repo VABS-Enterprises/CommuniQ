@@ -213,36 +213,36 @@ class _RoleplayViewState extends State<RoleplayView>
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(28),
-            gradient: isSelected
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF4A35C4), Color(0xFF7C5CFF), Color(0xFF9D7BFF)],
-                  )
-                : LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isSelected
+                  ? [
+                      const Color(0xFF1C2538),
+                      const Color(0xFF0F1520),
+                    ]
+                  : [
                       const Color(0xFF131B2C),
                       const Color(0xFF1A2438),
                     ],
-                  ),
+            ),
             boxShadow: [
               BoxShadow(
                 color: AppColors.primary.withValues(
                   alpha: isSelected
-                      ? 0.38 + 0.08 * _ambientController.value
-                      : 0.12 + 0.04 * _ambientController.value,
+                      ? 0.15 + 0.05 * _ambientController.value
+                      : 0.08 + 0.02 * _ambientController.value,
                 ),
                 blurRadius: 36,
-                spreadRadius: isSelected ? 4 : 0,
+                spreadRadius: isSelected ? 2 : 0,
                 offset: const Offset(0, 8),
               ),
             ],
             border: Border.all(
-              color: AppColors.primary
-                  .withValues(alpha: isSelected ? 0.5 : 0.18),
-              width: 1.5,
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.8)
+                  : AppColors.border,
+              width: isSelected ? 2 : 1.5,
             ),
           ),
           child: Row(
@@ -253,8 +253,8 @@ class _RoleplayViewState extends State<RoleplayView>
                   children: [
                     Text(
                       isSelected ? 'Ready to Practice' : 'Custom Roleplay',
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : AppColors.textPrimary,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
                         fontSize: 21,
                         fontWeight: FontWeight.bold,
                         letterSpacing: -0.3,
@@ -267,7 +267,7 @@ class _RoleplayViewState extends State<RoleplayView>
                           : 'Design any scenario — practice what matters',
                       style: TextStyle(
                         color: isSelected
-                            ? Colors.white.withValues(alpha: 0.8)
+                            ? AppColors.primaryExtraLight.withValues(alpha: 0.9)
                             : AppColors.textSecondary,
                         fontSize: 13,
                         height: 1.5,
@@ -278,25 +278,24 @@ class _RoleplayViewState extends State<RoleplayView>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 11),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? Colors.white
-                            : AppColors.primary,
+                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
-                            color: (isSelected
-                                    ? Colors.white
-                                    : AppColors.primary)
-                                .withValues(alpha: 0.3),
+                            color: AppColors.primary.withValues(alpha: 0.35),
                             blurRadius: 14,
                             offset: const Offset(0, 4),
                           ),
                         ],
+                        border: Border.all(
+                          color: AppColors.primaryLight.withValues(alpha: 0.5),
+                          width: 1,
+                        ),
                       ),
                       child: Text(
                         isSelected ? 'Configure & Start →' : 'Start →',
-                        style: TextStyle(
-                          color: isSelected ? AppColors.primary : Colors.white,
+                        style: const TextStyle(
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -311,11 +310,14 @@ class _RoleplayViewState extends State<RoleplayView>
                 height: 76,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: (isSelected ? Colors.white : AppColors.primary)
-                      .withValues(alpha: 0.12),
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.primary.withValues(alpha: isSelected ? 0.2 : 0.1),
+                      Colors.transparent,
+                    ],
+                  ),
                   border: Border.all(
-                    color: (isSelected ? Colors.white : AppColors.primary)
-                        .withValues(alpha: 0.22),
+                    color: AppColors.primary.withValues(alpha: isSelected ? 0.4 : 0.2),
                     width: 1.5,
                   ),
                 ),
