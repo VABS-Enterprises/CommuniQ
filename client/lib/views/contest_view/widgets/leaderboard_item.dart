@@ -21,24 +21,24 @@ class LeaderboardItem extends StatelessWidget {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: isCurrentUser
-            ? AppColors.primary.withValues(alpha: 0.10)
-            : AppColors.background,
-        borderRadius: BorderRadius.circular(14),
+            ? AppColors.primary.withValues(alpha: 0.12)
+            : const Color(0xFF1F2937).withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isCurrentUser
-              ? AppColors.primary.withValues(alpha: 0.35)
-              : AppColors.border,
+              ? AppColors.primary.withValues(alpha: 0.4)
+              : AppColors.border.withValues(alpha: 0.5),
           width: isCurrentUser ? 1.5 : 1,
         ),
         boxShadow: isCurrentUser
             ? [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.18),
-                  blurRadius: 16,
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  blurRadius: 12,
                   spreadRadius: 1,
                 ),
               ]
@@ -48,8 +48,8 @@ class LeaderboardItem extends StatelessWidget {
         children: [
           // Rank icon / number
           SizedBox(
-            width: 36,
-            child: Center(child: rankWidget),
+            width: 32,
+            child: Center(child: _rankIcon(rank)),
           ),
 
           const SizedBox(width: 12),
@@ -62,7 +62,7 @@ class LeaderboardItem extends StatelessWidget {
               shape: BoxShape.circle,
               color: isCurrentUser
                   ? AppColors.primary.withValues(alpha: 0.2)
-                  : AppColors.surface,
+                  : const Color(0xFF1F2937),
               border: Border.all(
                 color: isCurrentUser
                     ? AppColors.primary.withValues(alpha: 0.4)
@@ -75,7 +75,7 @@ class LeaderboardItem extends StatelessWidget {
                 style: TextStyle(
                   color: isCurrentUser
                       ? AppColors.primaryLight
-                      : AppColors.textSecondary,
+                      : AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -85,56 +85,63 @@ class LeaderboardItem extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          // Name
+          // Name and "You" tag
           Expanded(
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    color: isCurrentUser
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
-                    fontSize: 14,
-                    fontWeight: isCurrentUser
-                        ? FontWeight.bold
-                        : FontWeight.w500,
-                  ),
-                ),
-                if (isCurrentUser) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.3)),
-                    ),
-                    child: const Text(
-                      'You',
+                Row(
+                  children: [
+                    Text(
+                      name,
                       style: TextStyle(
-                        color: AppColors.primaryLight,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: isCurrentUser
+                            ? FontWeight.bold
+                            : FontWeight.w500,
                       ),
                     ),
-                  ),
-                ],
+                    if (isCurrentUser) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                              width: 0.5),
+                        ),
+                        child: const Text(
+                          'YOU',
+                          style: TextStyle(
+                            color: AppColors.primaryLight,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
 
-          // Score
+          // Score pill
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: _scoreColor(score).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border:
-                  Border.all(color: _scoreColor(score).withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _scoreColor(score).withValues(alpha: 0.3),
+                width: 1,
+              ),
             ),
             child: Text(
               '$score%',

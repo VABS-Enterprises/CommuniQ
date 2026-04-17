@@ -10,7 +10,7 @@ class ContestState {
 
   ContestState({
     this.hasAttempted = false,
-    this.rank = 24,
+    this.rank = 8,
     this.bestScore = 0,
     this.xpEarned = 0,
     List<ContestAttempt>? attempts,
