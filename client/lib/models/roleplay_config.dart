@@ -13,6 +13,15 @@ class RoleplayConfig {
   final String timeLimit;
   final String languageLevel;
 
+  /// The user's role in the scenario (e.g. "You as Employee").
+  final String role;
+
+  /// AI counterpart personality trait (e.g. "Logical", "Assertive").
+  final String traits;
+
+  /// Optional backstory / extra context for the AI prompt.
+  final String backstory;
+
   RoleplayConfig({
     this.scenarioId = '',
     this.scenarioTitle = 'Roleplay Session',
@@ -23,5 +32,8 @@ class RoleplayConfig {
     this.tone = 'Neutral',
     this.timeLimit = '60 sec',
     this.languageLevel = 'Intermediate',
+    this.role = 'You as Employee',
+    this.traits = 'Logical',
+    this.backstory = '',
   });
 }

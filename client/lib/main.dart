@@ -9,79 +9,37 @@ import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
 import 'package:communiq/views/onboarding/screens/welcome_screen.dart';
 
-/// The server URL used for all API calls — set via --dart-define=SERVER_URL=...
-/// Defaults to the deployed Render backend.
-/// For local dev: flutter run --dart-define=SERVER_URL=http://10.0.2.2:3000
+/// The server URL used for all API calls.
+///
+/// Override at build time:  flutter run --dart-define=SERVER_URL=https://your-server.com
+///
+/// Defaults:
+///   - Debug builds  → http://10.0.2.2:3000  (Android emulator → host loopback)
+///   - Release builds → https://communiq.onrender.com
 const _kServerUrl = String.fromEnvironment(
   'SERVER_URL',
-  defaultValue: 'https://communiq.onrender.com',
+  defaultValue: kDebugMode ? 'http://10.0.2.2:3000' : 'https://communiq.onrender.com',
 );
-
-void _printStartupBanner() {
-  final isLocalUrl = _kServerUrl.contains('10.0.2.2') ||
-      _kServerUrl.contains('localhost') ||
-      _kServerUrl.contains('192.168');
-  final modeLabel = kDebugMode ? '🛠  DEBUG' : '🚀 PRODUCTION';
-
-  debugPrint('');
-  debugPrint('╔══════════════════════════════════════════════╗');
-  debugPrint('║        COMMUNIQ APP CONFIGURATION            ║');
-  debugPrint('╠══════════════════════════════════════════════╣');
-  debugPrint('║  Mode:       $modeLabel');
-  debugPrint('║  Server URL: $_kServerUrl');
-  if (isLocalUrl) {
-    debugPrint('║  🛠  Local server — emulator/LAN dev mode');
-  } else {
-    debugPrint('║  ✅  Render cloud backend — production ready');
-  }
-  debugPrint('╚══════════════════════════════════════════════╝');
-  debugPrint('');
-  debugPrint('📋 HOW TO SEE THESE LOGS:');
-  debugPrint('   Run in a second terminal: adb logcat -s flutter');
-  debugPrint('   Or use: flutter logs');
-  debugPrint('');
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  _printStartupBanner();
-
-  // ── Step 1: Firebase ──────────────────────────────────────────────────────
   bool firebaseOk = false;
   String? firebaseError;
 
-  debugPrint('🔍 [main] Step 1: Initializing Firebase...');
   try {
     await Firebase.initializeApp();
     firebaseOk = true;
-    debugPrint('✅ [main] Step 1: Firebase initialized');
   } catch (e) {
     firebaseError = e.toString();
-    debugPrint('❌ [main] Step 1: Firebase initialization FAILED: $e');
+    debugPrint('[main] Firebase initialization failed: $e');
   }
 
   if (!firebaseOk) {
-    debugPrint('❌ [main] App cannot start — Firebase failed. Showing error screen.');
     runApp(_FirebaseErrorApp(error: firebaseError ?? 'Unknown error'));
     return;
   }
 
-  // ── Step 2: SharedPreferences / first launch ───────────────────────────────
-  debugPrint('🔍 [main] Step 2: Checking first-launch status...');
-  bool isFirstLaunch = true;
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    isFirstLaunch = prefs.getBool('isFirstLaunch') != false;
-    debugPrint('✅ [main] Step 2: isFirstLaunch=$isFirstLaunch');
-  } catch (e) {
-    debugPrint('⚠️  [main] Step 2: SharedPreferences unavailable — defaulting isFirstLaunch=true: $e');
-  }
-
-  // ── Step 3: Launch app ────────────────────────────────────────────────────
-  debugPrint('🚀 [main] Step 3: Launching app — routing to '
-      '${isFirstLaunch ? "WelcomeScreen (onboarding)" : "AuthGuard"}');
-  debugPrint('');
   runApp(const MyApp());
 }
 
@@ -101,9 +59,6 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
     setState(() => _retrying = true);
     try {
       await Firebase.initializeApp();
-      // Firebase init succeeded — re-launch the full app.
-      final prefs = await SharedPreferences.getInstance();
-      final isFirstLaunch = prefs.getBool('isFirstLaunch') != false;
       runApp(const MyApp());
     } catch (_) {
       setState(() => _retrying = false);
@@ -187,8 +142,7 @@ class MyApp extends StatelessWidget {
 }
 
 /// Guards the app with Firebase auth state. Unauthenticated users are sent to
-/// onboarding (first launch) or the login screen. Authenticated users go
-/// straight to the main app.
+/// the welcome/onboarding screen. Authenticated users go straight to the main app.
 class AuthGuard extends StatefulWidget {
   const AuthGuard({super.key});
 
@@ -197,8 +151,6 @@ class AuthGuard extends StatefulWidget {
 }
 
 class _AuthGuardState extends State<AuthGuard> {
-  // Incrementing this key forces the StreamBuilder to subscribe to a fresh
-  // stream instance, which is the simplest retry mechanism.
   int _streamKey = 0;
 
   void _retry() => setState(() => _streamKey++);
@@ -219,7 +171,6 @@ class _AuthGuardState extends State<AuthGuard> {
         }
 
         if (snapshot.hasError) {
-          debugPrint('[AuthGuard] authStateChanges error: ${snapshot.error}');
           return Scaffold(
             backgroundColor: AppColors.background,
             body: Center(
@@ -266,11 +217,9 @@ class _AuthGuardState extends State<AuthGuard> {
         }
 
         if (snapshot.hasData) {
-          debugPrint('[AuthGuard] ✅ User authenticated: ${snapshot.data?.email}');
           return const MainNavigationView();
         }
 
-        debugPrint('[AuthGuard] User not authenticated → WelcomeScreen');
         return const WelcomeScreen();
       },
     );

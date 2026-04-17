@@ -61,25 +61,44 @@ class SessionService {
 
   // ─── Session lifecycle ─────────────────────────────────────────────────────
 
-  /// Creates a new session for the given scenario. Returns the sessionId.
-  /// Optionally sends [persona], [tone], and [languageLevel] so the backend
-  /// can inject them into the AI system prompt.
+  /// Creates a new session. Returns the sessionId.
+  ///
+  /// Provide [scenarioId] to use a Firestore-backed scenario, **or** provide
+  /// [scenarioPrompt] (a plain-text system prompt) for a custom / preset session.
+  /// At least one of the two must be non-empty.
   Future<String> startSession(
     String scenarioId, {
+    String? scenarioPrompt,
+    String? scenarioTitle,
     String? persona,
     String? tone,
     String? languageLevel,
+    String? role,
+    String? traits,
+    String? backstory,
   }) async {
+    assert(
+      scenarioId.isNotEmpty || (scenarioPrompt != null && scenarioPrompt.isNotEmpty),
+      'Provide either scenarioId or scenarioPrompt',
+    );
     try {
-      debugPrint('[SessionService] startSession → scenarioId=$scenarioId '
-          'persona=$persona tone=$tone level=$languageLevel');
+      debugPrint('[SessionService] startSession → '
+          '${scenarioId.isNotEmpty ? "scenarioId=$scenarioId" : "scenarioPrompt (custom)"} '
+          'persona=$persona tone=$tone level=$languageLevel role=$role traits=$traits');
       final response = await _dio.post(
         ApiConstants.sessionsStart,
         data: {
-          'scenarioId': scenarioId,
+          if (scenarioId.isNotEmpty) 'scenarioId': scenarioId,
+          if (scenarioPrompt != null && scenarioPrompt.isNotEmpty)
+            'scenarioPrompt': scenarioPrompt,
+          if (scenarioTitle != null && scenarioTitle.isNotEmpty)
+            'scenarioTitle': scenarioTitle,
           if (persona != null) 'persona': persona,
           if (tone != null) 'tone': tone,
           if (languageLevel != null) 'languageLevel': languageLevel,
+          if (role != null && role.isNotEmpty) 'role': role,
+          if (traits != null && traits.isNotEmpty) 'traits': traits,
+          if (backstory != null && backstory.isNotEmpty) 'backstory': backstory,
         },
       );
       final sessionId =

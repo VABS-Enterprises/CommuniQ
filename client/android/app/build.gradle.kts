@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.vabs.communiq"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = "27.1.12297006"
 
     compileOptions {

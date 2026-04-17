@@ -5,13 +5,9 @@ from groq import AsyncGroq
 MAX_AUDIO_BYTES = 25 * 1024 * 1024   # 25 MB — Groq's hard limit
 MIN_AUDIO_BYTES = 1024                 # 1 KB  — anything smaller is not real audio
 
-# Nudges Whisper toward Indian English and common CommuniQ vocabulary.
-_WHISPER_PROMPT = (
-    "This is a spoken English conversation between an Indian professional or student "
-    "and an AI interviewer. The speaker may use Indian English pronunciation and occasional "
-    "Hinglish words. Common topics: work experience, projects, challenges, teamwork, "
-    "sales, group discussions. Transcribe accurately including filler words like um, uh, like."
-)
+# Short Whisper prompt: nudges toward Indian English without risking hallucination.
+# Longer prompts can cause Whisper to output the prompt text when audio is unclear.
+_WHISPER_PROMPT = "Indian English. Um, uh, like."
 
 
 async def transcribe(
@@ -56,7 +52,7 @@ async def transcribe(
 
     try:
         transcription = await client.audio.transcriptions.create(
-            model="whisper-large-v3",
+            model="whisper-large-v3-turbo",
             file=audio_file,
             response_format="text",
             language="en",

@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from agent import run_agent
+from bot import run_bot
 from cp3_diagnostics import get_cp3_stack_info
 
 load_dotenv()
@@ -48,6 +48,7 @@ class StartAgentRequest(BaseModel):
     livekit_url: str
     agent_token: str
     system_prompt: str
+    opening_text: str = ""  # The opening AI line already spoken to the user
 
 
 class StopAgentRequest(BaseModel):
@@ -69,11 +70,12 @@ async def start_agent(body: StartAgentRequest):
     logger.info("Starting agent — session=%s", body.session_id)
 
     task = asyncio.create_task(
-        run_agent(
+        run_bot(
             session_id=body.session_id,
             livekit_url=body.livekit_url,
             agent_token=body.agent_token,
             system_prompt=body.system_prompt,
+            opening_text=body.opening_text,
         ),
         name=f"agent-{body.session_id}",
     )

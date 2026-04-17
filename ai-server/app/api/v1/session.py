@@ -70,7 +70,7 @@ async def session_opening(
                 {"role": "system", "content": req.systemPrompt},
                 {"role": "user", "content": _OPENING_USER_MESSAGE},
             ],
-            max_tokens=128,
+            max_tokens=200,
             temperature=0.75,
             timeout=25,
         )
