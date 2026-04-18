@@ -42,14 +42,6 @@ class _GradientButtonState extends State<GradientButton> {
         decoration: BoxDecoration(
           color: _isPressed ? AppColors.primaryDark : AppColors.primary,
           borderRadius: AppRadius.buttonRadius,
-          boxShadow: [
-            if (!_isPressed)
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              )
-          ],
         ),
         child: Center(
           child: Text(

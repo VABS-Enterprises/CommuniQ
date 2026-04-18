@@ -11,6 +11,7 @@ import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/models/user_profile.dart';
 import 'package:communiq/views/onboarding/screens/welcome_screen.dart';
 import 'package:communiq/views/premium_view/screens/premium_screen.dart';
+import 'package:communiq/common_widgets/sky_campus_background.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -32,7 +33,11 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   Future<void> _load() async {
-    if (mounted) setState(() { _loading = true; _error = false; });
+    if (mounted)
+      setState(() {
+        _loading = true;
+        _error = false;
+      });
     try {
       final profile = await SessionService.instance.fetchProfile();
       OnboardingData? onboarding;
@@ -45,10 +50,19 @@ class _ProfileViewState extends State<ProfileView> {
       } catch (e) {
         debugPrint('[ProfileView] Onboarding fetch skipped: $e');
       }
-      if (mounted) setState(() { _profile = profile; _onboarding = onboarding; _loading = false; });
+      if (mounted)
+        setState(() {
+          _profile = profile;
+          _onboarding = onboarding;
+          _loading = false;
+        });
     } catch (e) {
       debugPrint('[ProfileView] load failed: $e');
-      if (mounted) setState(() { _error = true; _loading = false; });
+      if (mounted)
+        setState(() {
+          _error = true;
+          _loading = false;
+        });
     }
   }
 
@@ -59,18 +73,21 @@ class _ProfileViewState extends State<ProfileView> {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Log Out',
-            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+            style: TextStyle(
+                color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         content: const Text('Are you sure you want to log out?',
             style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Log Out',
-                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: Colors.redAccent, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -87,14 +104,18 @@ class _ProfileViewState extends State<ProfileView> {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(title,
-            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+            style: const TextStyle(
+                color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
-          child: Text(body, style: const TextStyle(color: AppColors.textSecondary, height: 1.6)),
+          child: Text(body,
+              style:
+                  const TextStyle(color: AppColors.textSecondary, height: 1.6)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close', style: TextStyle(color: AppColors.primary)),
+            child:
+                const Text('Close', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
@@ -103,11 +124,13 @@ class _ProfileViewState extends State<ProfileView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return SkyCampusBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
       body: SafeArea(
         child: _loading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.primary))
             : _error
                 ? _buildError()
                 : RefreshIndicator(
@@ -124,53 +147,69 @@ class _ProfileViewState extends State<ProfileView> {
                         SliverToBoxAdapter(child: _buildXpBar()),
                         if (_onboarding != null)
                           SliverToBoxAdapter(child: _buildOnboardingSection()),
-                        SliverToBoxAdapter(child: _buildSection(
+                        SliverToBoxAdapter(
+                            child: _buildSection(
                           'Account',
                           [
-                            _buildTile(Icons.person_outline_rounded, 'Display Name',
+                            _buildTile(
+                                Icons.person_outline_rounded, 'Display Name',
                                 subtitle: _profile?.name ?? '—'),
                             _buildTile(Icons.email_outlined, 'Email',
-                                subtitle: _profile?.email ?? '—',
-                                onTap: () {
-                                  Clipboard.setData(ClipboardData(text: _profile?.email ?? ''));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Email copied to clipboard')),
-                                  );
-                                }),
+                                subtitle: _profile?.email ?? '—', onTap: () {
+                              Clipboard.setData(
+                                  ClipboardData(text: _profile?.email ?? ''));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Email copied to clipboard')),
+                              );
+                            }),
                             _buildTile(
                               _profile?.isPremium == true
                                   ? Icons.workspace_premium_rounded
                                   : Icons.stars_outlined,
                               'Plan',
-                              subtitle: _profile?.isPremium == true ? 'Premium' : 'Free (Tap to upgrade)',
+                              subtitle: _profile?.isPremium == true
+                                  ? 'Premium'
+                                  : 'Free (Tap to upgrade)',
                               trailingColor: _profile?.isPremium == true
                                   ? const Color(0xFFFFD700)
                                   : AppColors.primary,
-                              onTap: _profile?.isPremium == true ? null : () {
-                                Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
-                              },
+                              onTap: _profile?.isPremium == true
+                                  ? null
+                                  : () {
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const PremiumScreen()));
+                                    },
                             ),
                           ],
                         )),
-                        SliverToBoxAdapter(child: _buildSection(
+                        SliverToBoxAdapter(
+                            child: _buildSection(
                           'Legal',
                           [
-                            _buildTile(Icons.description_outlined, 'Terms & Conditions',
+                            _buildTile(Icons.description_outlined,
+                                'Terms & Conditions',
                                 onTap: () => _showInfoDialog(
                                     'Terms & Conditions', _kTerms)),
-                            _buildTile(Icons.privacy_tip_outlined, 'Privacy Policy',
+                            _buildTile(
+                                Icons.privacy_tip_outlined, 'Privacy Policy',
                                 onTap: () => _showInfoDialog(
                                     'Privacy Policy', _kPrivacy)),
                           ],
                         )),
-                        SliverToBoxAdapter(child: _buildSection(
+                        SliverToBoxAdapter(
+                            child: _buildSection(
                           'App',
                           [
-                            _buildTile(Icons.info_outline_rounded, 'App Version',
+                            _buildTile(
+                                Icons.info_outline_rounded, 'App Version',
                                 subtitle: '1.0.0 (build 1)'),
-                            _buildTile(Icons.help_outline_rounded, 'Help & Support',
-                                onTap: () => _showInfoDialog(
-                                    'Help & Support',
+                            _buildTile(
+                                Icons.help_outline_rounded, 'Help & Support',
+                                onTap: () => _showInfoDialog('Help & Support',
                                     'For support, reach us at support@communiq.app')),
                           ],
                         )),
@@ -189,10 +228,12 @@ class _ProfileViewState extends State<ProfileView> {
                                         fontSize: 16)),
                                 onPressed: _handleLogout,
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                                  side: const BorderSide(
+                                      color: Colors.redAccent, width: 1.5),
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14)),
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
                                 ),
                               ),
                             ),
@@ -204,6 +245,7 @@ class _ProfileViewState extends State<ProfileView> {
                     ),
                   ),
       ),
+    ),
     );
   }
 
@@ -212,14 +254,16 @@ class _ProfileViewState extends State<ProfileView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.cloud_off_rounded, color: AppColors.textMuted, size: 48),
+          const Icon(Icons.cloud_off_rounded,
+              color: AppColors.textMuted, size: 48),
           const SizedBox(height: 12),
           const Text('Could not load profile',
               style: TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 16),
           TextButton(
             onPressed: _load,
-            child: const Text('Retry', style: TextStyle(color: AppColors.primary)),
+            child:
+                const Text('Retry', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
@@ -287,7 +331,8 @@ class _ProfileViewState extends State<ProfileView> {
                 const SizedBox(height: 8),
                 if (_profile?.isPremium == true)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                           colors: [Color(0xFFFFD700), Color(0xFFFFA500)]),
@@ -301,11 +346,10 @@ class _ProfileViewState extends State<ProfileView> {
                   )
                 else
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.border),
                     ),
                     child: const Text('Free Plan',
                         style: TextStyle(
@@ -322,30 +366,24 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   // ── Premium Banner ────────────────────────────────────────────────────────
-  
+
   Widget _buildPremiumBanner() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: GestureDetector(
         onTap: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const PremiumScreen()));
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: const LinearGradient(
-              colors: [AppColors.primary, Color(0xFF9D00FF)],
+              colors: [AppColors.primaryDark, AppColors.primary], // Richer, darker indigo
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              )
-            ]
           ),
           child: Row(
             children: [
@@ -355,16 +393,22 @@ class _ProfileViewState extends State<ProfileView> {
                   color: Colors.white24,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 28),
+                child: const Icon(Icons.workspace_premium_rounded,
+                    color: Colors.white, size: 28),
               ),
               const SizedBox(width: 16),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Upgrade to Premium', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Upgrade to Premium',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
                     SizedBox(height: 4),
-                    Text('Unlock advanced AI roleplays.', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text('Unlock advanced AI roleplays.',
+                        style: TextStyle(color: Colors.white70, fontSize: 13)),
                   ],
                 ),
               ),
@@ -391,8 +435,7 @@ class _ProfileViewState extends State<ProfileView> {
           _statCard('Level', '$lvl', Icons.military_tech_rounded,
               const Color(0xFF7C5CFF)),
           const SizedBox(width: 10),
-          _statCard('XP', '$xp', Icons.bolt_rounded,
-              const Color(0xFFFBBF24)),
+          _statCard('XP', '$xp', Icons.bolt_rounded, const Color(0xFFFBBF24)),
           const SizedBox(width: 10),
           _statCard('Streak', '$streak 🔥', Icons.local_fire_department_rounded,
               const Color(0xFFEF4444)),
@@ -411,7 +454,6 @@ class _ProfileViewState extends State<ProfileView> {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           children: [
@@ -424,8 +466,8 @@ class _ProfileViewState extends State<ProfileView> {
                     fontSize: 14)),
             const SizedBox(height: 2),
             Text(label,
-                style: const TextStyle(
-                    color: AppColors.textMuted, fontSize: 11)),
+                style:
+                    const TextStyle(color: AppColors.textMuted, fontSize: 11)),
           ],
         ),
       ),
@@ -446,7 +488,6 @@ class _ProfileViewState extends State<ProfileView> {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -489,7 +530,8 @@ class _ProfileViewState extends State<ProfileView> {
       'Onboarding Preferences',
       [
         if (o.contexts.isNotEmpty)
-          _buildChipTile(Icons.place_outlined, 'Communication Contexts', o.contexts),
+          _buildChipTile(
+              Icons.place_outlined, 'Communication Contexts', o.contexts),
         if (o.challenges.isNotEmpty)
           _buildChipTile(Icons.psychology_outlined, 'Challenges', o.challenges),
         if (o.speakingStyle != null)
@@ -528,14 +570,15 @@ class _ProfileViewState extends State<ProfileView> {
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
             ),
             child: Column(
               children: [
                 for (int i = 0; i < tiles.length; i++) ...[
                   tiles[i],
                   if (i < tiles.length - 1)
-                    Divider(height: 1, color: AppColors.border.withValues(alpha: 0.5),
+                    Divider(
+                        height: 1,
+                        color: AppColors.border.withValues(alpha: 0.5),
                         indent: 50),
                 ],
               ],
@@ -567,7 +610,8 @@ class _ProfileViewState extends State<ProfileView> {
           style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
       subtitle: subtitle != null
           ? Text(subtitle,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12))
+              style:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 12))
           : null,
       trailing: onTap != null
           ? Icon(Icons.chevron_right_rounded,
@@ -613,8 +657,6 @@ class _ProfileViewState extends State<ProfileView> {
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: AppColors.primary.withValues(alpha: 0.25)),
                             ),
                             child: Text(t,
                                 style: const TextStyle(

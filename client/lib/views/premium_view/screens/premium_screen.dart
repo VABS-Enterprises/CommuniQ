@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/common_widgets/sky_campus_background.dart';
 
 class PremiumScreen extends StatefulWidget {
   const PremiumScreen({super.key});
@@ -31,44 +32,11 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // ─── Background Ambient Blobs ───
-          Positioned(
-            top: -100,
-            left: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _kPremiumPurple.withValues(alpha: 0.15),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: const SizedBox(),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -50,
-            right: -50,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _kPremiumCyan.withValues(alpha: 0.15),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: const SizedBox(),
-              ),
-            ),
-          ),
-          
+    return SkyCampusBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
           SafeArea(
             child: Column(
               children: [
@@ -105,6 +73,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -123,7 +92,6 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border),
             ),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
@@ -153,14 +121,6 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: _kPremiumGold.withValues(alpha: 0.3),
-                blurRadius: 20,
-                spreadRadius: 2,
-                offset: const Offset(0, 4),
-              )
-            ],
           ),
           child: const Center(
             child: Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 36),
@@ -208,7 +168,6 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -232,7 +191,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
           color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(21),
           border: Border.all(
-            color: isSelected ? AppColors.primary.withValues(alpha: 0.5) : Colors.transparent,
+            color: Colors.transparent,
           ),
         ),
         child: Row(
@@ -280,14 +239,6 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            )
-          ],
         ),
         child: Column(
           children: [
@@ -369,13 +320,6 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
       ),
       child: ElevatedButton(
         onPressed: () {
@@ -403,7 +347,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
         child: Ink(
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [AppColors.primary, _kPremiumPurple],
+              colors: [AppColors.primaryDark, AppColors.primary], // Richer, darker indigo
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
