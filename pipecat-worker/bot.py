@@ -31,6 +31,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from typing import AsyncGenerator, Optional
 
 import edge_tts
@@ -81,6 +82,123 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 NODE_BACKEND_URL = os.getenv("NODE_BACKEND_URL", "http://localhost:3000").rstrip("/")
 PIPECAT_WEBHOOK_SECRET = os.getenv("PIPECAT_WEBHOOK_SECRET", "")
 
+# ─── TTS text normaliser ──────────────────────────────────────────────────────
+#
+# Edge TTS reads raw text, so numbers/units/abbreviations that look obvious to
+# a human are often mispronounced.  We pre-process LLM output before sending
+# it to the TTS service.
+#
+# Rules applied (in order):
+#   1. mAh / Ah / kWh / W / V / GHz / MHz / kHz → spelled out
+#   2. mm / cm / km / m  → "millimetres" etc.
+#   3. 10 AM / 10 PM / 10 a.m. / 10 p.m. → "10 in the morning" etc.
+#   4. Standalone large numbers: 1000 → "1,000" (TTS reads commas naturally)
+#   5. Decimal numbers: 3.5 → "3 point 5"
+#   6. Ordinals: 1st 2nd 3rd 4th → "first" "second" etc. (top 20)
+#   7. Common abbreviations: CEO, CTO, HR, AI, API, UI, UX → spelled or expanded
+#   8. Ellipsis … / ... → short pause (comma)
+#   9. Dash — between words → comma pause
+#  10. Multiple spaces / newlines → single space
+
+_ORDINALS = {
+    '1st': 'first', '2nd': 'second', '3rd': 'third', '4th': 'fourth',
+    '5th': 'fifth', '6th': 'sixth', '7th': 'seventh', '8th': 'eighth',
+    '9th': 'ninth', '10th': 'tenth', '11th': 'eleventh', '12th': 'twelfth',
+    '13th': 'thirteenth', '14th': 'fourteenth', '15th': 'fifteenth',
+    '16th': 'sixteenth', '17th': 'seventeenth', '18th': 'eighteenth',
+    '19th': 'nineteenth', '20th': 'twentieth',
+}
+
+# Units that should be expanded to their spoken form.
+_UNIT_MAP = [
+    # Battery / electricity
+    (r'(\d[\d,]*(?:\.\d+)?)\s*mAh\b', lambda m: f"{m.group(1)} milliamp hours"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*kWh\b', lambda m: f"{m.group(1)} kilowatt hours"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*Wh\b',  lambda m: f"{m.group(1)} watt hours"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*kW\b',  lambda m: f"{m.group(1)} kilowatts"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*MW\b',  lambda m: f"{m.group(1)} megawatts"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*W\b',   lambda m: f"{m.group(1)} watts"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*V\b',   lambda m: f"{m.group(1)} volts"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*Ah\b',  lambda m: f"{m.group(1)} amp hours"),
+    # Frequency
+    (r'(\d[\d,]*(?:\.\d+)?)\s*GHz\b', lambda m: f"{m.group(1)} gigahertz"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*MHz\b', lambda m: f"{m.group(1)} megahertz"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*kHz\b', lambda m: f"{m.group(1)} kilohertz"),
+    # Storage / memory
+    (r'(\d[\d,]*(?:\.\d+)?)\s*GB\b',  lambda m: f"{m.group(1)} gigabytes"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*MB\b',  lambda m: f"{m.group(1)} megabytes"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*KB\b',  lambda m: f"{m.group(1)} kilobytes"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*TB\b',  lambda m: f"{m.group(1)} terabytes"),
+    # Distance
+    (r'(\d[\d,]*(?:\.\d+)?)\s*km\b',  lambda m: f"{m.group(1)} kilometres"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*cm\b',  lambda m: f"{m.group(1)} centimetres"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*mm\b',  lambda m: f"{m.group(1)} millimetres"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*m\b',   lambda m: f"{m.group(1)} metres"),
+    # Speed
+    (r'(\d[\d,]*(?:\.\d+)?)\s*km/h\b', lambda m: f"{m.group(1)} kilometres per hour"),
+    (r'(\d[\d,]*(?:\.\d+)?)\s*mph\b',  lambda m: f"{m.group(1)} miles per hour"),
+    # Percentage — TTS usually reads % fine, but ensure space
+    (r'(\d[\d,]*(?:\.\d+)?)%', lambda m: f"{m.group(1)} percent"),
+]
+
+
+def _normalise_tts(text: str) -> str:
+    """
+    Convert LLM-generated text into a form that Edge TTS reads naturally.
+    Does NOT add SSML — works with plain text mode.
+    """
+    # 1. Units (most specific patterns first so mAh beats Ah, kWh beats Wh etc.)
+    for pattern, repl in _UNIT_MAP:
+        text = re.sub(pattern, repl, text)
+
+    # 2. Time: "10 AM" / "10am" / "10 a.m." → "10 in the morning"
+    def _time_repl(m: re.Match) -> str:
+        hour = m.group(1)
+        meridiem = m.group(2).lower().replace('.', '').replace(' ', '')
+        period = 'in the morning' if meridiem in ('am', 'a.m') else 'in the evening'
+        return f"{hour} {period}"
+    text = re.sub(
+        r'\b(\d{1,2})\s*([aApP]\.?[mM]\.?)\b',
+        _time_repl,
+        text,
+    )
+
+    # 3. Decimal numbers: 3.5 → "3 point 5"
+    def _decimal_repl(m: re.Match) -> str:
+        integer, decimal = m.group(1), m.group(2)
+        digits = ' '.join(decimal)
+        return f"{integer} point {digits}"
+    # Only replace decimals not already handled by unit rules
+    text = re.sub(r'\b(\d+)\.(\d+)\b', _decimal_repl, text)
+
+    # 4. Ordinals
+    for abbr, spoken in _ORDINALS.items():
+        text = re.sub(rf'\b{re.escape(abbr)}\b', spoken, text, flags=re.IGNORECASE)
+
+    # 5. Large numbers: add commas for natural TTS grouping (1000 → 1,000)
+    def _add_commas(m: re.Match) -> str:
+        n = m.group(0)
+        # Only add commas if number is ≥4 digits and has no commas already
+        if len(n) >= 4:
+            return f'{int(n):,}'
+        return n
+    text = re.sub(r'\b\d{4,}\b', _add_commas, text)
+
+    # 6. Ellipsis / long dashes → natural pause (comma)
+    text = re.sub(r'\.{2,}|…', ',', text)
+    text = re.sub(r'\s*—\s*', ', ', text)
+    text = re.sub(r'\s*–\s*', ', ', text)
+
+    # 7. Strip markdown that slipped through (asterisks, hashes)
+    text = re.sub(r'\*+', '', text)
+    text = re.sub(r'#+\s?', '', text)
+
+    # 8. Collapse whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
+
+
 # ─── Edge TTS service ─────────────────────────────────────────────────────────
 
 _EDGE_TTS_VOICE = os.getenv("EDGE_TTS_VOICE", "en-IN-PrabhatNeural")
@@ -113,6 +231,7 @@ class EdgeTTSService(TTSService):
         self._rate = rate
 
     async def run_tts(self, text: str, context_id: str) -> AsyncGenerator[Frame, None]:
+        text = _normalise_tts(text)
         logger.debug("EdgeTTSService: Generating TTS [%s]", text)
         proc = None
         try:
@@ -353,8 +472,9 @@ class AiTranscriptPoster(FrameProcessor):
     All frames are passed through unchanged.
     """
 
-    # How many words to group per karaoke chunk sent to Flutter.
-    _KARAOKE_CHUNK_WORDS = 3
+    # Send one word at a time so Flutter can accumulate and wrap naturally.
+    # Flutter decides when to clear and start a new "page" based on word count.
+    _KARAOKE_CHUNK_WORDS = 1
 
     def __init__(self, session_id: str, state: _TurnState, transport: "LiveKitTransport", **kwargs) -> None:
         super().__init__(**kwargs)
@@ -382,18 +502,18 @@ class AiTranscriptPoster(FrameProcessor):
                     name=f"post-turn-{self._session_id}",
                 )
             if ai_text:
+                # Normalise for display (same transformations applied to TTS input).
+                display_text = _normalise_tts(ai_text)
                 # Full text — Flutter stores this for history / evaluation only.
                 asyncio.create_task(
                     self._transport.send_message(
-                        json.dumps({"type": "ai_transcript", "text": ai_text})
+                        json.dumps({"type": "ai_transcript", "text": display_text})
                     ),
                     name="ui-ai-transcript",
                 )
                 # Karaoke stream: split into N-word chunks and send sequentially.
-                # Flutter replaces the displayed text on each chunk so the words
-                # appear to "scroll through" in sync with the TTS audio.
                 asyncio.create_task(
-                    self._stream_karaoke(ai_text),
+                    self._stream_karaoke(display_text),
                     name="ui-karaoke",
                 )
 

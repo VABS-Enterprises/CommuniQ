@@ -9,19 +9,26 @@ import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
 
+// ─── Palette ──────────────────────────────────────────────────────────────────
+// One set of constants so every colour decision is in one place.
+
+const _kBarColor = AppColors.primary;          // indigo — all skill bars
+const _kTrackColor = Color(0xFF1E293B);         // dark slate track
+const _kCardBg = Color(0xFF0F172A);             // surface card
+const _kDivider = Color(0xFF1E293B);            // subtle divider
+const _kUserLabel = AppColors.primary;
+const _kAiLabel = Color(0xFF475569);            // slate-600
+
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
 class RoleplayFeedbackScreen extends StatefulWidget {
   final FeedbackConfig config;
-
-  /// Full session report — used by the "View Analysis" bottom sheet.
-  /// Optional: if null, the button is still shown but with limited data.
   final SessionReport? report;
 
-  final bool isOnboarding;
+  /// Turn-by-turn history — [{role: 'user'|'ai', transcript: '...'}]
+  final List<Map<String, String>> conversationHistory;
 
-  /// XP earned in this session — shown as a banner below the score ring.
-  /// Pass 0 (default) to hide the banner.
+  final bool isOnboarding;
   final int xpAwarded;
   final int newLevel;
   final bool leveledUp;
@@ -32,6 +39,7 @@ class RoleplayFeedbackScreen extends StatefulWidget {
     super.key,
     required this.config,
     this.report,
+    this.conversationHistory = const [],
     this.isOnboarding = false,
     this.xpAwarded = 0,
     this.newLevel = 1,
@@ -46,102 +54,116 @@ class RoleplayFeedbackScreen extends StatefulWidget {
 
 class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     with TickerProviderStateMixin {
-  late AnimationController _scoreController;
-  late Animation<double> _scoreAnimation;
-
-  late List<AnimationController> _barControllers;
-  late List<Animation<double>> _barAnimations;
+  late AnimationController _ringCtrl;
+  late Animation<double> _ringAnim;
+  late List<AnimationController> _barCtrl;
+  late List<Animation<double>> _barAnim;
 
   @override
   void initState() {
     super.initState();
 
-    // Score ring animation
-    _scoreController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
-    _scoreAnimation = Tween<double>(begin: 0, end: widget.config.overallScore / 100)
-        .animate(CurvedAnimation(parent: _scoreController, curve: Curves.easeOutCubic));
+    _ringCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200));
+    _ringAnim = Tween<double>(begin: 0, end: widget.config.overallScore / 100)
+        .animate(CurvedAnimation(parent: _ringCtrl, curve: Curves.easeOutCubic));
 
-    // Progress bar animations (staggered)
-    _barControllers = List.generate(
+    _barCtrl = List.generate(widget.config.skills.length,
+        (_) => AnimationController(
+            vsync: this, duration: const Duration(milliseconds: 800)));
+    _barAnim = List.generate(
       widget.config.skills.length,
-      (i) => AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 900),
-      ),
-    );
-    _barAnimations = List.generate(
-      widget.config.skills.length,
-      (i) => Tween<double>(
-        begin: 0,
-        end: widget.config.skills[i].score / 100,
-      ).animate(CurvedAnimation(parent: _barControllers[i], curve: Curves.easeOutCubic)),
+      (i) => Tween<double>(begin: 0, end: widget.config.skills[i].score / 100)
+          .animate(CurvedAnimation(
+              parent: _barCtrl[i], curve: Curves.easeOutCubic)),
     );
 
-    // Staggered start
-    _scoreController.forward();
-    for (int i = 0; i < _barControllers.length; i++) {
-      Future.delayed(Duration(milliseconds: 400 + i * 150), () {
-        if (mounted) _barControllers[i].forward();
-      });
+    _ringCtrl.forward();
+    for (int i = 0; i < _barCtrl.length; i++) {
+      Future.delayed(Duration(milliseconds: 300 + i * 120),
+          () { if (mounted) _barCtrl[i].forward(); });
     }
   }
 
   @override
   void dispose() {
-    _scoreController.dispose();
-    for (final c in _barControllers) {
-      c.dispose();
-    }
+    _ringCtrl.dispose();
+    for (final c in _barCtrl) { c.dispose(); }
     super.dispose();
   }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+  String _scoreLabel(int s) {
+    if (s >= 90) return 'Outstanding';
+    if (s >= 75) return 'Great Job';
+    if (s >= 60) return 'Good Start';
+    if (s >= 45) return 'Keep Practicing';
+    return 'Room to Grow';
+  }
+
+  // ─── Build ───────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF080B14),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(context),
+            _topBar(context),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s16, vertical: AppSpacing.s8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: AppSpacing.s8),
-                    _buildHeader(),
-                    const SizedBox(height: AppSpacing.s32),
-                    _buildScoreSection(context),
-                    const SizedBox(height: AppSpacing.s32),
-                    _buildSectionLabel('SKILL BREAKDOWN'),
+                    // 1. Score hero
+                    _scoreHero(),
+                    const SizedBox(height: AppSpacing.s28),
+
+                    // 2. Skill breakdown — compact rows
+                    _sectionLabel('SKILL BREAKDOWN'),
                     const SizedBox(height: AppSpacing.s12),
-                    ...List.generate(
-                      widget.config.skills.length,
-                      (i) => Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.s12),
-                        child: _buildSkillCard(widget.config.skills[i], _barAnimations[i]),
-                      ),
+                    _skillRows(),
+                    const SizedBox(height: AppSpacing.s28),
+
+                    // 3. Conversation transcript — inline on the page
+                    _sectionLabel('CONVERSATION'),
+                    const SizedBox(height: AppSpacing.s4),
+                    const Text(
+                      'Tap highlighted words for feedback.',
+                      style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11,
+                          height: 1.4),
                     ),
-                    const SizedBox(height: AppSpacing.s8),
-                    _buildSectionLabel('AI COACH INSIGHTS'),
                     const SizedBox(height: AppSpacing.s12),
-                    _buildInsightsCard(),
-                    const SizedBox(height: AppSpacing.s24),
-                    _buildSectionLabel('IMPROVE NEXT TIME'),
+                    _transcriptBlock(),
+                    const SizedBox(height: AppSpacing.s28),
+
+                    // 4. Coach insights
+                    _sectionLabel('AI COACH INSIGHTS'),
                     const SizedBox(height: AppSpacing.s12),
-                    _buildImprovementsCard(),
+                    _insightsCard(),
+                    const SizedBox(height: AppSpacing.s28),
+
+                    // 5. Improve next time
+                    _sectionLabel('IMPROVE NEXT TIME'),
+                    const SizedBox(height: AppSpacing.s12),
+                    _improvementsCard(),
+
+                    // 6. Recommended next (optional)
                     if (widget.report?.recommendedNextType != null) ...[
-                      const SizedBox(height: AppSpacing.s24),
-                      _buildSectionLabel('RECOMMENDED NEXT'),
+                      const SizedBox(height: AppSpacing.s28),
+                      _sectionLabel('RECOMMENDED NEXT'),
                       const SizedBox(height: AppSpacing.s12),
-                      _buildRecommendedNextCard(context),
+                      _recommendedCard(context),
                     ],
+
                     const SizedBox(height: AppSpacing.s32),
-                    _buildBottomActions(context),
+                    _bottomActions(context),
                     const SizedBox(height: AppSpacing.s24),
                   ],
                 ),
@@ -153,27 +175,25 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     );
   }
 
-  // ─── Top Bar ────────────────────────────────────────────────────────────────
+  // ─── Top bar ─────────────────────────────────────────────────────────────────
 
-  Widget _buildTopBar(BuildContext context) {
+  Widget _topBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 20, 8),
+      padding: const EdgeInsets.fromLTRB(8, 8, 20, 4),
       child: Row(
         children: [
           IconButton(
             icon: Container(
-              width: 40,
-              height: 40,
+              width: 40, height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFF141D2C),
+                color: _kCardBg,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: _kDivider),
               ),
               child: const Icon(Icons.arrow_back_ios_new_rounded,
                   color: AppColors.textPrimary, size: 16),
             ),
-            onPressed: () =>
-                Navigator.popUntil(context, (route) => route.isFirst),
+            onPressed: () => Navigator.popUntil(context, (r) => r.isFirst),
             padding: EdgeInsets.zero,
           ),
           const Expanded(
@@ -194,576 +214,190 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     );
   }
 
-  // ─── Header ─────────────────────────────────────────────────────────────────
+  // ─── Score hero ──────────────────────────────────────────────────────────────
+  // Compact row: ring on left, title + label + XP chips on right.
 
-  Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [
-              AppColors.primary.withValues(alpha: 0.18),
-              AppColors.primaryLight.withValues(alpha: 0.08),
-            ]),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.3)),
-          ),
-          child: const Text(
-            'SESSION PERFORMANCE',
-            style: TextStyle(
-              color: AppColors.primaryLight,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.3,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          widget.config.scenarioTitle,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            height: 1.2,
-            letterSpacing: -0.5,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ─── Score Section ───────────────────────────────────────────────────────────
-
-  Color _scoreColor(int score) {
-    if (score >= 75) return Colors.green;
-    if (score >= 50) return Colors.orange;
-    return Colors.redAccent;
-  }
-
-  Color _scoreLightColor(int score) {
-    if (score >= 75) return Colors.greenAccent;
-    if (score >= 50) return Colors.orangeAccent;
-    return Colors.red.shade200;
-  }
-
-  String _scoreLabel(int score) {
-    if (score >= 90) return 'Outstanding';
-    if (score >= 75) return 'Great Job';
-    if (score >= 60) return 'Good Start';
-    if (score >= 45) return 'Keep Practicing';
-    return 'Room to Grow';
-  }
-
-  Widget _buildScoreSection(BuildContext context) {
-    final scoreColor = _scoreColor(widget.config.overallScore);
-    final scoreLightColor = _scoreLightColor(widget.config.overallScore);
-    return Center(
-      child: Column(
+  Widget _scoreHero() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _kCardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _kDivider),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Score ring with glow shadow
+          // ── Ring ─────────────────────────────────────────────────────────
           AnimatedBuilder(
-            animation: _scoreAnimation,
+            animation: _ringAnim,
             builder: (_, __) {
-              final value = _scoreAnimation.value;
-              final overallScore = widget.config.overallScore;
-              final displayScore = overallScore == 0
-                  ? 0
-                  : (value * overallScore / (overallScore / 100)).round();
-
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Outer glow
-                  Container(
-                    width: 196,
-                    height: 196,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: scoreColor.withValues(
-                              alpha: 0.12 + 0.06 * value),
-                          blurRadius: 40,
-                          spreadRadius: 8,
+              final v = _ringAnim.value;
+              final score = widget.config.overallScore;
+              final display = (v * score).round();
+              return SizedBox(
+                width: 100,
+                height: 100,
+                child: CustomPaint(
+                  painter: _RingPainter(progress: v),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$display',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            height: 1,
+                          ),
+                        ),
+                        const Text(
+                          '%',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(
-                    width: 180,
-                    height: 180,
-                    child: CustomPaint(
-                      painter: _ScoreRingPainter(
-                        progress: value,
-                        color: scoreColor,
-                        lightColor: scoreLightColor,
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '$displayScore',
-                              style: TextStyle(
-                                color: scoreColor,
-                                fontSize: 52,
-                                fontWeight: FontWeight.bold,
-                                height: 1,
-                              ),
-                            ),
-                            Text(
-                              '%',
-                              style: TextStyle(
-                                color: scoreColor.withValues(alpha: 0.65),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               );
             },
           ),
-          const SizedBox(height: 12),
-          // Score label
-          Text(
-            _scoreLabel(widget.config.overallScore),
-            style: TextStyle(
-              color: _scoreColor(widget.config.overallScore),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.s20),
-          // View analysis button
-          GestureDetector(
-            onTap: () => _showAnalysisSheet(context),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    width: 1.5),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.bar_chart_rounded,
-                      size: 16, color: AppColors.primaryLight),
-                  SizedBox(width: 8),
-                  Text(
-                    'View Analysis',
+          const SizedBox(width: 20),
+
+          // ── Right side ───────────────────────────────────────────────────
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 9, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'SESSION PERFORMANCE',
                     style: TextStyle(
                       color: AppColors.primaryLight,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          if (widget.xpAwarded > 0 ||
-              widget.newBadges.isNotEmpty ||
-              widget.newStreak > 0) ...[
-            const SizedBox(height: AppSpacing.s16),
-            _buildXpBanner(),
-          ],
-        ],
-      ),
-    );
-  }
-
-  void _showAnalysisSheet(BuildContext context) {
-    final report = widget.report;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (_, controller) => Column(
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  const Icon(Icons.bar_chart_rounded,
-                      color: AppColors.primaryLight, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Detailed Analysis',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView(
-                controller: controller,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: [
-                  // ── Individual scores ─────────────────────────────────
-                  _buildSheetLabel('SKILL SCORES'),
-                  const SizedBox(height: 12),
-                  if (report != null) ...[
-                    ...report.scores.entries.map((e) {
-                      const displayNames = {
-                        'clarity':       'Clarity',
-                        'fluency':       'Fluency',
-                        'confidence':    'Confidence',
-                        'vocabulary':    'Vocabulary',
-                        'grammar':       'Grammar',
-                        'pronunciation': 'Pronunciation',
-                      };
-                      final label = displayNames[e.key] ??
-                          '${e.key[0].toUpperCase()}${e.key.substring(1)}';
-                      return _buildScoreRow(label, e.value);
-                    }),
-                  ] else
-                    ...widget.config.skills.map((s) => _buildScoreRow(s.title, s.score)),
-                  const SizedBox(height: 24),
-
-                  // ── Filler words ──────────────────────────────────────
-                  _buildSheetLabel('FILLER WORDS'),
-                  const SizedBox(height: 12),
-                  if (report != null && report.fillerWordCount > 0) ...[
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${report.fillerWordCount} filler word${report.fillerWordCount == 1 ? '' : 's'} detected',
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            children: report.fillerWords.map((word) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                      color: Colors.orange.withValues(alpha: 0.35)),
-                                ),
-                                child: Text(
-                                  '"$word"',
-                                  style: const TextStyle(
-                                    color: Colors.orange,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ] else
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle_outline_rounded,
-                              color: Colors.green, size: 18),
-                          const SizedBox(width: 10),
-                          const Text(
-                            'No filler words detected — clean speech!',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 24),
-
-                  // ── Full transcript ───────────────────────────────────
-                  _buildSheetLabel('FULL TRANSCRIPT'),
-                  const SizedBox(height: 12),
-                  if (report != null && report.rawTranscript.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Text(
-                        report.rawTranscript,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                          height: 1.7,
-                        ),
-                      ),
-                    )
-                  else
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: const Text(
-                        'Transcript not available.',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSheetLabel(String label) {
-    return Text(
-      label,
-      style: const TextStyle(
-        color: AppColors.textMuted,
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.4,
-      ),
-    );
-  }
-
-  Widget _buildScoreRow(String label, int score) {
-    final color = score >= 80
-        ? Colors.green
-        : score >= 60
-            ? AppColors.primary
-            : Colors.orange;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
                 ),
-              ),
-              Text(
-                '$score%',
-                style: TextStyle(
-                  color: color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: score / 100,
-              minHeight: 5,
-              backgroundColor: AppColors.border,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildXpBanner() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // XP + level-up row
-        if (widget.xpAwarded > 0)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.bolt_rounded, color: AppColors.primaryLight, size: 20),
-                const SizedBox(width: 8),
+                const SizedBox(height: 6),
                 Text(
-                  '+${widget.xpAwarded} XP earned',
+                  widget.config.scenarioTitle,
                   style: const TextStyle(
-                    color: AppColors.primaryLight,
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    letterSpacing: -0.3,
+                    height: 1.2,
                   ),
                 ),
-                if (widget.leveledUp) ...[
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Level ${widget.newLevel}!',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        // Streak callout
-        if (widget.newStreak > 0) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('🔥', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 8),
+                const SizedBox(height: 6),
                 Text(
-                  '${widget.newStreak}-day streak!',
+                  _scoreLabel(widget.config.overallScore),
                   style: const TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.bold,
+                    color: AppColors.textMuted,
                     fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
+                // XP + streak chips
+                if (widget.xpAwarded > 0 ||
+                    widget.newStreak > 0 ||
+                    widget.newBadges.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      if (widget.xpAwarded > 0)
+                        _chip(
+                          icon: Icons.bolt_rounded,
+                          label: '+${widget.xpAwarded} XP',
+                          color: AppColors.primaryLight,
+                        ),
+                      if (widget.leveledUp)
+                        _chip(
+                          icon: Icons.arrow_upward_rounded,
+                          label: 'Level ${widget.newLevel}',
+                          color: AppColors.primaryLight,
+                        ),
+                      if (widget.newStreak > 0)
+                        _chip(
+                          emoji: '🔥',
+                          label: '${widget.newStreak}-day streak',
+                          color: const Color(0xFFFBBF24),
+                        ),
+                      ...widget.newBadges.map((b) => _chip(
+                            icon: Icons.military_tech_rounded,
+                            label: b,
+                            color: const Color(0xFFFBBF24),
+                          )),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
         ],
-        // New badge chips
-        if (widget.newBadges.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            alignment: WrapAlignment.center,
-            children: widget.newBadges.map((badge) {
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFBBF24).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: const Color(0xFFFBBF24).withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.military_tech_rounded,
-                        color: Color(0xFFFBBF24), size: 14),
-                    const SizedBox(width: 6),
-                    Text(
-                      badge,
-                      style: const TextStyle(
-                        color: Color(0xFFFBBF24),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ],
+      ),
     );
   }
 
-  // ─── Section Label ───────────────────────────────────────────────────────────
+  Widget _chip({
+    IconData? icon,
+    String? emoji,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (emoji != null)
+            Text(emoji, style: const TextStyle(fontSize: 11))
+          else if (icon != null)
+            Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Widget _buildSectionLabel(String label) {
+  // ─── Section label ────────────────────────────────────────────────────────────
+
+  Widget _sectionLabel(String label) {
     return Row(
       children: [
         Container(
-          width: 3,
-          height: 14,
+          width: 3, height: 14,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.primaryLight],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+            color: AppColors.primary,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -781,173 +415,278 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     );
   }
 
-  // ─── Skill Card ──────────────────────────────────────────────────────────────
+  // ─── Skill rows ───────────────────────────────────────────────────────────────
+  // Flat table-style rows — single indigo bar, no colour coding by score.
+  // The score percentage as text is enough information; colour-coded bars
+  // are visually noisy and redundant.
 
-  Widget _buildSkillCard(SkillCard skill, Animation<double> barAnim) {
-    final barColor = _scoreColor(skill.score);
-    final barLightColor = _scoreLightColor(skill.score);
+  Widget _skillRows() {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.s16),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1520),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-            color: barColor.withValues(alpha: 0.12)),
-        boxShadow: [
-          BoxShadow(
-            color: barColor.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: _kCardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kDivider),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(widget.config.skills.length, (i) {
+          final skill = widget.config.skills[i];
+          final isLast = i == widget.config.skills.length - 1;
+          return Column(
             children: [
-              Text(
-                skill.title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                  letterSpacing: -0.2,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: barColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: barColor.withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  '${skill.score}%',
-                  style: TextStyle(
-                    color: barColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
+              _skillRow(skill, _barAnim[i]),
+              if (!isLast) ...[
+                const SizedBox(height: 14),
+                Divider(height: 1, color: _kDivider),
+                const SizedBox(height: 14),
+              ],
             ],
-          ),
-          const SizedBox(height: AppSpacing.s12),
-          AnimatedBuilder(
-            animation: barAnim,
-            builder: (_, __) => Container(
-              height: 8,
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: FractionallySizedBox(
-                widthFactor: barAnim.value,
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [barColor, barLightColor],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: barColor.withValues(alpha: 0.4),
-                        blurRadius: 6,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (skill.tags.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.s12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: skill.tags
-                  .map(
-                    (tag) => Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.2)),
-                      ),
-                      child: Text(
-                        tag,
-                        style: const TextStyle(
-                          color: AppColors.primaryLight,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ],
-        ],
+          );
+        }),
       ),
     );
   }
 
-  // ─── Insights Card ───────────────────────────────────────────────────────────
-
-  Widget _buildInsightsCard() {
-    if (widget.config.insights.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(AppSpacing.s16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F1520),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.border),
+  Widget _skillRow(SkillCard skill, Animation<double> anim) {
+    return Row(
+      children: [
+        // Name
+        Expanded(
+          flex: 4,
+          child: Text(
+            skill.title,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ),
-        child: const Center(
-          child: Text('—',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
+        // Bar — single indigo, no gradients, no shadows
+        Expanded(
+          flex: 5,
+          child: AnimatedBuilder(
+            animation: anim,
+            builder: (_, __) => ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: SizedBox(
+                height: 5,
+                child: Stack(
+                  children: [
+                    Container(color: _kTrackColor),
+                    FractionallySizedBox(
+                      widthFactor: anim.value,
+                      alignment: Alignment.centerLeft,
+                      child: Container(color: _kBarColor),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Score number — right-aligned, fixed width so bars align
+        SizedBox(
+          width: 36,
+          child: Text(
+            '${skill.score}%',
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Conversation transcript ──────────────────────────────────────────────────
+
+  Widget _transcriptBlock() {
+    final history = widget.conversationHistory;
+    final rawTranscript = widget.report?.rawTranscript ?? '';
+    final fillerSet =
+        widget.report?.fillerWords.map((w) => w.toLowerCase()).toSet() ??
+            <String>{};
+
+    if (history.isEmpty && rawTranscript.isEmpty) {
+      return _emptyCard('Transcript not available.');
+    }
+
+    if (history.isEmpty) {
+      // Fallback: show raw string
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _kCardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kDivider),
+        ),
+        child: Text(
+          rawTranscript,
+          style: const TextStyle(
+              color: AppColors.textSecondary, fontSize: 13, height: 1.7),
         ),
       );
     }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: _kCardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kDivider),
+      ),
+      child: Column(
+        children: history.asMap().entries.map((e) {
+          final i = e.key;
+          final turn = e.value;
+          final isUser = (turn['role'] ?? '') == 'user';
+          final text = turn['transcript'] ?? '';
+          final isLast = i == history.length - 1;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Role badge
+                    Container(
+                      width: 36,
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        isUser ? 'YOU' : 'AI',
+                        style: TextStyle(
+                          color: isUser ? _kUserLabel : _kAiLabel,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: isUser
+                          ? _userText(text, fillerSet)
+                          : Text(
+                              text,
+                              style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                                height: 1.65,
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!isLast)
+                Divider(height: 1, color: _kDivider, indent: 14, endIndent: 14),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// Renders user text with filler words underlined red (tappable).
+  Widget _userText(String text, Set<String> fillerSet) {
+    if (text.isEmpty) return const SizedBox.shrink();
+    final words = text.split(RegExp(r'\s+'));
+    final spans = <InlineSpan>[];
+
+    for (int i = 0; i < words.length; i++) {
+      final word = words[i];
+      final clean = word.replaceAll(RegExp(r'[^a-zA-Z]'), '').toLowerCase();
+      final isFiller = fillerSet.contains(clean);
+
+      if (isFiller) {
+        spans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              _showTooltip('"$word" is a filler word — try pausing instead.');
+            },
+            child: Text(
+              i < words.length - 1 ? '$word ' : word,
+              style: const TextStyle(
+                color: Color(0xFFF87171),
+                fontSize: 13,
+                height: 1.65,
+                decoration: TextDecoration.underline,
+                decorationColor: Color(0xFFF87171),
+              ),
+            ),
+          ),
+        ));
+      } else {
+        spans.add(TextSpan(
+          text: i < words.length - 1 ? '$word ' : word,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 13,
+            height: 1.65,
+          ),
+        ));
+      }
+    }
+
+    return RichText(text: TextSpan(children: spans));
+  }
+
+  void _showTooltip(String msg) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg,
+          style: const TextStyle(color: Colors.white, fontSize: 13)),
+      backgroundColor: const Color(0xFF1E293B),
+      duration: const Duration(seconds: 3),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
+  }
+
+  // ─── Insights card ────────────────────────────────────────────────────────────
+
+  Widget _insightsCard() {
+    if (widget.config.insights.isEmpty) return _emptyCard('—');
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1520),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.12)),
+        color: _kCardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kDivider),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: widget.config.insights.map((insight) {
-          final isLast = widget.config.insights.last == insight;
+        children: widget.config.insights.asMap().entries.map((e) {
+          final isLast = e.key == widget.config.insights.length - 1;
           return Padding(
-            padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.s12),
+            padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.s14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  margin: const EdgeInsets.only(top: 5),
-                  width: 6,
-                  height: 6,
+                  margin: const EdgeInsets.only(top: 7),
+                  width: 4,
+                  height: 4,
                   decoration: const BoxDecoration(
-                    color: AppColors.primaryLight,
+                    color: AppColors.primary,
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    insight,
+                    e.value,
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
@@ -963,59 +702,47 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     );
   }
 
-  // ─── Improvements Card ───────────────────────────────────────────────────────
+  // ─── Improvements card ────────────────────────────────────────────────────────
 
-  Widget _buildImprovementsCard() {
-    if (widget.config.improvements.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(AppSpacing.s16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F1520),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: const Center(
-          child: Text('—',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
-        ),
-      );
-    }
+  Widget _improvementsCard() {
+    if (widget.config.improvements.isEmpty) return _emptyCard('—');
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1520),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-            color: AppColors.primaryLight.withValues(alpha: 0.1)),
+        color: _kCardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _kDivider),
       ),
       child: Column(
-        children: widget.config.improvements.map((tip) {
-          final isLast = widget.config.improvements.last == tip;
+        children: widget.config.improvements.asMap().entries.map((e) {
+          final isLast = e.key == widget.config.improvements.length - 1;
           return Padding(
             padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.s12),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 28,
+                  height: 28,
+                  margin: const EdgeInsets.only(top: 1),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
+                    color: AppColors.primary.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.lightbulb_outline_rounded,
-                    color: AppColors.primaryLight,
-                    size: 16,
-                  ),
+                  child: const Icon(Icons.lightbulb_outline_rounded,
+                      color: AppColors.primaryLight, size: 14),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    tip,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                      height: 1.4,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 5),
+                    child: Text(
+                      e.value,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
                     ),
                   ),
                 ),
@@ -1027,31 +754,20 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     );
   }
 
-  // ─── Recommended Next Card ───────────────────────────────────────────────────
+  // ─── Recommended next ─────────────────────────────────────────────────────────
 
-  Widget _buildRecommendedNextCard(BuildContext context) {
+  Widget _recommendedCard(BuildContext context) {
     final nextType = widget.report!.recommendedNextType!;
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
+      onTap: () => Navigator.push(context, MaterialPageRoute(
           builder: (_) =>
-              RoleplaySetupScreen(mode: 'prefilled', scenario: nextType),
-        ),
-      ),
+              RoleplaySetupScreen(mode: 'prefilled', scenario: nextType))),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.s16),
         decoration: BoxDecoration(
-          color: const Color(0xFF0F1520),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.06),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          color: _kCardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -1062,11 +778,8 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                 color: AppColors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
-                Icons.auto_awesome_rounded,
-                color: AppColors.primaryLight,
-                size: 18,
-              ),
+              child: const Icon(Icons.auto_awesome_rounded,
+                  color: AppColors.primaryLight, size: 16),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1074,41 +787,35 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Try next:',
+                    'Try next',
                     style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    nextType,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  Text(nextType,
+                      style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
             const Icon(Icons.arrow_forward_ios_rounded,
-                color: AppColors.textMuted, size: 14),
+                color: AppColors.textMuted, size: 13),
           ],
         ),
       ),
     );
   }
 
-  // ─── Bottom Actions ──────────────────────────────────────────────────────────
+  // ─── Bottom actions ───────────────────────────────────────────────────────────
 
-  Widget _buildBottomActions(BuildContext context) {
+  Widget _bottomActions(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Primary — gradient button
         GestureDetector(
           onTap: () {
             HapticFeedback.lightImpact();
@@ -1116,35 +823,24 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(
-                    builder: (_) => const GoalConfirmationScreen(
-                          data: OnboardingData(),
-                        )),
+                    builder: (_) =>
+                        const GoalConfirmationScreen(data: OnboardingData())),
                 (_) => false,
               );
             } else {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                    builder: (_) => const RoleplaySetupScreen(mode: 'custom')),
+                    builder: (_) =>
+                        const RoleplaySetupScreen(mode: 'custom')),
               );
             }
           },
           child: Container(
-            height: 56,
+            height: 54,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryLight],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.35),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Center(
               child: Text(
@@ -1153,24 +849,24 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
+                  letterSpacing: -0.1,
                 ),
               ),
             ),
           ),
         ),
         const SizedBox(height: AppSpacing.s12),
-        // Secondary
         GestureDetector(
           onTap: () {
             HapticFeedback.lightImpact();
-            Navigator.popUntil(context, (route) => route.isFirst);
+            Navigator.popUntil(context, (r) => r.isFirst);
           },
           child: Container(
-            height: 56,
+            height: 54,
             decoration: BoxDecoration(
-              color: const Color(0xFF0F1520),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.border, width: 1.5),
+              color: _kCardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _kDivider, width: 1.5),
             ),
             child: const Center(
               child: Text(
@@ -1188,76 +884,61 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     );
   }
 
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+  Widget _emptyCard(String msg) => Container(
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        decoration: BoxDecoration(
+          color: _kCardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kDivider),
+        ),
+        child: Center(
+          child: Text(msg,
+              style: const TextStyle(
+                  color: AppColors.textMuted, fontSize: 14)),
+        ),
+      );
 }
 
-// ─── Custom Painter: Score Ring ───────────────────────────────────────────────
+// ─── Score ring painter ───────────────────────────────────────────────────────
+// Single indigo arc on a dark track. No glow, no gradient, no shadow.
 
-class _ScoreRingPainter extends CustomPainter {
+class _RingPainter extends CustomPainter {
   final double progress;
-  final Color color;
-  final Color lightColor;
-
-  _ScoreRingPainter({
-    required this.progress,
-    required this.color,
-    required this.lightColor,
-  });
+  const _RingPainter({required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width - 16) / 2;
-    const strokeWidth = 10.0;
+    final radius = (size.width - 14) / 2;
+    const stroke = 8.0;
 
-    // Track (background) arc
-    final trackPaint = Paint()
-      ..color = const Color(0xFF1E2533)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawCircle(center, radius, trackPaint);
-
-    // Primary filled arc
-    final primaryPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    // Secondary lighter arc (small accent)
-    final lightPaint = Paint()
-      ..color = lightColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    const startAngle = -math.pi / 2;
-    final sweepAngle = 2 * math.pi * progress;
-
-    // Draw primary arc up to 80% of fill
-    final primaryEnd = sweepAngle * 0.85;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      startAngle,
-      primaryEnd,
-      false,
-      primaryPaint,
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = _kTrackColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round,
     );
 
-    // Draw lighter accent for last 15%
-    if (progress > 0.01) {
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle + primaryEnd,
-        sweepAngle - primaryEnd,
-        false,
-        lightPaint,
-      );
-    }
+    if (progress <= 0) return;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * progress,
+      false,
+      Paint()
+        ..color = _kBarColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.round,
+    );
   }
 
   @override
-  bool shouldRepaint(_ScoreRingPainter old) =>
-      old.progress != progress || old.color != color;
+  bool shouldRepaint(_RingPainter old) => old.progress != progress;
 }

@@ -155,12 +155,21 @@ class _RoleplayConversationScreenState
   /// Server said opening response included LiveKit — we connect after the HTTP opening audio finishes.
   bool _serverLiveVoiceEnabled = false;
 
-  // ─── Karaoke transcript (live voice mode) ─────────────────────────────────────
-  // Current N-word chunk being displayed while the AI speaks.
-  // Replaced on each "ai_karaoke" message from the Pipecat bot.
+  // ─── Karaoke transcript (live voice + HTTP mode) ──────────────────────────────
+  // Text currently displayed while the AI speaks. Words are appended one by
+  // one. When the word count would exceed _KARAOKE_MAX_WORDS, the display
+  // resets and continues from the next word — teleprompter-style page turns.
   String _karaokeChunk = '';
+  // Number of words currently in _karaokeChunk. Reset each page-turn.
+  int _karaokeWordCount = 0;
+  // Max words before a page-clear. At 19sp font, ~1.6 line height, on a
+  // ~360px wide card: ~5-6 words per line × ~7 visible lines ≈ 40 words
+  // before the text would overflow the card's visible area.
+  static const int _karaokeMaxWords = 40;
   // Full text of what the user said last turn — shown while user_turn is active.
   String _lastUserTranscript = '';
+  // Used to cancel an in-flight local karaoke stream when interrupted.
+  bool _localKaraokeActive = false;
 
   // ─── Opening loading state ────────────────────────────────────────────────────
   // True while the very first HTTP opening call is in flight.
@@ -214,6 +223,7 @@ class _RoleplayConversationScreenState
   void dispose() {
     debugPrint(
         '🎙 [Conversation] Screen disposed — session=${widget.sessionId}');
+    _cancelLocalKaraoke();
     _sessionTimer?.cancel();
     _amplitudeTimer?.cancel();
     _pulseController.dispose();
@@ -275,6 +285,7 @@ class _RoleplayConversationScreenState
         setState(() {
           _lastUserTranscript = msg.text;
           _karaokeChunk = '';
+          _karaokeWordCount = 0;
         });
         debugPrint('[LiveVoice] User said: "${msg.text}"');
 
@@ -285,22 +296,34 @@ class _RoleplayConversationScreenState
         setState(() {
           _state = _ConvState.ai_speaking;
           _karaokeChunk = '';
+          _karaokeWordCount = 0;
           _cardAnimKey++;
         });
         debugPrint('[LiveVoice] AI says: "${msg.text.length > 60 ? '${msg.text.substring(0, 60)}…' : msg.text}"');
 
       case 'ai_karaoke':
-        // Word-chunk from the bot — replace the displayed karaoke text.
+        // Single word from the bot — accumulate into the display buffer.
+        // When the buffer exceeds the max word count, clear and start fresh
+        // so the text never overflows the card (teleprompter page-turn).
         if (msg.text.isEmpty) return;
+        final incomingWords = msg.text.trim().split(RegExp(r'\s+'));
         setState(() {
-          _karaokeChunk = msg.text;
+          for (final word in incomingWords) {
+            if (_karaokeWordCount >= _karaokeMaxWords) {
+              _karaokeChunk = word;
+              _karaokeWordCount = 1;
+            } else {
+              _karaokeChunk = _karaokeChunk.isEmpty ? word : '$_karaokeChunk $word';
+              _karaokeWordCount++;
+            }
+          }
         });
-        debugPrint('[LiveVoice] Karaoke chunk: "${msg.text}"');
 
       case 'ai_done':
         setState(() {
           _state = _ConvState.user_turn;
           _karaokeChunk = '';
+          _karaokeWordCount = 0;
           _lastUserTranscript = '';
           _cardAnimKey++;
         });
@@ -309,6 +332,43 @@ class _RoleplayConversationScreenState
       default:
         debugPrint('[LiveVoice] Unknown data message type: ${msg.type}');
     }
+  }
+
+  /// Stream text locally word-by-word (for HTTP opening / HTTP fallback turns).
+  ///
+  /// Sends one word every ~0.40 s, accumulating into [_karaokeChunk].
+  /// When [_karaokeMaxWords] is reached the display clears and continues
+  /// from the next word — same teleprompter page-turn as live voice mode.
+  ///
+  /// Call [_cancelLocalKaraoke] first if a previous stream may still be running.
+  Future<void> _streamLocalKaraoke(String text) async {
+    _localKaraokeActive = true;
+    final words = text.split(RegExp(r'\s+'));
+    if (words.isEmpty) { _localKaraokeActive = false; return; }
+    const delay = Duration(milliseconds: 400); // ~0.40 s per word
+
+    for (int i = 0; i < words.length; i++) {
+      if (!_localKaraokeActive || !mounted) break;
+      final word = words[i];
+      setState(() {
+        if (_karaokeWordCount >= _karaokeMaxWords) {
+          _karaokeChunk = word;
+          _karaokeWordCount = 1;
+        } else {
+          _karaokeChunk = _karaokeChunk.isEmpty ? word : '$_karaokeChunk $word';
+          _karaokeWordCount++;
+        }
+      });
+      // Don't delay after the last word.
+      if (i < words.length - 1) {
+        await Future.delayed(delay);
+      }
+    }
+    _localKaraokeActive = false;
+  }
+
+  void _cancelLocalKaraoke() {
+    _localKaraokeActive = false;
   }
 
   /// Disconnect from LiveKit at session end or on dispose.
@@ -418,11 +478,18 @@ class _RoleplayConversationScreenState
         setState(() {
           _isOpeningLoading = false;
           _state = _ConvState.ai_speaking;
-          _cardText = opening.aiReply;
+          _cardText = opening.aiReply; // kept for history; karaoke drives display
+          _karaokeChunk = '';
+          _karaokeWordCount = 0;
           _cardAnimKey++;
         });
         _aiPlaybackStage = _AiPlaybackStage.afterOpening;
-        await _playBase64Audio(opening.aiAudioBase64);
+        // Stream karaoke chunks concurrently with audio playback so text
+        // appears in sync with the voice, just like the live voice mode.
+        await Future.wait([
+          _playBase64Audio(opening.aiAudioBase64),
+          _streamLocalKaraoke(opening.aiReply),
+        ]);
       } catch (e) {
         sw.stop();
         debugPrint('❌ [Conversation] Opening failed after ${sw.elapsedMilliseconds}ms: $e');
@@ -513,6 +580,7 @@ class _RoleplayConversationScreenState
     // LiveKit is already publishing the mic — do not start the file recorder
     // (Android: record + WebRTC mic together breaks audio focus).
     if (_isLiveVoiceActive) {
+      _cancelLocalKaraoke();
       _micStartTime = DateTime.now();
       _liveTranscript = '';
       if (!mounted) return;
@@ -520,6 +588,7 @@ class _RoleplayConversationScreenState
         _state = _ConvState.user_turn;
         _cardText = '';
         _karaokeChunk = '';
+        _karaokeWordCount = 0;
         _cardAnimKey++;
       });
       _pulseController.duration = const Duration(milliseconds: 800);
@@ -763,13 +832,19 @@ class _RoleplayConversationScreenState
 
       setState(() {
         _state = _ConvState.ai_speaking;
-        _cardText = result.aiReply;
+        _cardText = result.aiReply; // kept for history; karaoke drives display
+        _karaokeChunk = '';
+        _karaokeWordCount = 0;
         _cardAnimKey++;
       });
 
       _lastAiAudioForReplay = result.aiAudioBase64;
       _aiPlaybackStage = _AiPlaybackStage.afterTurnFirstPlay;
-      await _playBase64Audio(result.aiAudioBase64);
+      // Stream karaoke concurrent with audio so text appears in sync.
+      await Future.wait([
+        _playBase64Audio(result.aiAudioBase64),
+        _streamLocalKaraoke(result.aiReply),
+      ]);
     } catch (e) {
       debugPrint('❌ [Conversation] Turn #$turnNumber failed: $e');
       if (!mounted) return;
@@ -948,6 +1023,13 @@ class _RoleplayConversationScreenState
                 'Add one specific detail about your work to make it memorable.',
               ],
             ),
+            conversationHistory: _conversationHistory.isNotEmpty
+                ? List.from(_conversationHistory)
+                : const [
+                    {'role': 'ai', 'transcript': 'Hello! I\'m glad we could meet today. What brings you in?'},
+                    {'role': 'user', 'transcript': 'I want to di-ve-lop my negoshiation skills.'},
+                    {'role': 'ai', 'transcript': 'That\'s a great goal. Let\'s start with the basics.'},
+                  ],
             isOnboarding: widget.isOnboarding,
             xpAwarded: 50,
             newLevel: 1,
@@ -977,6 +1059,7 @@ class _RoleplayConversationScreenState
           builder: (_) => RoleplayFeedbackScreen(
             config: feedbackConfig,
             report: result.report,
+            conversationHistory: List.from(_conversationHistory),
             isOnboarding: widget.isOnboarding,
             xpAwarded: result.xpAwarded,
             newLevel: result.newLevel,
@@ -1540,21 +1623,6 @@ class _RoleplayConversationScreenState
               ),
             ),
 
-            // ── Waveform (classic HTTP mode only) ─────────────────────────────
-            if (_state == _ConvState.user_turn && !_isLiveVoiceActive) ...[
-              const SizedBox(height: 12),
-              _buildWaveformRow(),
-              const SizedBox(height: 4),
-              Center(
-                child: Text(
-                  'Speak clearly, then tap SEND',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -1562,18 +1630,6 @@ class _RoleplayConversationScreenState
   }
 
   String _getSpeakerLabel() {
-    if (_isLiveVoiceActive) {
-      switch (_state) {
-        case _ConvState.user_turn:
-          return 'YOU — SPEAK ANYTIME';
-        case _ConvState.ai_speaking:
-          return '${widget.config.persona.toUpperCase()} — YOU CAN INTERRUPT';
-        case _ConvState.processing:
-          return 'PROCESSING';
-        case _ConvState.ending:
-          return 'EVALUATING';
-      }
-    }
     switch (_state) {
       case _ConvState.user_turn:
         return 'YOU';
@@ -1702,236 +1758,127 @@ class _RoleplayConversationScreenState
     );
   }
 
+  /// Unified card content layout — all states share the same structural template:
+  ///
+  ///  ┌──────────────────────────────────────┐
+  ///  │  [transcript / placeholder / loader]  │  ← Expanded, top-left anchored
+  ///  │                                       │
+  ///  │                                       │
+  ///  │  [waveform bars]                      │  ← fixed bottom, always present
+  ///  │  [status label]                        │    when relevant
+  ///  └──────────────────────────────────────┘
+  ///
+  /// This eliminates the flicker/jump when state transitions shift content
+  /// between center and top.
   Widget _buildCardContent() {
-    // ── Live voice mode ────────────────────────────────────────────────────────
-    if (_isLiveVoiceActive) {
-      switch (_state) {
-        case _ConvState.user_turn:
-          // Show what the user just said (fades to "Listening…" placeholder)
-          // and the animated waveform beneath it.
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_lastUserTranscript.isNotEmpty) ...[
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Text(
-                      _lastUserTranscript,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 17,
-                        height: 1.65,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ] else
-                const Spacer(),
-              _buildWaveformRow(),
-              const SizedBox(height: 12),
-              AnimatedBuilder(
-                animation: _pulseController,
-                builder: (_, __) => Text(
-                  'Listening...',
-                  style: TextStyle(
-                    color: AppColors.textMuted.withValues(
-                        alpha: 0.45 + 0.3 * _pulseController.value),
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
+    // ── Processing / Ending (shared, no voice active needed) ──────────────────
+    if (_state == _ConvState.processing || _state == _ConvState.ending) {
+      final label = _state == _ConvState.ending
+          ? 'Analysing your session...'
+          : (_isOpeningLoading
+              ? 'Connecting to ${widget.config.persona}...'
+              : 'Processing...');
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Spacer(),
+          Center(child: _buildDotsLoader()),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 14,
+                letterSpacing: 0.2,
               ),
-            ],
-          );
-
-        case _ConvState.ai_speaking:
-          // Karaoke: show animated bars + current word-chunk.
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _buildAiSpeakingBars(),
-              const SizedBox(height: 20),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                transitionBuilder: (child, anim) => FadeTransition(
-                  opacity: anim,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.12),
-                      end: Offset.zero,
-                    ).animate(anim),
-                    child: child,
-                  ),
-                ),
-                child: _karaokeChunk.isNotEmpty
-                    ? Text(
-                        _karaokeChunk,
-                        key: ValueKey<String>(_karaokeChunk),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                          height: 1.5,
-                        ),
-                      )
-                    : AnimatedBuilder(
-                        key: const ValueKey('placeholder'),
-                        animation: _pulseController,
-                        builder: (_, __) => Text(
-                          '${widget.config.persona} is speaking...',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.textMuted.withValues(
-                                alpha: 0.45 + 0.3 * _pulseController.value),
-                            fontSize: 15,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ),
-              ),
-            ],
-          );
-
-        case _ConvState.processing:
-        case _ConvState.ending:
-          break; // falls through to shared logic below
-      }
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const Spacer(),
+        ],
+      );
     }
 
-    // ── Classic / shared states ────────────────────────────────────────────────
-    switch (_state) {
-      case _ConvState.user_turn:
-        // Show live transcript from STT if available; otherwise placeholder.
-        final displayText = _liveTranscript.isNotEmpty
-            ? _liveTranscript
-            : (_cardText.isNotEmpty ? _cardText : '');
-        final isPlaceholder = displayText.isEmpty;
+    // ── Determine what text to show in the main area ───────────────────────────
+    final bool isUserTurn = _state == _ConvState.user_turn;
+    final bool isAiSpeaking = _state == _ConvState.ai_speaking;
 
-        return Align(
-          alignment: Alignment.topLeft,
+    // For user turns: prefer live STT partial, fallback to last confirmed transcript.
+    final String userDisplayText = _isLiveVoiceActive
+        ? _lastUserTranscript
+        : (_liveTranscript.isNotEmpty ? _liveTranscript : _cardText);
+
+    // For AI turns: karaoke chunk (set by live-voice messages or _streamLocalKaraoke).
+    final String aiDisplayText = _karaokeChunk;
+
+    final bool hasContent = isUserTurn
+        ? userDisplayText.isNotEmpty
+        : aiDisplayText.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Main text area — always top-anchored ─────────────────────────────
+        Expanded(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            child: isPlaceholder
-                ? _buildPlaceholderText()
-                : Text(
-                    displayText,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 17,
-                      height: 1.65,
-                    ),
-                  ),
-          ),
-        );
-
-      case _ConvState.processing:
-        final loadingLabel = _isOpeningLoading
-            ? 'Connecting to ${widget.config.persona}'
-            : 'Processing';
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildDotsLoader(),
-              const SizedBox(height: 20),
-              AnimatedBuilder(
-                animation: _pulseController,
-                builder: (_, __) => Text(
-                  loadingLabel,
-                  style: TextStyle(
-                    color: AppColors.textSecondary.withValues(
-                        alpha: 0.6 + 0.4 * _pulseController.value),
-                    fontSize: 14,
-                    letterSpacing: 0.3,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
-        );
-
-      case _ConvState.ai_speaking:
-        return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 350),
-          switchInCurve: Curves.easeOut,
-          child: Align(
-            key: ValueKey<int>(_cardAnimKey),
-            alignment: Alignment.topLeft,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Text(
-                _cardText,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 17,
-                  height: 1.65,
-                ),
-              ),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              switchInCurve: Curves.easeOut,
+              child: hasContent
+                  ? Text(
+                      isUserTurn ? userDisplayText : aiDisplayText,
+                      key: ValueKey<String>(
+                          isUserTurn ? userDisplayText : aiDisplayText),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w400,
+                        height: 1.6,
+                        letterSpacing: -0.1,
+                      ),
+                    )
+                  : _buildEmptyPlaceholder(isUserTurn),
             ),
           ),
-        );
+        ),
 
-      case _ConvState.ending:
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildDotsLoader(),
-              const SizedBox(height: 20),
-              AnimatedBuilder(
-                animation: _pulseController,
-                builder: (_, __) => Text(
-                  'Analysing your session',
-                  style: TextStyle(
-                    color: AppColors.textSecondary.withValues(
-                        alpha: 0.6 + 0.4 * _pulseController.value),
-                    fontSize: 14,
-                    letterSpacing: 0.3,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
+        // ── Bottom: waveform / AI bars + status hint ─────────────────────────
+        const SizedBox(height: 12),
+        if (isAiSpeaking)
+          _buildAiSpeakingBars()
+        else if (isUserTurn)
+          _buildWaveformRow(),
+        const SizedBox(height: 8),
+        Text(
+          isAiSpeaking
+              ? '${widget.config.persona} is speaking'
+              : (_isLiveVoiceActive ? 'Listening — speak anytime' : 'Speak clearly'),
+          style: const TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 12,
+            letterSpacing: 0.1,
           ),
-        );
-    }
+        ),
+      ],
+    );
   }
 
-  // Animated placeholder shown when the user hasn't spoken yet this turn.
-  Widget _buildPlaceholderText() {
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (_, __) => Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            'Speak now',
-            style: TextStyle(
-              color: AppColors.textMuted.withValues(
-                  alpha: 0.5 + 0.3 * _pulseController.value),
-              fontSize: 17,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-          const SizedBox(width: 2),
-          Text(
-            '...',
-            style: TextStyle(
-              color: AppColors.textMuted.withValues(
-                  alpha: 0.3 + 0.5 * _pulseController.value),
-              fontSize: 17,
-            ),
-          ),
-        ],
+  /// Subtle placeholder when there's no text yet — no pulsating opacity.
+  Widget _buildEmptyPlaceholder(bool isUserTurn) {
+    return Text(
+      key: const ValueKey('placeholder'),
+      isUserTurn ? 'Say something...' : '...',
+      style: const TextStyle(
+        color: AppColors.textMuted,
+        fontSize: 17,
+        fontStyle: FontStyle.italic,
+        height: 1.6,
       ),
     );
   }
+
 
   // ─── Waveform row ─────────────────────────────────────────────────────────────
 
