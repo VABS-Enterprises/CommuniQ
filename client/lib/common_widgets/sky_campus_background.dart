@@ -21,9 +21,9 @@ class SkyCampusBackground extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                AppColors.background, // #070014
-                AppColors.background, // #0E0324
-                AppColors.background, // #160735
+                AppColors.bgDark,
+                AppColors.bgDeep,
+                AppColors.bgVoid,
               ],
             ),
           ),
@@ -33,7 +33,8 @@ class SkyCampusBackground extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             gradient: RadialGradient(
-              center: const Alignment(0, -0.2), // Centered slightly above the middle
+              center: const Alignment(
+                  0, -0.2), // Centered slightly above the middle
               radius: 1.2,
               colors: [
                 AppColors.primary.withValues(alpha: 0.08), // 8% opacity #5B2EFF
@@ -51,7 +52,8 @@ class SkyCampusBackground extends StatelessWidget {
               radius: 1.5,
               colors: [
                 Colors.transparent,
-                AppColors.background.withValues(alpha: 0.20), // 20% opacity #070014 at edges
+                AppColors.background
+                    .withValues(alpha: 0.20), // 20% opacity #070014 at edges
               ],
               stops: const [0.5, 1.0], // Center remains transparent
             ),
@@ -80,4 +82,3 @@ class SkyCampusBackground extends StatelessWidget {
     );
   }
 }
-

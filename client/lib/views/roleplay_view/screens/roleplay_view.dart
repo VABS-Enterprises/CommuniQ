@@ -32,13 +32,14 @@ class _RoleplayViewState extends State<RoleplayView>
     super.dispose();
   }
 
-  void _onScenarioSelect(String? key) =>
-      setState(() => _selectedPresetKey = _selectedPresetKey == key ? null : key);
+  void _onScenarioSelect(String? key) => setState(
+      () => _selectedPresetKey = _selectedPresetKey == key ? null : key);
 
   void _onStart() => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => SetupScenarioPage(prefilledPresetKey: _selectedPresetKey),
+          builder: (_) =>
+              SetupScenarioPage(prefilledPresetKey: _selectedPresetKey),
         ),
       );
 
@@ -280,13 +281,6 @@ class _RoleplayViewState extends State<RoleplayView>
                       decoration: BoxDecoration(
                         color: AppColors.primary,
                         borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.35),
-                            blurRadius: 14,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                         border: Border.all(
                           color: AppColors.primaryLight.withValues(alpha: 0.5),
                           width: 1,
@@ -312,12 +306,14 @@ class _RoleplayViewState extends State<RoleplayView>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppColors.primary.withValues(alpha: isSelected ? 0.2 : 0.1),
+                      AppColors.primary
+                          .withValues(alpha: isSelected ? 0.2 : 0.1),
                       Colors.transparent,
                     ],
                   ),
                   border: Border.all(
-                    color: AppColors.primary.withValues(alpha: isSelected ? 0.4 : 0.2),
+                    color: AppColors.primary
+                        .withValues(alpha: isSelected ? 0.4 : 0.2),
                     width: 1.5,
                   ),
                 ),

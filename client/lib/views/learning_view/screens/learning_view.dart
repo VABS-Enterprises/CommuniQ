@@ -30,22 +30,22 @@ const _kJourneySubtitles = [
 
 // Wave-curve offsets (index 0 = level 1 at bottom, index 9 = level 10 at top).
 const _kWave = [
-  0.48,  // 0 → far right
-  0.05,  // 1 → slight right
+  0.48, // 0 → far right
+  0.05, // 1 → slight right
   -0.38, // 2 → left
   -0.50, // 3 → far left
   -0.18, // 4 → center-left
-  0.22,  // 5 → center-right
-  0.50,  // 6 → far right
-  0.30,  // 7 → right
+  0.22, // 5 → center-right
+  0.50, // 6 → far right
+  0.30, // 7 → right
   -0.15, // 8 → slight left
   -0.48, // 9 → far left
 ];
 
-const _kCyan        = Color(0xFF00D2FF);
-const _kOrange      = Color(0xFFFF6B35);
-const _kNodeSize    = 82.0;
-const _kPerJourney  = 10;
+const _kCyan = Color(0xFF00D2FF);
+const _kOrange = Color(0xFFFF6B35);
+const _kNodeSize = 82.0;
+const _kPerJourney = 10;
 const _kTotalLevels = 150;
 
 // ─── Main widget ──────────────────────────────────────────────────────────────
@@ -56,44 +56,40 @@ class LearningView extends StatefulWidget {
   State<LearningView> createState() => _LearningViewState();
 }
 
-class _LearningViewState extends State<LearningView> with TickerProviderStateMixin {
+class _LearningViewState extends State<LearningView>
+    with TickerProviderStateMixin {
   List<CommuniqLevel> _levels = [];
   Set<int> _completedIds = {};
   bool _isLoading = true;
-
-  // Shared animation controllers passed down to nodes
   late final AnimationController _glowCtrl;
   late final Animation<double> _glowAnim;
-  late final AnimationController _mascotCtrl;
-  late final Animation<double> _mascotAnim;
   late final AnimationController _pulseCtrl;
   late final Animation<double> _pulseAnim;
   late final AnimationController _particleCtrl;
 
   // ── GlobalKeys for flying-animation targets ──────────────────────────────────
   final _profileBadgeKey = GlobalKey<_CircularXPBadgeState>();
-  final _journeyXPKeys   = List.generate(15, (_) => GlobalKey<_JourneyXPBarState>());
+  final _journeyXPKeys =
+      List.generate(15, (_) => GlobalKey<_JourneyXPBarState>());
 
   @override
   void initState() {
     super.initState();
 
-    _glowCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))
+    _glowCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1500))
       ..repeat(reverse: true);
     _glowAnim = Tween<double>(begin: 0.4, end: 1.0)
         .animate(CurvedAnimation(parent: _glowCtrl, curve: Curves.easeInOut));
 
-    _mascotCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1300))
-      ..repeat(reverse: true);
-    _mascotAnim = Tween<double>(begin: 0, end: -10)
-        .animate(CurvedAnimation(parent: _mascotCtrl, curve: Curves.easeInOut));
-
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))
+    _pulseCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1800))
       ..repeat();
     _pulseAnim = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeOut));
 
-    _particleCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2500))
+    _particleCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 2500))
       ..repeat();
 
     _load();
@@ -102,7 +98,6 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
   @override
   void dispose() {
     _glowCtrl.dispose();
-    _mascotCtrl.dispose();
     _pulseCtrl.dispose();
     _particleCtrl.dispose();
     super.dispose();
@@ -113,13 +108,15 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
   Future<void> _load() async {
     try {
       final levels = await LevelService.instance.fetchLevels();
-      final prefs  = await SharedPreferences.getInstance();
-      final done   = (prefs.getStringList('completed_level_ids') ?? []).map(int.parse).toSet();
+      final prefs = await SharedPreferences.getInstance();
+      final done = (prefs.getStringList('completed_level_ids') ?? [])
+          .map(int.parse)
+          .toSet();
       if (mounted) {
         setState(() {
-          _levels       = levels;
+          _levels = levels;
           _completedIds = done;
-          _isLoading    = false;
+          _isLoading = false;
         });
       }
     } catch (_) {
@@ -141,7 +138,7 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
     if (_isJourneyLocked(ji)) return _NodeState.locked;
 
     if (_completedIds.contains(id)) return _NodeState.completed;
-    if (id == _currentId)           return _NodeState.current;
+    if (id == _currentId) return _NodeState.current;
     return _NodeState.locked;
   }
 
@@ -160,12 +157,12 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
 
   int _starsInJourney(int ji) {
     final start = ji * _kPerJourney;
-    final end   = (start + _kPerJourney).clamp(0, _levels.length);
+    final end = (start + _kPerJourney).clamp(0, _levels.length);
     if (start >= _levels.length) return 0;
-    
+
     int stars = 0;
     for (int i = start; i < end; i++) {
-        stars += _starsForScore(_scoreFor(_levels[i].id));
+      stars += _starsForScore(_scoreFor(_levels[i].id));
     }
     return stars;
   }
@@ -177,9 +174,12 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
 
   int _completedInJourney(int ji) {
     final start = ji * _kPerJourney;
-    final end   = (start + _kPerJourney).clamp(0, _levels.length);
+    final end = (start + _kPerJourney).clamp(0, _levels.length);
     if (start >= _levels.length) return 0;
-    return _levels.sublist(start, end).where((l) => _completedIds.contains(l.id)).length;
+    return _levels
+        .sublist(start, end)
+        .where((l) => _completedIds.contains(l.id))
+        .length;
   }
 
   String _personaFor(String category) {
@@ -209,7 +209,8 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
           ]),
           backgroundColor: AppColors.surface,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -220,7 +221,8 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(children: [
-            const Icon(Icons.lock_rounded, color: AppColors.primaryLight, size: 16),
+            const Icon(Icons.lock_rounded,
+                color: AppColors.primaryLight, size: 16),
             const SizedBox(width: 8),
             const Expanded(
               child: Text('Complete earlier scenarios to unlock this.',
@@ -229,7 +231,8 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
           ]),
           backgroundColor: AppColors.surface,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -261,17 +264,21 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
 
   /// Step 2 — when journey completes: turn bar green, then fire chips to profile ring.
   void _animateJourneyComplete({required int ji}) {
-    _journeyXPKeys[ji.clamp(0, 14)].currentState
-        ?.onJourneyCompleted(onReadyToFly: () => _launchJourneyXPToProfile(ji: ji));
+    _journeyXPKeys[ji.clamp(0, 14)].currentState?.onJourneyCompleted(
+        onReadyToFly: () => _launchJourneyXPToProfile(ji: ji));
   }
 
   /// Step 3 — fire 5 staggered chips from the now-green journey bar to the profile circle.
   void _launchJourneyXPToProfile({required int ji}) {
-    final jBox = _journeyXPKeys[ji.clamp(0, 14)].currentContext?.findRenderObject() as RenderBox?;
-    final pBox = _profileBadgeKey.currentContext?.findRenderObject() as RenderBox?;
-    if (jBox == null || !jBox.attached || pBox == null || !pBox.attached) return;
+    final jBox = _journeyXPKeys[ji.clamp(0, 14)]
+        .currentContext
+        ?.findRenderObject() as RenderBox?;
+    final pBox =
+        _profileBadgeKey.currentContext?.findRenderObject() as RenderBox?;
+    if (jBox == null || !jBox.attached || pBox == null || !pBox.attached)
+      return;
 
-    final src  = jBox.localToGlobal(jBox.size.center(Offset.zero));
+    final src = jBox.localToGlobal(jBox.size.center(Offset.zero));
     final dest = pBox.localToGlobal(pBox.size.center(Offset.zero));
     final overlay = Overlay.of(context);
 
@@ -285,7 +292,9 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
             to: dest,
             label: '+20 XP',
             arcDir: i.isEven ? 1 : -1,
-            onLanded: i == 0 ? () => _profileBadgeKey.currentState?.onXPArrived() : null,
+            onLanded: i == 0
+                ? () => _profileBadgeKey.currentState?.onXPArrived()
+                : null,
             onComplete: () => e?.remove(),
           ),
         );
@@ -296,10 +305,13 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
 
   /// Reloads completed IDs after returning from RoleplaySetupScreen, then fires
   /// the correct animations depending on what changed.
-  Future<void> _reloadAndAnimate({required int ji, required Set<int> prevCompleted}) async {
+  Future<void> _reloadAndAnimate(
+      {required int ji, required Set<int> prevCompleted}) async {
     try {
-      final prefs  = await SharedPreferences.getInstance();
-      final newDone = (prefs.getStringList('completed_level_ids') ?? []).map(int.parse).toSet();
+      final prefs = await SharedPreferences.getInstance();
+      final newDone = (prefs.getStringList('completed_level_ids') ?? [])
+          .map(int.parse)
+          .toSet();
       if (!mounted) return;
 
       final newlyCompleted = newDone.difference(prevCompleted);
@@ -312,7 +324,7 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
       if (!mounted) return;
 
       // Source: centre of screen — feels like XP materialises from the session
-      final sz  = MediaQuery.of(context).size;
+      final sz = MediaQuery.of(context).size;
       final src = Offset(sz.width / 2, sz.height * 0.5);
 
       // Step 1: chip to journey bar
@@ -322,8 +334,10 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
       await Future.delayed(const Duration(milliseconds: 1050));
       if (!mounted) return;
 
-      final prevJiCount = prevCompleted.where((id) => ((id - 1) ~/ _kPerJourney) == ji).length;
-      final newJiCount  = newDone.where((id) => ((id - 1) ~/ _kPerJourney) == ji).length;
+      final prevJiCount =
+          prevCompleted.where((id) => ((id - 1) ~/ _kPerJourney) == ji).length;
+      final newJiCount =
+          newDone.where((id) => ((id - 1) ~/ _kPerJourney) == ji).length;
 
       if (prevJiCount < _kPerJourney && newJiCount >= _kPerJourney) {
         _animateJourneyComplete(ji: ji);
@@ -357,8 +371,9 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
                 levelId: level.id, // ← enables completion on end-call
               ),
             ),
-          // On return, detect completion and fire the right animation
-          ).then((_) => _reloadAndAnimate(ji: ji, prevCompleted: prevCompleted));
+            // On return, detect completion and fire the right animation
+          ).then(
+              (_) => _reloadAndAnimate(ji: ji, prevCompleted: prevCompleted));
         },
       ),
     );
@@ -374,11 +389,17 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
         children: [
           // Subtle top gradient overlay
           Positioned(
-            top: 0, left: 0, right: 0, height: 260,
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 260,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.primary.withValues(alpha: 0.10), AppColors.background],
+                  colors: [
+                    AppColors.primary.withValues(alpha: 0.10),
+                    AppColors.background
+                  ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -395,29 +416,13 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
                 ),
                 Expanded(
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                              color: AppColors.primary))
                       : _buildPath(),
                 ),
               ],
             ),
-          ),
-          // Floating mascot
-          Positioned(
-            right: 16, bottom: 96,
-            child: _Mascot(animation: _mascotAnim, onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text(
-                    'Every scenario makes you a better communicator! 💪',
-                    style: TextStyle(color: AppColors.textPrimary),
-                  ),
-                  backgroundColor: AppColors.surface,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            }),
           ),
         ],
       ),
@@ -452,7 +457,7 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
 
   Widget _buildJourneyNodes(int journeyIndex) {
     final start = journeyIndex * _kPerJourney;
-    final end   = (start + _kPerJourney).clamp(0, _levels.length);
+    final end = (start + _kPerJourney).clamp(0, _levels.length);
     if (start >= _levels.length) return const SizedBox.shrink();
     final slice = _levels.sublist(start, end);
 
@@ -511,7 +516,10 @@ class _TopBar extends StatelessWidget {
                 const Text('🔥', style: TextStyle(fontSize: 15)),
                 const SizedBox(width: 4),
                 Text('$streak',
-                    style: const TextStyle(color: _kOrange, fontWeight: FontWeight.bold, fontSize: 15)),
+                    style: const TextStyle(
+                        color: _kOrange,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15)),
               ],
             ),
           ),
@@ -522,7 +530,11 @@ class _TopBar extends StatelessWidget {
               colors: [AppColors.primaryLight, _kCyan],
             ).createShader(b),
             child: const Text('CommuniQ',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5)),
           ),
           const Spacer(),
           // Circular XP ring around profile icon
@@ -541,15 +553,18 @@ class _TopBar extends StatelessWidget {
 class _CircularXPBadge extends StatefulWidget {
   final int completed;
   final int total;
-  const _CircularXPBadge({super.key, required this.completed, required this.total});
+  const _CircularXPBadge(
+      {super.key, required this.completed, required this.total});
 
   @override
   State<_CircularXPBadge> createState() => _CircularXPBadgeState();
 }
 
-class _CircularXPBadgeState extends State<_CircularXPBadge> with TickerProviderStateMixin {
+class _CircularXPBadgeState extends State<_CircularXPBadge>
+    with TickerProviderStateMixin {
   late final AnimationController _fillCtrl;
-  late Animation<double> _fillAnim;      // not final – can be replaced in didUpdateWidget
+  late Animation<double>
+      _fillAnim; // not final – can be replaced in didUpdateWidget
 
   late final AnimationController _hitCtrl;
   late final Animation<double> _hitScale;
@@ -560,17 +575,19 @@ class _CircularXPBadgeState extends State<_CircularXPBadge> with TickerProviderS
     super.initState();
     final target = widget.total > 0 ? widget.completed / widget.total : 0.0;
 
-    _fillCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
-    _fillAnim = Tween<double>(begin: 0.0, end: target)
-        .animate(CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
+    _fillCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200));
+    _fillAnim = Tween<double>(begin: 0.0, end: target).animate(
+        CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _fillCtrl.forward();
     });
 
-    _hitCtrl  = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _hitCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 500));
     _hitScale = Tween<double>(begin: 1.0, end: 1.28)
         .animate(CurvedAnimation(parent: _hitCtrl, curve: Curves.elasticOut));
-    _hitGlow  = Tween<double>(begin: 0.0, end: 1.0)
+    _hitGlow = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _hitCtrl, curve: Curves.easeOut));
   }
 
@@ -579,10 +596,10 @@ class _CircularXPBadgeState extends State<_CircularXPBadge> with TickerProviderS
     super.didUpdateWidget(old);
     if (old.completed != widget.completed) {
       final target = widget.total > 0 ? widget.completed / widget.total : 0.0;
-      final from   = _fillAnim.value;
+      final from = _fillAnim.value;
       _fillCtrl.reset();
-      _fillAnim = Tween<double>(begin: from, end: target)
-          .animate(CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
+      _fillAnim = Tween<double>(begin: from, end: target).animate(
+          CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
       _fillCtrl.forward();
     }
   }
@@ -623,11 +640,13 @@ class _CircularXPBadgeState extends State<_CircularXPBadge> with TickerProviderS
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                          color: AppColors.primary.withValues(alpha: _hitGlow.value * 0.55),
+                          color: AppColors.primary
+                              .withValues(alpha: _hitGlow.value * 0.55),
                           blurRadius: 18,
                           spreadRadius: 5),
                       BoxShadow(
-                          color: _kCyan.withValues(alpha: _hitGlow.value * 0.35),
+                          color:
+                              _kCyan.withValues(alpha: _hitGlow.value * 0.35),
                           blurRadius: 10,
                           spreadRadius: 2),
                     ],
@@ -642,7 +661,8 @@ class _CircularXPBadgeState extends State<_CircularXPBadge> with TickerProviderS
                   strokeWidth: 3.5,
                   backgroundColor: AppColors.border.withValues(alpha: 0.35),
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    Color.lerp(AppColors.primary, _kCyan, (_fillAnim.value + 0.1).clamp(0, 1))!,
+                    Color.lerp(AppColors.primary, _kCyan,
+                        (_fillAnim.value + 0.1).clamp(0, 1))!,
                   ),
                   strokeCap: StrokeCap.round,
                 ),
@@ -656,7 +676,8 @@ class _CircularXPBadgeState extends State<_CircularXPBadge> with TickerProviderS
                   color: AppColors.surface,
                   border: Border.all(color: AppColors.border),
                 ),
-                child: const Icon(Icons.person_rounded, color: AppColors.textSecondary, size: 20),
+                child: const Icon(Icons.person_rounded,
+                    color: AppColors.textSecondary, size: 20),
               ),
             ],
           ),
@@ -690,7 +711,8 @@ class _JourneyHeader extends StatefulWidget {
   State<_JourneyHeader> createState() => _JourneyHeaderState();
 }
 
-class _JourneyHeaderState extends State<_JourneyHeader> with SingleTickerProviderStateMixin {
+class _JourneyHeaderState extends State<_JourneyHeader>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _slideCtrl;
   late final Animation<Offset> _slideAnim;
   late final Animation<double> _fadeAnim;
@@ -698,14 +720,18 @@ class _JourneyHeaderState extends State<_JourneyHeader> with SingleTickerProvide
   @override
   void initState() {
     super.initState();
-    _slideCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _slideCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 500));
     _slideAnim = Tween<Offset>(begin: const Offset(-0.25, 0), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOutCubic));
-    _fadeAnim  = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(
+            CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOutCubic));
+    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
 
     final delay = Duration(milliseconds: min(widget.index * 40, 300));
-    Future.delayed(delay, () { if (mounted) _slideCtrl.forward(); });
+    Future.delayed(delay, () {
+      if (mounted) _slideCtrl.forward();
+    });
   }
 
   @override
@@ -742,7 +768,8 @@ class _JourneyHeaderState extends State<_JourneyHeader> with SingleTickerProvide
                       end: Alignment.centerRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.22)),
+                    border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.22)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -756,13 +783,16 @@ class _JourneyHeaderState extends State<_JourneyHeader> with SingleTickerProvide
                                 Row(
                                   children: [
                                     if (widget.isLocked) ...[
-                                      const Icon(Icons.lock_rounded, size: 12, color: AppColors.textMuted),
+                                      const Icon(Icons.lock_rounded,
+                                          size: 12, color: AppColors.textMuted),
                                       const SizedBox(width: 4),
                                     ],
                                     Text(
                                       'JOURNEY ${widget.index + 1}',
                                       style: TextStyle(
-                                          color: widget.isLocked ? AppColors.textMuted : AppColors.primaryLight,
+                                          color: widget.isLocked
+                                              ? AppColors.textMuted
+                                              : AppColors.primaryLight,
                                           fontSize: 10,
                                           fontWeight: FontWeight.w800,
                                           letterSpacing: 2.0),
@@ -772,7 +802,9 @@ class _JourneyHeaderState extends State<_JourneyHeader> with SingleTickerProvide
                                 const SizedBox(height: 2),
                                 Text(widget.subtitle,
                                     style: TextStyle(
-                                        color: widget.isLocked ? AppColors.textMuted : AppColors.textPrimary,
+                                        color: widget.isLocked
+                                            ? AppColors.textMuted
+                                            : AppColors.textPrimary,
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold)),
                               ],
@@ -780,19 +812,25 @@ class _JourneyHeaderState extends State<_JourneyHeader> with SingleTickerProvide
                           ),
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 600),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: widget.isLocked ? AppColors.surface : AppColors.primary.withValues(alpha: 0.12),
+                              color: widget.isLocked
+                                  ? AppColors.surface
+                                  : AppColors.primary.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+                                const Icon(Icons.star_rounded,
+                                    size: 14, color: Colors.amber),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${widget.starsInJourney} / 30',
                                   style: TextStyle(
-                                      color: widget.isLocked ? AppColors.textMuted : AppColors.primaryLight,
+                                      color: widget.isLocked
+                                          ? AppColors.textMuted
+                                          : AppColors.primaryLight,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700),
                                 ),
@@ -808,18 +846,23 @@ class _JourneyHeaderState extends State<_JourneyHeader> with SingleTickerProvide
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                            border: Border.all(
+                                color: AppColors.border.withValues(alpha: 0.5)),
                           ),
                           child: Row(
                             children: [
                               const Padding(
                                 padding: EdgeInsets.only(left: 4, right: 12),
-                                child: Icon(Icons.lock_rounded, size: 24, color: AppColors.textMuted),
+                                child: Icon(Icons.lock_rounded,
+                                    size: 24, color: AppColors.textMuted),
                               ),
                               Expanded(
                                 child: Text(
                                   'Get 20 stars in Journey ${widget.index} to unlock this path (Current: ${widget.prevJourneyStars}/20)',
-                                  style: const TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.3),
+                                  style: const TextStyle(
+                                      color: AppColors.textMuted,
+                                      fontSize: 13,
+                                      height: 1.3),
                                 ),
                               ),
                             ],
@@ -854,7 +897,8 @@ class _JourneyXPBar extends StatefulWidget {
   State<_JourneyXPBar> createState() => _JourneyXPBarState();
 }
 
-class _JourneyXPBarState extends State<_JourneyXPBar> with TickerProviderStateMixin {
+class _JourneyXPBarState extends State<_JourneyXPBar>
+    with TickerProviderStateMixin {
   late final AnimationController _fillCtrl;
   late Animation<double> _fillAnim;
 
@@ -872,22 +916,25 @@ class _JourneyXPBarState extends State<_JourneyXPBar> with TickerProviderStateMi
     super.initState();
     final target = widget.completed / _JourneyXPBar.total;
 
-    _fillCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
-    _fillAnim = Tween<double>(begin: 0.0, end: target)
-        .animate(CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
+    _fillCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1000));
+    _fillAnim = Tween<double>(begin: 0.0, end: target).animate(
+        CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
     Future.delayed(const Duration(milliseconds: 450), () {
       if (mounted) _fillCtrl.forward();
     });
 
-    _hitCtrl   = AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
+    _hitCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 450));
     _hitBorder = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _hitCtrl, curve: Curves.easeOut));
-    _hitGlow   = Tween<double>(begin: 0.0, end: 1.0)
+    _hitGlow = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _hitCtrl, curve: Curves.easeInOut));
 
-    _completeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
-    _completeAnim = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _completeCtrl, curve: Curves.easeInOut));
+    _completeCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900));
+    _completeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(parent: _completeCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -895,10 +942,10 @@ class _JourneyXPBarState extends State<_JourneyXPBar> with TickerProviderStateMi
     super.didUpdateWidget(old);
     if (old.completed != widget.completed) {
       final target = widget.completed / _JourneyXPBar.total;
-      final from   = _fillAnim.value;
+      final from = _fillAnim.value;
       _fillCtrl.reset();
-      _fillAnim = Tween<double>(begin: from, end: target)
-          .animate(CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
+      _fillAnim = Tween<double>(begin: from, end: target).animate(
+          CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
       _fillCtrl.forward();
     }
   }
@@ -934,17 +981,20 @@ class _JourneyXPBarState extends State<_JourneyXPBar> with TickerProviderStateMi
   @override
   Widget build(BuildContext context) {
     final xpEarned = widget.completed * 20;
-    const totalXP  = _JourneyXPBar.total * 20;
-    final cv       = _completeAnim.value; // 0 → 1
+    const totalXP = _JourneyXPBar.total * 20;
+    final cv = _completeAnim.value; // 0 → 1
 
     // Lerped colours: normal → green
-    final bgColor     = Color.lerp(AppColors.surface,  const Color(0xFF0B2218), cv)!;
+    final bgColor = Color.lerp(AppColors.surface, const Color(0xFF0B2218), cv)!;
     final borderColor = Color.lerp(
-        Color.lerp(AppColors.border, AppColors.primary, _hitBorder.value * 0.75)!,
-        AppColors.success, cv)!;
+        Color.lerp(
+            AppColors.border, AppColors.primary, _hitBorder.value * 0.75)!,
+        AppColors.success,
+        cv)!;
     final shadowColor = Color.lerp(
         AppColors.primary.withValues(alpha: _hitGlow.value * 0.22),
-        AppColors.success.withValues(alpha: 0.30), cv)!;
+        AppColors.success.withValues(alpha: 0.30),
+        cv)!;
 
     return AnimatedBuilder(
       animation: Listenable.merge([_fillAnim, _hitCtrl, _completeCtrl]),
@@ -952,8 +1002,8 @@ class _JourneyXPBarState extends State<_JourneyXPBar> with TickerProviderStateMi
         duration: const Duration(milliseconds: 500),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: _completeAnim.value > 0.1 
-              ? AppColors.success.withValues(alpha: _completeAnim.value * 0.15) 
+          color: _completeAnim.value > 0.1
+              ? AppColors.success.withValues(alpha: _completeAnim.value * 0.15)
               : Colors.transparent,
         ),
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
@@ -979,9 +1029,11 @@ class _JourneyXPBarState extends State<_JourneyXPBar> with TickerProviderStateMi
                                     color: AppColors.textPrimary,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700)),
-                            Text('${widget.completed} / ${_JourneyXPBar.total} done',
+                            Text(
+                                '${widget.completed} / ${_JourneyXPBar.total} done',
                                 style: const TextStyle(
-                                    color: AppColors.textSecondary, fontSize: 10)),
+                                    color: AppColors.textSecondary,
+                                    fontSize: 10)),
                           ],
                         ),
                         const SizedBox(height: 5),
@@ -1015,7 +1067,8 @@ class _JourneyXPBarState extends State<_JourneyXPBar> with TickerProviderStateMi
                       color: AppColors.success.withValues(alpha: 0.18),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check_rounded, color: AppColors.success, size: 17),
+                    child: const Icon(Icons.check_rounded,
+                        color: AppColors.success, size: 17),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -1044,7 +1097,8 @@ class _JourneyXPBarState extends State<_JourneyXPBar> with TickerProviderStateMi
                             value: 1.0,
                             minHeight: 5,
                             backgroundColor: Colors.transparent,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.success),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.success),
                           ),
                         ),
                       ],
@@ -1088,7 +1142,8 @@ class _NodeItem extends StatefulWidget {
   State<_NodeItem> createState() => _NodeItemState();
 }
 
-class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixin {
+class _NodeItemState extends State<_NodeItem>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _entranceCtrl;
   late final Animation<double> _entranceFade;
   late final Animation<Offset> _entranceSlide;
@@ -1097,11 +1152,13 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
   @override
   void initState() {
     super.initState();
-    _entranceCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _entranceCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 500));
     _entranceFade = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOut));
-    _entranceSlide = Tween<Offset>(begin: const Offset(0, 0.30), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOutCubic));
+    _entranceSlide =
+        Tween<Offset>(begin: const Offset(0, 0.30), end: Offset.zero).animate(
+            CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOutCubic));
 
     Future.delayed(Duration(milliseconds: widget.staggerIndex * 60), () {
       if (mounted) _entranceCtrl.forward();
@@ -1119,6 +1176,7 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
     setState(() => _isPressed = false);
     widget.onTap();
   }
+
   void _onTapCancel() => setState(() => _isPressed = false);
 
   @override
@@ -1137,8 +1195,16 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: widget.circleOnLeft
-                  ? [_buildCircleContent(), const SizedBox(width: 12), Flexible(child: _buildLabel())]
-                  : [Flexible(child: _buildLabel()), const SizedBox(width: 12), _buildCircleContent()],
+                  ? [
+                      _buildCircleContent(),
+                      const SizedBox(width: 12),
+                      Flexible(child: _buildLabel())
+                    ]
+                  : [
+                      Flexible(child: _buildLabel()),
+                      const SizedBox(width: 12),
+                      _buildCircleContent()
+                    ],
             ),
           ),
         ),
@@ -1151,8 +1217,10 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
   Widget _buildStars(int score) {
     // Determine active stars
     int activeStars = 0;
-    if (score > 80) activeStars = 3;
-    else if (score > 50) activeStars = 2;
+    if (score > 80)
+      activeStars = 3;
+    else if (score > 50)
+      activeStars = 2;
     else if (score > 35) activeStars = 1;
 
     Widget starIcon(bool active, double size) {
@@ -1160,12 +1228,21 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
         Icons.star_rounded,
         size: size,
         color: active ? const Color(0xFFFFD700) : AppColors.surface,
-        shadows: active ? [
-          Shadow(color: Colors.orange.withValues(alpha: 0.8), blurRadius: 4, offset: const Offset(0, 1)),
-          Shadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 2, offset: const Offset(0, 2)),
-        ] : [
-          const Shadow(color: Colors.black45, blurRadius: 2, offset: Offset(0, 1)),
-        ],
+        shadows: active
+            ? [
+                Shadow(
+                    color: Colors.orange.withValues(alpha: 0.8),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1)),
+                Shadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 2,
+                    offset: const Offset(0, 2)),
+              ]
+            : [
+                const Shadow(
+                    color: Colors.black45, blurRadius: 2, offset: Offset(0, 1)),
+              ],
       );
     }
 
@@ -1209,7 +1286,7 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
   }) {
     final double depth = _isPressed ? 2.0 : 9.0;
     final double nodeHeight = _kNodeSize + 12;
-    
+
     return SizedBox(
       width: _kNodeSize,
       height: nodeHeight,
@@ -1224,21 +1301,22 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
             bottom: 0,
             child: Container(
               width: _kNodeSize,
-              height: _kNodeSize + depth - 1, // Stretches to connect bottom and top seamlessly
+              height: _kNodeSize +
+                  depth -
+                  1, // Stretches to connect bottom and top seamlessly
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(_kNodeSize / 2),
-                color: shadowColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    blurRadius: 8,
-                    offset: const Offset(0, 5),
-                  )
-                ]
-              ),
+                  borderRadius: BorderRadius.circular(_kNodeSize / 2),
+                  color: shadowColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 5),
+                    )
+                  ]),
             ),
           ),
-          
+
           if (baseBadge != null)
             Positioned(
               bottom: -6,
@@ -1266,52 +1344,57 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
                 border: Border.all(color: borderColor, width: 2.0),
               ),
               child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                   // Glossy candy inner top reflection (elliptical for a more organic shine)
-                   Positioned(
-                     top: 3,
-                     child: Container(
-                       width: _kNodeSize * 0.6,
-                       height: _kNodeSize * 0.3,
-                       decoration: BoxDecoration(
-                         borderRadius: BorderRadius.all(Radius.elliptical(_kNodeSize * 0.3, _kNodeSize * 0.15)),
-                         gradient: LinearGradient(
-                           colors: [Colors.white.withValues(alpha: reflectionAlpha), Colors.white.withValues(alpha: 0.0)],
-                           begin: Alignment.topCenter,
-                           end: Alignment.bottomCenter,
-                         )
-                       ),
-                     ),
-                   ),
-                   // Bottom inner shadow for stronger 3D depth
-                   Positioned(
-                     bottom: 2,
-                     child: Container(
-                       width: _kNodeSize * 0.7,
-                       height: _kNodeSize * 0.22,
-                       decoration: BoxDecoration(
-                         borderRadius: BorderRadius.all(Radius.elliptical(_kNodeSize * 0.35, _kNodeSize * 0.11)),
-                         gradient: LinearGradient(
-                           colors: [Colors.black.withValues(alpha: 0.0), Colors.black.withValues(alpha: 0.3)],
-                           begin: Alignment.topCenter,
-                           end: Alignment.bottomCenter,
-                         )
-                       ),
-                     ),
-                   ),
-                   child,
-                   
-                   // Top badge securely bound to the moving face
-                   if (topBadge != null)
-                     Positioned(
-                       right: -4,
-                       bottom: 4,
-                       child: topBadge,
-                     ),
-                ]
-              ),
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Glossy candy inner top reflection (elliptical for a more organic shine)
+                    Positioned(
+                      top: 3,
+                      child: Container(
+                        width: _kNodeSize * 0.6,
+                        height: _kNodeSize * 0.3,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.all(Radius.elliptical(
+                                _kNodeSize * 0.3, _kNodeSize * 0.15)),
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withValues(alpha: reflectionAlpha),
+                                Colors.white.withValues(alpha: 0.0)
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            )),
+                      ),
+                    ),
+                    // Bottom inner shadow for stronger 3D depth
+                    Positioned(
+                      bottom: 2,
+                      child: Container(
+                        width: _kNodeSize * 0.7,
+                        height: _kNodeSize * 0.22,
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.all(Radius.elliptical(
+                                _kNodeSize * 0.35, _kNodeSize * 0.11)),
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.black.withValues(alpha: 0.0),
+                                Colors.black.withValues(alpha: 0.3)
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            )),
+                      ),
+                    ),
+                    child,
+
+                    // Top badge securely bound to the moving face
+                    if (topBadge != null)
+                      Positioned(
+                        right: -4,
+                        bottom: 4,
+                        child: topBadge,
+                      ),
+                  ]),
             ),
           ),
           if (showSparkles)
@@ -1327,7 +1410,7 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
                   children: [
                     Positioned(
                       left: (_kNodeSize - 110) / 2,
-                      top:  (_kNodeSize - 110) / 2,
+                      top: (_kNodeSize - 110) / 2,
                       child: _SparkleOverlay(controller: widget.particleCtrl),
                     ),
                   ],
@@ -1353,7 +1436,7 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
             AnimatedBuilder(
               animation: widget.pulseAnim,
               builder: (_, __) {
-                final scale   = 1.0 + widget.pulseAnim.value * 0.6;
+                final scale = 1.0 + widget.pulseAnim.value * 0.6;
                 final opacity = (1.0 - widget.pulseAnim.value) * 0.4;
                 return Transform.translate(
                   offset: const Offset(0, -6),
@@ -1365,7 +1448,8 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                            color: AppColors.primary.withValues(alpha: opacity), width: 3),
+                            color: AppColors.primary.withValues(alpha: opacity),
+                            width: 3),
                       ),
                     ),
                   ),
@@ -1381,7 +1465,16 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
               child: const Center(
                 child: Text('START',
                     style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5, shadows: [Shadow(color: Colors.black26, offset: Offset(0, 1), blurRadius: 2)])),
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
+                        letterSpacing: 0.5,
+                        shadows: [
+                          Shadow(
+                              color: Colors.black26,
+                              offset: Offset(0, 1),
+                              blurRadius: 2)
+                        ])),
               ),
             ),
           ],
@@ -1392,10 +1485,17 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
         return _build3DButton(
           primaryColor: const Color(0xFF2A2346), // A gorgeous deep amethyst
           shadowColor: const Color(0xFF120E21),
-          borderColor: const Color(0xFF63569D).withValues(alpha: 0.8), // A vivid violet/indigo border
+          borderColor: const Color(0xFF63569D)
+              .withValues(alpha: 0.8), // A vivid violet/indigo border
           reflectionAlpha: 0.25, // Subtler softer gloss reflection
           child: Center(
-            child: Text(widget.level.categoryEmoji, style: const TextStyle(fontSize: 28, shadows: [Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))])),
+            child: Text(widget.level.categoryEmoji,
+                style: const TextStyle(fontSize: 28, shadows: [
+                  Shadow(
+                      color: Colors.black45,
+                      blurRadius: 4,
+                      offset: Offset(0, 2))
+                ])),
           ),
           topBadge: Container(
             width: 24,
@@ -1403,10 +1503,15 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
             decoration: BoxDecoration(
               color: AppColors.success,
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF2A2346), width: 2), // matching border
-              boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))],
+              border: Border.all(
+                  color: const Color(0xFF2A2346), width: 2), // matching border
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))
+              ],
             ),
-            child: const Icon(Icons.check_rounded, color: Colors.white, size: 14),
+            child:
+                const Icon(Icons.check_rounded, color: Colors.white, size: 14),
           ),
           baseBadge: _buildStars(widget.score),
         );
@@ -1421,7 +1526,8 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
           child: Center(
             child: Opacity(
               opacity: 0.35,
-              child: Text(widget.level.categoryEmoji, style: const TextStyle(fontSize: 24)),
+              child: Text(widget.level.categoryEmoji,
+                  style: const TextStyle(fontSize: 24)),
             ),
           ),
         );
@@ -1431,13 +1537,15 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
   // ─── Label ─────────────────────────────────────────────────────────────────
 
   Widget _buildLabel() {
-    final isLocked  = widget.state == _NodeState.locked;
+    final isLocked = widget.state == _NodeState.locked;
     final isCurrent = widget.state == _NodeState.current;
 
     return SizedBox(
       width: 120, // constrain width to force wrapping and maintain clean gap
       child: Column(
-        crossAxisAlignment: widget.circleOnLeft ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+        crossAxisAlignment: widget.circleOnLeft
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isCurrent)
@@ -1451,7 +1559,10 @@ class _NodeItemState extends State<_NodeItem> with SingleTickerProviderStateMixi
               ),
               child: const Text('+20 XP',
                   style: TextStyle(
-                      color: _kCyan, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                      color: _kCyan,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5)),
             ),
           Text(
             widget.level.title,
@@ -1488,7 +1599,7 @@ class _SparkleOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const boxSize = 110.0;
-    const center  = boxSize / 2;
+    const center = boxSize / 2;
 
     return AnimatedBuilder(
       animation: controller,
@@ -1498,13 +1609,13 @@ class _SparkleOverlay extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: _sparks.map((spark) {
-            final angle   = spark[0];
-            final maxR    = spark[1];
-            final delay   = spark[2];
+            final angle = spark[0];
+            final maxR = spark[1];
+            final delay = spark[2];
             final dotSize = spark[3];
 
-            final t       = (controller.value + delay) % 1.0;
-            final r       = maxR * (0.30 + 0.70 * t);
+            final t = (controller.value + delay) % 1.0;
+            final r = maxR * (0.30 + 0.70 * t);
             final opacity = t < 0.65 ? (1.0 - t / 0.65) * 0.85 : 0.0;
 
             final x = center + cos(angle) * r - dotSize / 2;
@@ -1512,7 +1623,7 @@ class _SparkleOverlay extends StatelessWidget {
 
             return Positioned(
               left: x,
-              top:  y,
+              top: y,
               child: Opacity(
                 opacity: opacity.clamp(0.0, 1.0),
                 child: Container(
@@ -1532,43 +1643,6 @@ class _SparkleOverlay extends StatelessWidget {
   }
 }
 
-// ─── Floating mascot ─────────────────────────────────────────────────────────
-class _Mascot extends StatelessWidget {
-  final Animation<double> animation;
-  final VoidCallback onTap;
-  const _Mascot({required this.animation, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (_, __) => Transform.translate(
-        offset: Offset(0, animation.value),
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, _kCyan],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.45), blurRadius: 16, spreadRadius: 2)
-              ],
-            ),
-            child: const Center(child: Text('🤖', style: TextStyle(fontSize: 24))),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ─── Flying "+20 XP" chip overlay animation ───────────────────────────────────
 ///
 /// Rendered inside the global [Overlay] (which is a [Stack]).
@@ -1577,8 +1651,8 @@ class _Mascot extends StatelessWidget {
 class _FlyingXPChip extends StatefulWidget {
   final Offset from;
   final Offset to;
-  final String label;       // text shown on the chip
-  final int arcDir;         // +1 or -1 — which side the arc bulges
+  final String label; // text shown on the chip
+  final int arcDir; // +1 or -1 — which side the arc bulges
   final VoidCallback? onLanded;
   final VoidCallback onComplete;
 
@@ -1595,7 +1669,8 @@ class _FlyingXPChip extends StatefulWidget {
   State<_FlyingXPChip> createState() => _FlyingXPChipState();
 }
 
-class _FlyingXPChipState extends State<_FlyingXPChip> with SingleTickerProviderStateMixin {
+class _FlyingXPChipState extends State<_FlyingXPChip>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _progress;
   late final Animation<double> _fade;
@@ -1605,18 +1680,19 @@ class _FlyingXPChipState extends State<_FlyingXPChip> with SingleTickerProviderS
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1500));
 
     _progress = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
 
-    _fade = Tween<double>(begin: 1.0, end: 0.0)
-        .animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0.72, 1.0)));
+    _fade = Tween<double>(begin: 1.0, end: 0.0).animate(
+        CurvedAnimation(parent: _ctrl, curve: const Interval(0.72, 1.0)));
 
     _scale = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 0.5, end: 1.25), weight: 15),
-      TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0),  weight: 10),
-      TweenSequenceItem(tween: Tween(begin: 1.0,  end: 0.65), weight: 75),
+      TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.65), weight: 75),
     ]).animate(_ctrl);
 
     // Fire onLanded at 78% travel
@@ -1651,7 +1727,7 @@ class _FlyingXPChipState extends State<_FlyingXPChip> with SingleTickerProviderS
 
     const arcH = 140.0; // steeper/wider perpendicular bulge
     final nx = len > 0 ? (-dy / len) * widget.arcDir : 0.0;
-    final ny = len > 0 ? ( dx / len) * widget.arcDir : 0.0;
+    final ny = len > 0 ? (dx / len) * widget.arcDir : 0.0;
 
     final cpX = (p0.dx + p2.dx) / 2 + nx * arcH;
     final cpY = (p0.dy + p2.dy) / 2 + ny * arcH;
@@ -1679,13 +1755,14 @@ class _FlyingXPChipState extends State<_FlyingXPChip> with SingleTickerProviderS
               children: [
                 Positioned(
                   left: pos.dx - halfW,
-                  top:  pos.dy - halfH,
+                  top: pos.dy - halfH,
                   child: Opacity(
                     opacity: _fade.value.clamp(0.0, 1.0),
                     child: Transform.scale(
                       scale: _scale.value,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 11, vertical: 5),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [AppColors.primary, _kCyan],
@@ -1695,7 +1772,8 @@ class _FlyingXPChipState extends State<_FlyingXPChip> with SingleTickerProviderS
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.55),
+                                color:
+                                    AppColors.primary.withValues(alpha: 0.55),
                                 blurRadius: 10,
                                 spreadRadius: 1),
                             BoxShadow(
@@ -1733,7 +1811,8 @@ class _ScenarioSheet extends StatefulWidget {
   State<_ScenarioSheet> createState() => _ScenarioSheetState();
 }
 
-class _ScenarioSheetState extends State<_ScenarioSheet> with SingleTickerProviderStateMixin {
+class _ScenarioSheetState extends State<_ScenarioSheet>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _enterCtrl;
   late final Animation<double> _scaleAnim;
   late final Animation<double> _fadeAnim;
@@ -1741,12 +1820,13 @@ class _ScenarioSheetState extends State<_ScenarioSheet> with SingleTickerProvide
   @override
   void initState() {
     super.initState();
-    _enterCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _enterCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 700));
     _scaleAnim = Tween<double>(begin: 0.35, end: 1.0)
         .animate(CurvedAnimation(parent: _enterCtrl, curve: Curves.elasticOut));
-    _fadeAnim  = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(
-            parent: _enterCtrl, curve: const Interval(0.0, 0.55, curve: Curves.easeOut)));
+    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+        parent: _enterCtrl,
+        curve: const Interval(0.0, 0.55, curve: Curves.easeOut)));
     _enterCtrl.forward();
   }
 
@@ -1770,8 +1850,11 @@ class _ScenarioSheetState extends State<_ScenarioSheet> with SingleTickerProvide
         children: [
           const SizedBox(height: 12),
           Container(
-            width: 40, height: 4,
-            decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2)),
           ),
           const SizedBox(height: 24),
 
@@ -1779,7 +1862,8 @@ class _ScenarioSheetState extends State<_ScenarioSheet> with SingleTickerProvide
           ScaleTransition(
             scale: _scaleAnim,
             child: Container(
-              width: 62, height: 62,
+              width: 62,
+              height: 62,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
@@ -1788,7 +1872,9 @@ class _ScenarioSheetState extends State<_ScenarioSheet> with SingleTickerProvide
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: Center(child: Text(widget.level.categoryEmoji, style: const TextStyle(fontSize: 28))),
+              child: Center(
+                  child: Text(widget.level.categoryEmoji,
+                      style: const TextStyle(fontSize: 28))),
             ),
           ),
           const SizedBox(height: 14),
@@ -1800,39 +1886,50 @@ class _ScenarioSheetState extends State<_ScenarioSheet> with SingleTickerProvide
               children: [
                 // XP badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: _kCyan.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: _kCyan.withValues(alpha: 0.3)),
                   ),
                   child: const Text('+20 XP',
-                      style: TextStyle(color: _kCyan, fontWeight: FontWeight.bold, fontSize: 12)),
+                      style: TextStyle(
+                          color: _kCyan,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12)),
                 ),
                 const SizedBox(height: 10),
 
                 // Full title (sheet shows complete name)
                 Text(widget.level.title,
                     style: const TextStyle(
-                        color: AppColors.textPrimary, fontSize: 21, fontWeight: FontWeight.bold),
+                        color: AppColors.textPrimary,
+                        fontSize: 21,
+                        fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center),
                 const SizedBox(height: 6),
 
                 Text(widget.level.scenario,
                     style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13, height: 1.5),
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        height: 1.5),
                     textAlign: TextAlign.center),
                 const SizedBox(height: 6),
 
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(widget.level.category,
                       style: const TextStyle(
-                          color: AppColors.primaryLight, fontSize: 11, fontWeight: FontWeight.w600)),
+                          color: AppColors.primaryLight,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600)),
                 ),
                 const SizedBox(height: 20),
 
@@ -1860,7 +1957,9 @@ class _ScenarioSheetState extends State<_ScenarioSheet> with SingleTickerProvide
                       const SizedBox(height: 8),
                       Text(widget.level.prompt,
                           style: const TextStyle(
-                              color: AppColors.textPrimary, fontSize: 13, height: 1.6)),
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              height: 1.6)),
                     ],
                   ),
                 ),
@@ -1878,20 +1977,17 @@ class _ScenarioSheetState extends State<_ScenarioSheet> with SingleTickerProvide
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.40),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6)),
-                      ],
                     ),
                     child: TextButton(
                       onPressed: widget.onStart,
                       style: TextButton.styleFrom(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16))),
                       child: const Text('Start Scenario',
                           style: TextStyle(
-                              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ),

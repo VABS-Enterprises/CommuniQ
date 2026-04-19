@@ -39,13 +39,25 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Future<void> _loadProfile() async {
-    if (mounted) setState(() { _profileError = false; _isLoading = true; });
+    if (mounted)
+      setState(() {
+        _profileError = false;
+        _isLoading = true;
+      });
     try {
       final profile = await SessionService.instance.fetchProfile();
-      if (mounted) setState(() { _profile = profile; _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _profile = profile;
+          _isLoading = false;
+        });
     } catch (e) {
       debugPrint('[HomeView] fetchProfile failed: $e');
-      if (mounted) setState(() { _profileError = true; _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _profileError = true;
+          _isLoading = false;
+        });
     }
   }
 
@@ -53,7 +65,11 @@ class _HomeViewState extends State<HomeView> {
     if (mounted) setState(() => _sessionsLoading = true);
     try {
       final s = await SessionService.instance.fetchSessionHistory();
-      if (mounted) setState(() { _sessions = s; _sessionsLoading = false; });
+      if (mounted)
+        setState(() {
+          _sessions = s;
+          _sessionsLoading = false;
+        });
     } catch (_) {
       if (mounted) setState(() => _sessionsLoading = false);
     }
@@ -166,8 +182,8 @@ class _HomeViewState extends State<HomeView> {
         border: Border.all(color: AppColors.border),
       ),
       child: const Center(
-        child: CircularProgressIndicator(
-            color: AppColors.primary, strokeWidth: 2),
+        child:
+            CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
       ),
     );
   }
@@ -435,9 +451,9 @@ class _ThisWeekCard extends StatelessWidget {
                 child: _ImprovementChip(
                   label: 'Confidence',
                   delta: '+12%',
-                  baseColor: AppColors.primary,       // #7C5CFF
-                  accentColor: AppColors.primaryDark,  // #5A3FD9
-                  textColor: AppColors.primaryLight,   // #A78BFA
+                  baseColor: AppColors.primary, // #7C5CFF
+                  accentColor: AppColors.primaryDark, // #5A3FD9
+                  textColor: AppColors.primaryLight, // #A78BFA
                 ),
               ),
               const SizedBox(width: 12),
@@ -446,9 +462,9 @@ class _ThisWeekCard extends StatelessWidget {
                 child: _ImprovementChip(
                   label: 'Fluency',
                   delta: '+8%',
-                  baseColor: AppColors.primaryLight,       // #A78BFA
-                  accentColor: AppColors.primary,           // #7C5CFF
-                  textColor: AppColors.primaryExtraLight,   // #C4B5FD
+                  baseColor: AppColors.primaryLight, // #A78BFA
+                  accentColor: AppColors.primary, // #7C5CFF
+                  textColor: AppColors.primaryExtraLight, // #C4B5FD
                 ),
               ),
             ],
@@ -657,8 +673,8 @@ class _ActivityCard extends StatelessWidget {
               color: AppColors.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
-            child:
-                const Icon(Icons.history_rounded, color: AppColors.primary, size: 18),
+            child: const Icon(Icons.history_rounded,
+                color: AppColors.primary, size: 18),
           ),
           const SizedBox(height: 8),
           Text(

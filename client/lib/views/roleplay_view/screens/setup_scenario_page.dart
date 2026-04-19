@@ -17,8 +17,7 @@ const List<Map<String, dynamic>> _kPresets = [
     'title': 'Assertiveness',
     'subtitle': 'Say no politely to extra work',
     'icon': Icons.bolt,
-    'systemPrompt':
-        'You are a persistent but professional manager who wants an employee to take on '
+    'systemPrompt': 'You are a persistent but professional manager who wants an employee to take on '
         'additional work beyond their current scope. You genuinely believe the project is '
         'urgent and important. Be professional but firm — you have real business reasons. '
         'The employee needs to practice assertively declining or renegotiating the request '
@@ -34,8 +33,7 @@ const List<Map<String, dynamic>> _kPresets = [
     'title': 'Job Interview',
     'subtitle': 'Answer tough HR questions',
     'icon': Icons.work_outline,
-    'systemPrompt':
-        'You are an experienced HR interviewer conducting a job interview for a mid-to-senior '
+    'systemPrompt': 'You are an experienced HR interviewer conducting a job interview for a mid-to-senior '
         'position at a reputable Indian tech company. Ask behavioral and situational questions '
         'using the STAR framework. Be professional and curious. Follow up on vague or incomplete '
         'answers — push gently for specifics. Occasionally challenge weak answers to see if the '
@@ -51,8 +49,7 @@ const List<Map<String, dynamic>> _kPresets = [
     'title': 'Negotiation',
     'subtitle': 'Negotiate a raise or budget',
     'icon': Icons.handshake,
-    'systemPrompt':
-        'You are a skeptical department head being approached for a salary raise or budget '
+    'systemPrompt': 'You are a skeptical department head being approached for a salary raise or budget '
         'increase. You are not hostile, but you need solid justification — data, outcomes, '
         'market benchmarks. Challenge weak arguments respectfully. If presented with strong '
         'evidence and clear business impact, acknowledge it and show willingness to consider '
@@ -68,8 +65,7 @@ const List<Map<String, dynamic>> _kPresets = [
     'title': 'Leadership',
     'subtitle': 'Coach a struggling team member',
     'icon': Icons.groups,
-    'systemPrompt':
-        'You are a team member who has been underperforming lately — missing deadlines and '
+    'systemPrompt': 'You are a team member who has been underperforming lately — missing deadlines and '
         'seeming disengaged. You are slightly defensive and unsure of yourself. You respond '
         'well to empathy and honest feedback delivered with care. The user is playing the '
         'manager and needs to practice giving constructive feedback and coaching in a direct '
@@ -85,8 +81,7 @@ const List<Map<String, dynamic>> _kPresets = [
     'title': 'Conflict Resolution',
     'subtitle': 'De-escalate a workplace dispute',
     'icon': Icons.balance,
-    'systemPrompt':
-        'You are a colleague who is frustrated and feels misunderstood after a team '
+    'systemPrompt': 'You are a colleague who is frustrated and feels misunderstood after a team '
         'disagreement. You are not aggressive but you are clearly upset — your concerns '
         'have been dismissed in the past. You respond positively to genuine listening and '
         'acknowledgement. The user needs to practice de-escalation, active listening, and '
@@ -102,8 +97,7 @@ const List<Map<String, dynamic>> _kPresets = [
     'title': 'Small Talk',
     'subtitle': 'Network at a corporate event',
     'icon': Icons.chat_bubble_outline,
-    'systemPrompt':
-        'You are a friendly professional at a corporate networking event. You are open, '
+    'systemPrompt': 'You are a friendly professional at a corporate networking event. You are open, '
         'warm, and genuinely interested in meeting new people. Ask questions, share '
         'your own perspective, and help the user practice keeping a natural, engaging '
         'conversation going. Keep topics light but professional — work, interests, '
@@ -119,8 +113,7 @@ const List<Map<String, dynamic>> _kPresets = [
     'title': 'Giving Feedback',
     'subtitle': 'Give constructive feedback to a peer',
     'icon': Icons.feedback_outlined,
-    'systemPrompt':
-        'You are a peer colleague who has just received constructive feedback about your '
+    'systemPrompt': 'You are a peer colleague who has just received constructive feedback about your '
         'work on a recent project. You are slightly defensive at first but genuinely open '
         'to hearing honest, well-framed feedback. Respond realistically — push back on '
         'vague criticism, acknowledge specific and fair points, and help the user practice '
@@ -140,11 +133,11 @@ const List<Map<String, dynamic>> _kPresets = [
 const Map<String, List<Color>> _kScenarioColors = {
   'assertiveness': [Color(0xFFFF6B35), Color(0xFFFF9A62)],
   'job_interview': [Color(0xFF4FACFE), Color(0xFF00D4FF)],
-  'negotiation':   [Color(0xFF43E97B), Color(0xFF38F9D7)],
-  'leadership':    [Color(0xFF667EEA), Color(0xFFA78BFA)],
-  'conflict':      [Color(0xFFFC466B), Color(0xFFFF6B6B)],
-  'small_talk':    [Color(0xFF7B61FF), Color(0xFF9D7BFF)],
-  'feedback':      [Color(0xFFF7971E), Color(0xFFFFD200)],
+  'negotiation': [Color(0xFF43E97B), Color(0xFF38F9D7)],
+  'leadership': [Color(0xFF667EEA), Color(0xFFA78BFA)],
+  'conflict': [Color(0xFFFC466B), Color(0xFFFF6B6B)],
+  'small_talk': [Color(0xFF7B61FF), Color(0xFF9D7BFF)],
+  'feedback': [Color(0xFFF7971E), Color(0xFFFFD200)],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -462,7 +455,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF080B14),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -543,8 +536,6 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
     );
   }
 
-
-
   Widget _buildCustomInput() {
     final isEmpty = _scenarioController.text.trim().isEmpty;
     return Column(
@@ -589,7 +580,9 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
         Padding(
           padding: const EdgeInsets.only(left: 4),
           child: Text(
-            isEmpty ? 'Required — describe the conversation you want to practice' : '✓ Scenario described',
+            isEmpty
+                ? 'Required — describe the conversation you want to practice'
+                : '✓ Scenario described',
             style: AppTextStyles.bodySmall.copyWith(
               color: isEmpty ? AppColors.textMuted : AppColors.success,
             ),
@@ -629,8 +622,8 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
         _ConfigCard(
           label: 'Your Role',
           value: _role,
-          onTap: () => _showPicker('Your Role', _roles, _role,
-              (v) => setState(() => _role = v)),
+          onTap: () => _showPicker(
+              'Your Role', _roles, _role, (v) => setState(() => _role = v)),
         ),
       ],
     );
@@ -646,8 +639,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
           onTap: () => setState(() => _traits = trait),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: BoxDecoration(
               gradient: isSelected
                   ? LinearGradient(
@@ -659,18 +651,15 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
               color: isSelected ? null : AppColors.surface,
               borderRadius: BorderRadius.circular(50),
               border: Border.all(
-                color:
-                    isSelected ? AppColors.primaryLight : AppColors.border,
+                color: isSelected ? AppColors.primaryLight : AppColors.border,
                 width: isSelected ? 1.5 : 1,
               ),
             ),
             child: Text(
               trait,
               style: AppTextStyles.bodyMedium.copyWith(
-                color:
-                    isSelected ? Colors.white : AppColors.textSecondary,
-                fontWeight:
-                    isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
           ),
@@ -689,20 +678,20 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
             const SizedBox(width: 8),
             Text(
               '(Optional)',
-              style: AppTextStyles.labelSmall
-                  .copyWith(color: AppColors.textMuted),
+              style:
+                  AppTextStyles.labelSmall.copyWith(color: AppColors.textMuted),
             ),
           ],
         ),
         const SizedBox(height: 12),
         Container(
-      decoration: BoxDecoration(
-          color: const Color(0xFF0F1520),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: TextField(
-          controller: _backstoryController,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F1520),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: TextField(
+            controller: _backstoryController,
             maxLines: 2,
             style: AppTextStyles.bodyLarge.copyWith(
               color: AppColors.textPrimary,
@@ -710,9 +699,10 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
             ),
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.all(16),
-              hintText: 'Extra context for the AI (e.g. "I have 3 years of experience...")',
-              hintStyle: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textMuted),
+              hintText:
+                  'Extra context for the AI (e.g. "I have 3 years of experience...")',
+              hintStyle:
+                  AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
@@ -791,15 +781,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                 ? AppColors.primary.withValues(alpha: 0.4)
                 : AppColors.border,
           ),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.35),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : null,
+          boxShadow: null,
         ),
         child: Center(
           child: _isStarting
@@ -823,9 +805,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
               : Text(
                   'Start Roleplay',
                   style: AppTextStyles.titleMedium.copyWith(
-                    color: active
-                        ? Colors.white
-                        : AppColors.textMuted,
+                    color: active ? Colors.white : AppColors.textMuted,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -859,8 +839,6 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
   }
 }
 
-
-
 // -----------------------------------------------------------------------------
 // Config card widget
 // -----------------------------------------------------------------------------
@@ -882,10 +860,9 @@ class _ConfigCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF0F1520),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.12)),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
           boxShadow: [
             BoxShadow(
               color: AppColors.primary.withValues(alpha: 0.04),
