@@ -17,3 +17,8 @@ httpx>=0.27.0
 
 # Environment variables
 python-dotenv>=1.0.0
+
+# Edge TTS — pin floor to avoid the recurring 403 Sec-MS-GEC token breakage.
+# Microsoft periodically rotates their anti-abuse tokens; upgrade this when
+# a 403 WSServerHandshakeError reappears (pip install --upgrade edge-tts).
+edge-tts>=7.2.8

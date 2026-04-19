@@ -11,7 +11,8 @@ import '../constants/api_constants.dart';
 ///
 /// Possible [type] values:
 ///   "user_transcript" — user finished a turn; [text] is the STT result.
-///   "ai_transcript"   — AI finished generating; [text] is the LLM reply.
+///   "ai_transcript"   — AI finished generating; [text] is the full LLM reply.
+///   "ai_karaoke"      — streaming word-chunk (3 words) for karaoke display.
 ///   "ai_done"         — AI audio playback finished; no [text].
 class LiveVoiceMessage {
   final String type;

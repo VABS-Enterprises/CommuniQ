@@ -26,8 +26,17 @@ LLM_MODEL = settings.llm_model
 
 router = APIRouter()
 
-# Colab parity: same user nudge as opening turn ("Start the interview now.").
+# Opening nudge sent as the first user message so the LLM starts the scene.
 _OPENING_USER_MESSAGE = "Start the interview now."
+
+# Appended to the system prompt for the opening turn only.
+# Keeps the first line short — it is TTS-synthesised and the user hears it
+# before they can speak, so a long monologue wastes several seconds.
+_OPENING_VOICE_SUFFIX = (
+    "\n\nVoice mode — opening line only: Deliver ONE short, natural spoken "
+    "sentence (max 20 words) to open the conversation. "
+    "No lists, no asterisks, no markdown. Speak as if you just picked up the phone."
+)
 
 
 def _convert_history(raw_history: list) -> list[dict]:
@@ -67,12 +76,12 @@ async def session_opening(
             groq,
             model=LLM_MODEL,
             messages=[
-                {"role": "system", "content": req.systemPrompt},
+                {"role": "system", "content": req.systemPrompt + _OPENING_VOICE_SUFFIX},
                 {"role": "user", "content": _OPENING_USER_MESSAGE},
             ],
-            max_tokens=200,
+            max_tokens=80,
             temperature=0.75,
-            timeout=25,
+            timeout=20,
         )
     except Exception as e:
         logger.error("Opening LLM failed — session=%s: %s", req.sessionId, e)

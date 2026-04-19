@@ -37,9 +37,13 @@ import edge_tts
 import httpx
 from dotenv import load_dotenv
 
+from pipecat.audio.turn.smart_turn.base_smart_turn import SmartTurnParams
+from pipecat.audio.turn.smart_turn.local_smart_turn_v3 import LocalSmartTurnAnalyzerV3
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.frames.frames import (
+    AudioRawFrame,
+    BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
     EndFrame,
     ErrorFrame,
@@ -48,14 +52,21 @@ from pipecat.frames.frames import (
     LLMTextFrame,
     TTSAudioRawFrame,
     TranscriptionFrame,
+    UserStartedSpeakingFrame,
+    UserStoppedSpeakingFrame,
 )
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
+from pipecat.processors.aggregators.llm_response_universal import (
+    LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
+)
 from pipecat.processors.audio.vad_processor import VADProcessor
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+from pipecat.turns.user_stop.turn_analyzer_user_turn_stop_strategy import TurnAnalyzerUserTurnStopStrategy
+from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from pipecat.services.groq.llm import GroqLLMService
 from pipecat.services.groq.stt import GroqSTTService
 from pipecat.services.settings import TTSSettings
@@ -73,6 +84,9 @@ PIPECAT_WEBHOOK_SECRET = os.getenv("PIPECAT_WEBHOOK_SECRET", "")
 # ─── Edge TTS service ─────────────────────────────────────────────────────────
 
 _EDGE_TTS_VOICE = os.getenv("EDGE_TTS_VOICE", "en-IN-PrabhatNeural")
+# +20 % faster speech — edge-tts accepts "+N%" / "-N%" strings for rate.
+# Users found the default speed too slow; +20% keeps it natural for most voices.
+_EDGE_TTS_RATE = os.getenv("EDGE_TTS_RATE", "+20%")
 _EDGE_TTS_SAMPLE_RATE = 24000
 _EDGE_TTS_CHUNK_MS = 20  # PCM chunk size in ms for smooth playback
 
@@ -92,32 +106,45 @@ class EdgeTTSService(TTSService):
         voice: str = _EDGE_TTS_VOICE
         language: None = None  # edge-tts infers language from the voice name
 
-    def __init__(self, voice: str = _EDGE_TTS_VOICE, **kwargs) -> None:
+    def __init__(self, voice: str = _EDGE_TTS_VOICE, rate: str = _EDGE_TTS_RATE, **kwargs) -> None:
         settings = EdgeTTSService.Settings(model="edge-tts", voice=voice, language=None)
         super().__init__(sample_rate=_EDGE_TTS_SAMPLE_RATE, settings=settings, **kwargs)
         self._voice = voice
+        self._rate = rate
 
     async def run_tts(self, text: str, context_id: str) -> AsyncGenerator[Frame, None]:
         logger.debug("EdgeTTSService: Generating TTS [%s]", text)
         proc = None
         try:
-            # Start an ffmpeg subprocess that reads MP3 from stdin and writes
-            # raw 16-bit PCM at 24 kHz mono to stdout.
-            proc = await asyncio.create_subprocess_exec(
+            # Launch ffmpeg and the edge-tts WebSocket connection concurrently.
+            # ffmpeg is ready to decode the moment the first MP3 chunk arrives,
+            # eliminating the sequential "start subprocess, then connect" delay.
+            proc_coro = asyncio.create_subprocess_exec(
                 "ffmpeg",
                 "-loglevel", "error",
+                # Low-latency flags: avoid buffering input until the first full
+                # MP3 frame — emit PCM as soon as it is decoded.
+                "-probesize", "32",
+                "-analyzeduration", "0",
                 "-f", "mp3", "-i", "pipe:0",
                 "-f", "s16le", "-ar", str(_EDGE_TTS_SAMPLE_RATE), "-ac", "1",
                 "pipe:1",
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
             )
+            communicate = edge_tts.Communicate(text, self._voice, rate=self._rate)
+
+            # Open both concurrently — WebSocket handshake and subprocess
+            # creation overlap instead of running one after the other.
+            proc, stream_iter = await asyncio.gather(
+                proc_coro,
+                self._open_stream(communicate),
+            )
 
             async def _feed_mp3() -> None:
-                """Stream edge-tts MP3 chunks into ffmpeg stdin."""
+                """Write pre-fetched edge-tts chunks into ffmpeg stdin."""
                 try:
-                    communicate = edge_tts.Communicate(text, self._voice)
-                    async for chunk in communicate.stream():
+                    async for chunk in stream_iter:
                         if chunk["type"] == "audio":
                             proc.stdin.write(chunk["data"])
                     proc.stdin.close()
@@ -130,13 +157,18 @@ class EdgeTTSService(TTSService):
 
             feed_task = asyncio.create_task(_feed_mp3(), name="edge-tts-feed")
 
-            # Read PCM from ffmpeg stdout and yield as audio frames.
-            pcm_chunk_bytes = _EDGE_TTS_SAMPLE_RATE * 2 * _EDGE_TTS_CHUNK_MS // 1000
+            # Use a small initial read size (10 ms) so the first audio frame is
+            # emitted as soon as any PCM is available — reduces perceived TTFB.
+            first_chunk_bytes = _EDGE_TTS_SAMPLE_RATE * 2 * 10 // 1000
+            normal_chunk_bytes = _EDGE_TTS_SAMPLE_RATE * 2 * _EDGE_TTS_CHUNK_MS // 1000
+            first = True
             await self.stop_ttfb_metrics()
             while True:
-                pcm = await proc.stdout.read(pcm_chunk_bytes)
+                read_size = first_chunk_bytes if first else normal_chunk_bytes
+                pcm = await proc.stdout.read(read_size)
                 if not pcm:
                     break
+                first = False
                 yield TTSAudioRawFrame(
                     audio=pcm,
                     sample_rate=_EDGE_TTS_SAMPLE_RATE,
@@ -144,7 +176,7 @@ class EdgeTTSService(TTSService):
                     context_id=context_id,
                 )
 
-            await feed_task  # ensure feeder finished cleanly
+            await feed_task
             await proc.wait()
 
         except Exception as exc:
@@ -153,6 +185,16 @@ class EdgeTTSService(TTSService):
         finally:
             if proc and proc.returncode is None:
                 proc.kill()
+
+    @staticmethod
+    async def _open_stream(communicate: "edge_tts.Communicate"):
+        """
+        Return the async generator from edge_tts.Communicate.stream() so it
+        can be awaited in gather() alongside the subprocess creation.
+        The generator itself is lazy — no network I/O happens here, only
+        the object construction, which is synchronous and instant.
+        """
+        return communicate.stream()
 
 
 # ─── Shared turn state ────────────────────────────────────────────────────────
@@ -223,21 +265,96 @@ class UserTranscriptCapture(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
+class VadDebugLogger(FrameProcessor):
+    """
+    Transparent pass-through that logs every VAD and speaker event so we can
+    trace exactly when Silero/Smart Turn fire and how long the gaps are.
+
+    Also samples incoming audio RMS every 2 seconds so we can confirm audio
+    is actually flowing and measure mic volume levels.
+
+    Insert it AFTER VADProcessor in the pipeline to observe its output.
+    """
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        import time
+        self._speech_start_ts: float | None = None
+        self._audio_frame_count: int = 0
+        self._audio_rms_sum: float = 0.0
+        self._last_audio_log_ts: float = time.monotonic()
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        await super().process_frame(frame, direction)
+
+        import time
+        import struct
+        import math
+        now = time.monotonic()
+
+        # ── Audio volume sampling (upstream audio frames from mic) ─────────────
+        if isinstance(frame, AudioRawFrame) and direction == FrameDirection.DOWNSTREAM:
+            # AudioRawFrame.audio is raw 16-bit PCM bytes
+            data = frame.audio
+            if data:
+                samples = struct.unpack(f"<{len(data)//2}h", data[:len(data) - len(data)%2])
+                if samples:
+                    rms = math.sqrt(sum(s*s for s in samples) / len(samples)) / 32768.0
+                    self._audio_rms_sum += rms
+                    self._audio_frame_count += 1
+
+            if now - self._last_audio_log_ts >= 2.0:
+                avg_rms = (self._audio_rms_sum / self._audio_frame_count
+                           if self._audio_frame_count > 0 else 0.0)
+                logger.info(
+                    "🎚  [AUDIO] frames=%d  avg_rms=%.4f  (min_volume threshold=0.04)",
+                    self._audio_frame_count, avg_rms
+                )
+                self._audio_frame_count = 0
+                self._audio_rms_sum = 0.0
+                self._last_audio_log_ts = now
+
+        # ── VAD / turn events ──────────────────────────────────────────────────
+        elif isinstance(frame, UserStartedSpeakingFrame):
+            self._speech_start_ts = now
+            logger.info("🎤 [VAD] UserStartedSpeaking ↑")
+
+        elif isinstance(frame, UserStoppedSpeakingFrame):
+            duration = (now - self._speech_start_ts) if self._speech_start_ts else 0.0
+            self._speech_start_ts = None
+            logger.info("🔇 [VAD] UserStoppedSpeaking ↓  (speech lasted %.2fs)", duration)
+
+        elif isinstance(frame, TranscriptionFrame):
+            logger.info("📝 [STT] Transcription → %r", frame.text)
+
+        elif isinstance(frame, BotStartedSpeakingFrame):
+            logger.info("🔊 [BOT] BotStartedSpeaking ↑")
+
+        elif isinstance(frame, BotStoppedSpeakingFrame) and direction == FrameDirection.UPSTREAM:
+            logger.info("🔕 [BOT] BotStoppedSpeaking ↑ (upstream)")
+
+        await self.push_frame(frame, direction)
+
+
 class AiTranscriptPoster(FrameProcessor):
     """
     Placed between GroqLLMService and EdgeTTSService.
 
-    1. Accumulates LLMTextFrame chunks from the LLM and, upon
-       LLMFullResponseEndFrame, POSTs the complete (user, AI) turn pair to
-       POST /sessions/internal/live-voice-turn on the Node backend.
-    2. Sends the AI text to Flutter via LiveKit data message so the UI can
-       display it while the audio plays ("ai_transcript").
-    3. Catches BotStoppedSpeakingFrame flowing upstream from the transport
-       output and sends an "ai_done" signal to Flutter so the UI can switch
-       back to the user-turn state once the AI finishes speaking.
+    1. Accumulates LLMTextFrame chunks from the LLM.
+       On LLMFullResponseEndFrame:
+         - POSTs the complete (user, AI) turn pair to Node for evaluation.
+         - Sends the full ai_transcript to Flutter for history storage.
+         - Streams karaoke word-chunks to Flutter so words appear on screen in
+           sync with the audio (3 words per chunk to fill 2-3 visible lines
+           before being replaced by the next batch).
+    2. Catches BotStoppedSpeakingFrame flowing upstream and sends "ai_done"
+       so Flutter knows the AI has finished speaking.
 
     All frames are passed through unchanged.
     """
+
+    # How many words to group per karaoke chunk sent to Flutter.
+    _KARAOKE_CHUNK_WORDS = 3
 
     def __init__(self, session_id: str, state: _TurnState, transport: "LiveKitTransport", **kwargs) -> None:
         super().__init__(**kwargs)
@@ -265,12 +382,19 @@ class AiTranscriptPoster(FrameProcessor):
                     name=f"post-turn-{self._session_id}",
                 )
             if ai_text:
-                # Tell Flutter to show the AI's response in the conversation card.
+                # Full text — Flutter stores this for history / evaluation only.
                 asyncio.create_task(
                     self._transport.send_message(
                         json.dumps({"type": "ai_transcript", "text": ai_text})
                     ),
                     name="ui-ai-transcript",
+                )
+                # Karaoke stream: split into N-word chunks and send sequentially.
+                # Flutter replaces the displayed text on each chunk so the words
+                # appear to "scroll through" in sync with the TTS audio.
+                asyncio.create_task(
+                    self._stream_karaoke(ai_text),
+                    name="ui-karaoke",
                 )
 
         elif isinstance(frame, BotStoppedSpeakingFrame) and direction == FrameDirection.UPSTREAM:
@@ -281,6 +405,34 @@ class AiTranscriptPoster(FrameProcessor):
             )
 
         await self.push_frame(frame, direction)
+
+    async def _stream_karaoke(self, text: str) -> None:
+        """
+        Split text into word-chunks and send them to Flutter with a small
+        delay between each so the text scrolls in rough sync with TTS playback.
+
+        Timing heuristic: ~140 words/minute at +20% speed ≈ 0.43 s per word.
+        We send each chunk just before the TTS would finish reading it so the
+        next batch is already on screen when the voice moves on.
+        """
+        words = text.split()
+        if not words:
+            return
+        chunk_size = self._KARAOKE_CHUNK_WORDS
+        # Approximate seconds per word at the sped-up TTS rate.
+        secs_per_word = 0.40
+        delay = chunk_size * secs_per_word  # seconds between chunk sends
+
+        for i in range(0, len(words), chunk_size):
+            chunk = " ".join(words[i: i + chunk_size])
+            try:
+                await self._transport.send_message(
+                    json.dumps({"type": "ai_karaoke", "text": chunk})
+                )
+            except Exception as exc:
+                logger.warning("Karaoke send error: %s", exc)
+            if i + chunk_size < len(words):
+                await asyncio.sleep(delay)
 
     async def _post_turn(self, user_transcript: str, ai_transcript: str) -> None:
         url = f"{NODE_BACKEND_URL}/sessions/internal/live-voice-turn"
@@ -358,10 +510,15 @@ async def run_bot(
     vad = VADProcessor(
         vad_analyzer=SileroVADAnalyzer(
             params=VADParams(
-                confidence=0.5,   # default 0.7 — lower to catch quieter speech
-                min_volume=0.05,  # default 0.6 — emulator/device mics are much quieter
+                # Permissive values for debugging — emulator mic can be very quiet.
+                # confidence: 0.4 lets Silero fire even on faint speech.
+                # min_volume: 0.02 is near-zero RMS gate (won't block quiet mics).
+                # start_secs: 0.2 s to fire quickly.
+                # stop_secs: 0.8 s pause before treating as silence.
+                confidence=0.4,
+                min_volume=0.02,
                 start_secs=0.2,
-                stop_secs=0.2,    # keep at default — Smart Turn model is calibrated for 0.2s
+                stop_secs=0.8,
             )
         )
     )
@@ -384,28 +541,33 @@ async def run_bot(
         api_key=api_key,
         settings=GroqLLMService.Settings(
             model="llama-3.1-8b-instant",
-            max_completion_tokens=256,
+            # 320 tokens allows ~4 spoken sentences on a detailed answer
+            # while the voice_suffix instruction prevents unnecessary padding
+            # on short user inputs.
+            max_completion_tokens=320,
             temperature=0.75,
         ),
     )
 
     # ── TTS ───────────────────────────────────────────────────────────────────
     # Using Microsoft Edge TTS (free, no rate limits).
-    # Groq Orpheus has only 3,600 tokens/day on the free tier — too low for
-    # even a single session, so it is not used here.
-    tts = EdgeTTSService()
+    # Rate is set to +20% via _EDGE_TTS_RATE (overridable via EDGE_TTS_RATE env var).
+    tts = EdgeTTSService(voice=_EDGE_TTS_VOICE, rate=_EDGE_TTS_RATE)
 
     # ── Context (chat history) ────────────────────────────────────────────────
-    # Append a voice-mode instruction so the LLM keeps replies short and
-    # plain-text only — no markdown, no bullet points.  Long responses burn
-    # TTS tokens and feel unnatural in conversation.
+    # Voice-mode instruction: teaches the LLM to match response length to
+    # what the user actually said — a one-liner deserves a one-liner back,
+    # a detailed answer deserves a fuller response. No markdown ever.
     voice_suffix = (
-        "\n\nIMPORTANT — Voice mode: Respond in spoken English only. "
-        "Keep each reply to 1–3 sentences. "
-        "Never use bullet points, numbered lists, asterisks, or markdown. "
-        "Speak naturally as if in a real conversation. "
-        "If the user's message is very short or seems like the beginning of a "
-        "longer thought, give a brief acknowledgment and invite them to continue."
+        "\n\nVoice mode rules (strictly follow):\n"
+        "1. Never use bullet points, numbered lists, asterisks, or any markdown.\n"
+        "2. Match your reply length to the user's input:\n"
+        "   - Short input (greeting, one-word, yes/no) → 1 sentence reply, then ask one question.\n"
+        "   - Medium input (1–2 sentences) → 2–3 sentence reply.\n"
+        "   - Detailed input (paragraph, full explanation) → up to 4 sentences, but still conversational.\n"
+        "3. Never monologue. Always end with a question or a clear invitation to continue.\n"
+        "4. Speak naturally — contractions, natural rhythm — as if talking on a phone call.\n"
+        "5. Do NOT re-introduce yourself after the opening line."
     )
     messages: list[dict] = [{"role": "system", "content": system_prompt + voice_suffix}]
     # Seed the opening line so the bot knows what it already said.
@@ -414,23 +576,43 @@ async def run_bot(
         messages.append({"role": "assistant", "content": opening_text.strip()})
         logger.info("[%s] Seeded opening into LLM context (%d chars)", session_id, len(opening_text))
     context = LLMContext(messages=messages)
-    context_aggregator = LLMContextAggregatorPair(context)
+
+    # Smart Turn is Pipecat's neural end-of-turn detector. Without explicit
+    # configuration it defaults to stop_secs=3.0 — the user would have to be
+    # silent for 3 full seconds before the bot responds.  We override to 0.8 s
+    # which matches our Silero stop_secs and gives a natural conversational pace.
+    _smart_turn = LocalSmartTurnAnalyzerV3(
+        params=SmartTurnParams(
+            stop_secs=0.8,
+            pre_speech_ms=200.0,
+        )
+    )
+    context_aggregator = LLMContextAggregatorPair(
+        context,
+        user_params=LLMUserAggregatorParams(
+            user_turn_strategies=UserTurnStrategies(
+                stop=[TurnAnalyzerUserTurnStopStrategy(turn_analyzer=_smart_turn)]
+            )
+        ),
+    )
 
     # ── Turn-sync + UI-sync processors ───────────────────────────────────────
     turn_state = _TurnState()
     user_capture = UserTranscriptCapture(state=turn_state, transport=transport)
     ai_poster = AiTranscriptPoster(session_id=session_id, state=turn_state, transport=transport)
+    vad_debug = VadDebugLogger()
 
     # ── Pipeline ──────────────────────────────────────────────────────────────
     #
     #  transport.input   — WebRTC audio frames from Flutter mic
-    #  vad               — SileroVAD: emits VADUserStarted/StoppedSpeakingFrame
+    #  vad               — SileroVAD: emits UserStarted/StoppedSpeakingFrame
+    #  vad_debug         — logs VAD events for debugging (pass-through)
     #  stt               — Groq Whisper: segments on VAD events → TranscriptionFrame
     #  user_capture      — records TranscriptionFrame.text in turn_state
     #  context_agg.user  — adds transcription into LLM message history
     #  llm               — Groq Llama: streams LLMTextFrame + LLMFullResponseEndFrame
     #  ai_poster         — collects LLMTextFrames, POSTs turn pair to Node
-    #  tts               — Groq PlayAI TTS: text → audio frames
+    #  tts               — Edge TTS: text → audio frames
     #  transport.output  — sends audio frames back to Flutter via WebRTC
     #  context_agg.asst  — adds the AI reply to LLM message history
     #
@@ -438,6 +620,7 @@ async def run_bot(
         [
             transport.input(),
             vad,
+            vad_debug,
             stt,
             user_capture,
             context_aggregator.user(),
