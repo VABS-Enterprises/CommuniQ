@@ -11,6 +11,7 @@ class OnboardingData {
   final String? speakingNote;        // Screen 3 — optional free-text note
   final String? level;               // Screen 4 — Beginner / Intermediate / Advanced
   final String? primaryGoal;         // Screen 6 — the #1 thing to work on
+  final int? commitmentDays;         // Commitment screen — 2, 3, or 5 days/week
 
   const OnboardingData({
     this.contexts = const [],
@@ -19,6 +20,7 @@ class OnboardingData {
     this.speakingNote,
     this.level,
     this.primaryGoal,
+    this.commitmentDays,
   });
 
   OnboardingData copyWith({
@@ -28,6 +30,7 @@ class OnboardingData {
     String? speakingNote,
     String? level,
     String? primaryGoal,
+    int? commitmentDays,
   }) =>
       OnboardingData(
         contexts: contexts ?? this.contexts,
@@ -36,6 +39,7 @@ class OnboardingData {
         speakingNote: speakingNote ?? this.speakingNote,
         level: level ?? this.level,
         primaryGoal: primaryGoal ?? this.primaryGoal,
+        commitmentDays: commitmentDays ?? this.commitmentDays,
       );
 
   Map<String, dynamic> toJson() => {
@@ -46,6 +50,7 @@ class OnboardingData {
           'speakingNote': speakingNote,
         if (level != null) 'level': level,
         if (primaryGoal != null) 'primaryGoal': primaryGoal,
+        if (commitmentDays != null) 'commitmentDays': commitmentDays,
       };
 
   factory OnboardingData.fromJson(Map<String, dynamic> json) => OnboardingData(
@@ -55,6 +60,7 @@ class OnboardingData {
         speakingNote: json['speakingNote'] as String?,
         level: json['level'] as String?,
         primaryGoal: json['primaryGoal'] as String?,
+        commitmentDays: json['commitmentDays'] as int?,
       );
 
   String toJsonString() => jsonEncode(toJson());

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:communiq/core/constants/app_colors.dart';
@@ -18,30 +17,63 @@ class RoleplayIntroScreen extends StatefulWidget {
 }
 
 class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnim;
+    with TickerProviderStateMixin {
+  // Mic pulse loop
+  late AnimationController _pulseCtrl;
+  // Wave rings
+  late AnimationController _waveCtrl;
+  // One-shot entrance
+  late AnimationController _entranceCtrl;
+
+  late Animation<double> _micScale;
+  late Animation<double> _micGlow;
+  late Animation<double> _fadeContent;
+  late Animation<Offset> _slideContent;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
+
+    _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 2200),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.92, end: 1.05).animate(
-        CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+
+    _waveCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
+
+    _entranceCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..forward();
+
+    _micScale = Tween<double>(begin: 0.93, end: 1.05).animate(
+        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    _micGlow = Tween<double>(begin: 0.3, end: 0.6).animate(
+        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+
+    _fadeContent = CurvedAnimation(
+        parent: _entranceCtrl,
+        curve: const Interval(0.2, 1.0, curve: Curves.easeOut));
+    _slideContent = Tween<Offset>(
+            begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(CurvedAnimation(
+            parent: _entranceCtrl,
+            curve: const Interval(0.2, 1.0, curve: Curves.easeOut)));
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
+    _pulseCtrl.dispose();
+    _waveCtrl.dispose();
+    _entranceCtrl.dispose();
     super.dispose();
   }
 
-  /// User skips goal-selection — save partial data then go to sign-up.
   Future<void> _skip() async {
-    debugPrint('[Onboarding] Step 5/6 — Skipped goal selection, saving partial data');
+    debugPrint('[Onboarding] Step 5/6 — Skipped goal, saving partial data');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isFirstLaunch', false);
     await OnboardingService.saveLocally(widget.data);
@@ -57,121 +89,260 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              const SizedBox(height: 24),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: buildProgressDots(5),
-              ),
-              const Spacer(flex: 1),
-              ScaleTransition(
-                scale: _pulseAnim,
-                child: Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primary,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.35),
-                        blurRadius: 40,
-                        spreadRadius: 6,
-                      ),
-                    ],
+      body: OnboardingBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                const SizedBox(height: 24),
+
+                buildOnboardingHeader(context, 5),
+
+                const Spacer(flex: 1),
+
+                // Animated mic visualization
+                AnimatedBuilder(
+                  animation: Listenable.merge([_pulseCtrl, _waveCtrl]),
+                  builder: (_, __) => _buildMicVisual(),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Content
+                FadeTransition(
+                  opacity: _fadeContent,
+                  child: SlideTransition(
+                    position: _slideContent,
+                    child: Column(
+                      children: [
+                        ShaderMask(
+                          shaderCallback: (b) => const LinearGradient(
+                            colors: [Colors.white, Color(0xFFBCC8FF)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ).createShader(b),
+                          blendMode: BlendMode.srcIn,
+                          child: const Text(
+                            'Your first roleplay\nawaits',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 30,
+                              fontWeight: FontWeight.w800,
+                              height: 1.2,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Practice with a real scenario the moment\nyou create your account',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 15,
+                            height: 1.6,
+                          ),
+                        ),
+
+                        const SizedBox(height: 28),
+
+                        _buildScenarioCard(),
+
+                        const SizedBox(height: 20),
+
+                        // Feature pills
+                        _buildFeatureRow(),
+                      ],
+                    ),
                   ),
-                  child: const Icon(Icons.mic_rounded,
-                      color: Colors.white, size: 40),
                 ),
-              ),
-              const SizedBox(height: 28),
-              const Text(
-                "Your first roleplay\nawaits",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  height: 1.25,
+
+                const Spacer(flex: 2),
+
+                OnboardingButton(
+                  label: "Let's Go",
+                  onPressed: () {
+                    debugPrint('[Onboarding] Step 5/6 — Proceeding to goals');
+                    Navigator.push(
+                      context,
+                      slideRoute(GoalConfirmationScreen(data: widget.data)),
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Create your account to get started',
-                textAlign: TextAlign.center,
-                style:
-                    TextStyle(color: AppColors.textSecondary, fontSize: 15),
-              ),
-              const SizedBox(height: 28),
-              _buildScenarioCard(),
-              const Spacer(flex: 2),
-              OnboardingButton(
-                label: "Let's Go",
-                onPressed: () {
-                  debugPrint('[Onboarding] Step 5/6 — Roleplay intro passed, proceeding to goal selection');
-                  Navigator.push(
-                    context,
-                    slideRoute(GoalConfirmationScreen(data: widget.data)),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: _skip,
-                child: const Text(
-                  'Skip for now',
-                  style:
-                      TextStyle(color: AppColors.textMuted, fontSize: 14),
+
+                const SizedBox(height: 12),
+
+                TextButton(
+                  onPressed: _skip,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textMuted,
+                  ),
+                  child: const Text(
+                    'Skip for now',
+                    style: TextStyle(fontSize: 14),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-            ],
+
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  // ── Mic Visual ─────────────────────────────────────────────────────────────
+
+  Widget _buildMicVisual() {
+    return SizedBox(
+      width: 160,
+      height: 160,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Expanding wave rings
+          ...[0.0, 0.33, 0.66].map((offset) {
+            final t = ((_waveCtrl.value + offset) % 1.0);
+            final scale = 0.5 + t * 0.9;
+            final alpha = (1.0 - t) * 0.25;
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: alpha),
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            );
+          }),
+
+          // Core mic button
+          Transform.scale(
+            scale: _micScale.value,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: AppColors.primaryGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: _micGlow.value),
+                    blurRadius: 50,
+                    spreadRadius: 8,
+                  ),
+                  BoxShadow(
+                    color: AppColors.violet.withValues(alpha: _micGlow.value * 0.5),
+                    blurRadius: 70,
+                    spreadRadius: 4,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.mic_rounded,
+                color: Colors.white,
+                size: 36,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Scenario Card ──────────────────────────────────────────────────────────
+
   Widget _buildScenarioCard() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.cardSurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.glassBorder, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'SCENARIO',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.4,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'SCENARIO',
+                  style: TextStyle(
+                    color: AppColors.primaryLight,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              const Icon(Icons.lock_open_rounded,
+                  color: AppColors.success, size: 14),
+              const SizedBox(width: 4),
+              const Text(
+                'Unlocked',
+                style: TextStyle(
+                  color: AppColors.success,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           const Text(
             'Introduce yourself',
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Tell us about yourself in a relaxed, friendly conversation. '
+            'A great place to start your journey.',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 13,
+              height: 1.55,
             ),
           ),
           const SizedBox(height: 14),
           Row(
             children: [
-              _buildChip(Icons.face_retouching_natural_rounded,
-                  'Friendly Listener'),
+              _buildChip(Icons.face_retouching_natural_rounded, 'Friendly AI'),
               const SizedBox(width: 8),
-              _buildChip(Icons.timer_outlined, '2 minutes'),
+              _buildChip(Icons.timer_outlined, '2 min'),
+              const SizedBox(width: 8),
+              _buildChip(Icons.bar_chart_rounded, 'Beginner'),
             ],
           ),
         ],
@@ -181,22 +352,66 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
 
   Widget _buildChip(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.12),
+        color: AppColors.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+        border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.22), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColors.primaryLight, size: 13),
+          Icon(icon, color: AppColors.primaryLight, size: 12),
           const SizedBox(width: 5),
-          Text(label,
-              style: const TextStyle(
-                  color: AppColors.primaryLight,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.primaryLight,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Feature Row ────────────────────────────────────────────────────────────
+
+  Widget _buildFeatureRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildFeaturePill(Icons.insights_rounded, 'AI scoring'),
+        const SizedBox(width: 8),
+        _buildFeaturePill(Icons.replay_rounded, 'Instant replay'),
+        const SizedBox(width: 8),
+        _buildFeaturePill(Icons.lightbulb_rounded, 'Live tips'),
+      ],
+    );
+  }
+
+  Widget _buildFeaturePill(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppColors.violetLight, size: 13),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
