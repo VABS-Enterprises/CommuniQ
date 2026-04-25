@@ -4,37 +4,75 @@
 /// excluded — difficulty is never shown to the user in the UI.
 class CommuniqLevel {
   final int id;
+  final int journeyId;
+  final String journeyTitle;
   final String title;
-  final String category;
   final String scenario;
-  final String prompt;
+
+  // MCQ
+  final String mcqQuestion;
+  final String mcqCorrectOption;
+  final List<String> mcqIncorrectOptions;
+  final String mcqCorrectFeedback;
+  final String mcqIncorrectFeedback;
+
+  // Response
+  final String responsePrompt;
+  final String responseSuccessFeedback;
 
   const CommuniqLevel({
     required this.id,
+    required this.journeyId,
+    required this.journeyTitle,
     required this.title,
-    required this.category,
     required this.scenario,
-    required this.prompt,
+    required this.mcqQuestion,
+    required this.mcqCorrectOption,
+    required this.mcqIncorrectOptions,
+    required this.mcqCorrectFeedback,
+    required this.mcqIncorrectFeedback,
+    required this.responsePrompt,
+    required this.responseSuccessFeedback,
   });
 
   factory CommuniqLevel.fromJson(Map<String, dynamic> json) {
+    final mcq = json['mcq'] as Map<String, dynamic>? ?? {};
+    final response = json['response'] as Map<String, dynamic>? ?? {};
+
     return CommuniqLevel(
       id: json['id'] as int,
+      journeyId: json['journey_id'] as int? ?? 1,
+      journeyTitle: json['journey_title'] as String? ?? '',
       title: json['title'] as String,
-      category: json['category'] as String,
       scenario: json['scenario'] as String,
-      prompt: json['prompt'] as String,
-      // _difficulty intentionally ignored
+      mcqQuestion: mcq['question'] as String? ?? '',
+      mcqCorrectOption: mcq['correct_option'] as String? ?? '',
+      mcqIncorrectOptions: List<String>.from(mcq['incorrect_options'] ?? []),
+      mcqCorrectFeedback: mcq['correct_feedback'] as String? ?? 'Perfect!',
+      mcqIncorrectFeedback: mcq['incorrect_feedback'] as String? ?? 'Try again!',
+      responsePrompt: response['prompt'] as String? ?? '',
+      responseSuccessFeedback: response['success_feedback'] as String? ?? 'Great job!',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'journey_id': journeyId,
+      'journey_title': journeyTitle,
       'title': title,
-      'category': category,
       'scenario': scenario,
-      'prompt': prompt,
+      'mcq': {
+        'question': mcqQuestion,
+        'correct_option': mcqCorrectOption,
+        'incorrect_options': mcqIncorrectOptions,
+        'correct_feedback': mcqCorrectFeedback,
+        'incorrect_feedback': mcqIncorrectFeedback,
+      },
+      'response': {
+        'prompt': responsePrompt,
+        'success_feedback': responseSuccessFeedback,
+      }
     };
   }
 
@@ -43,17 +81,7 @@ class CommuniqLevel {
 
   /// Icon emoji representing the category — used in UI nodes
   String get categoryEmoji {
-    switch (category.toLowerCase()) {
-      case 'social':
-        return '🗣️';
-      case 'professional':
-        return '💼';
-      case 'communication':
-        return '💬';
-      case 'leadership':
-        return '🌟';
-      default:
-        return '✨';
-    }
+    // Categories are replaced by journeys, so we can return a default or map from journey title
+    return '✨';
   }
 }

@@ -5,6 +5,7 @@ import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/services/level_service.dart';
 import 'package:communiq/models/communiq_level.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
+import 'package:communiq/views/learning_view/screens/learning_session_screen.dart';
 
 // ─── Node state ───────────────────────────────────────────────────────────────
 enum _NodeState { completed, current, locked }
@@ -60,6 +61,7 @@ class _LearningViewState extends State<LearningView>
     with TickerProviderStateMixin {
   List<CommuniqLevel> _levels = [];
   Set<int> _completedIds = {};
+  Map<int, int> _levelCoins = {};
   bool _isLoading = true;
   late final AnimationController _glowCtrl;
   late final Animation<double> _glowAnim;
@@ -109,13 +111,22 @@ class _LearningViewState extends State<LearningView>
     try {
       final levels = await LevelService.instance.fetchLevels();
       final prefs = await SharedPreferences.getInstance();
+      // await prefs.clear(); // RESET PROGRESS AS REQUESTED
+      
       final done = (prefs.getStringList('completed_level_ids') ?? [])
           .map(int.parse)
           .toSet();
+          
+      final Map<int, int> coins = {};
+      for (final id in done) {
+        coins[id] = prefs.getInt('level_${id}_coins') ?? 20;
+      }
+      
       if (mounted) {
         setState(() {
           _levels = levels;
           _completedIds = done;
+          _levelCoins = coins;
           _isLoading = false;
         });
       }
@@ -165,6 +176,21 @@ class _LearningViewState extends State<LearningView>
       stars += _starsForScore(_scoreFor(_levels[i].id));
     }
     return stars;
+  }
+
+  int _coinsInJourney(int ji) {
+    final start = ji * _kPerJourney;
+    final end = (start + _kPerJourney).clamp(0, _levels.length);
+    if (start >= _levels.length) return 0;
+
+    int coins = 0;
+    for (int i = start; i < end; i++) {
+      final id = _levels[i].id;
+      if (_completedIds.contains(id)) {
+        coins += _levelCoins[id] ?? 30;
+      }
+    }
+    return coins;
   }
 
   bool _isJourneyLocked(int ji) {
@@ -243,23 +269,37 @@ class _LearningViewState extends State<LearningView>
 
   // ─── Flying XP animation ───────────────────────────────────────────────────
 
-  /// Step 1 — fire one chip from centre-screen to the journey XP bar.
-  void _launchChipToJourneyBar({required Offset src, required int ji}) {
+  void _launchChipToJourneyBar({required Offset src, required int ji, required int earnedCoins}) {
     final key = _journeyXPKeys[ji.clamp(0, 14)];
     final box = key.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.attached) return;
     final dest = box.localToGlobal(box.size.center(Offset.zero));
-    OverlayEntry? e;
-    e = OverlayEntry(
-      builder: (_) => _FlyingXPChip(
-        from: src,
-        to: dest,
-        label: '+20 XP',
-        onLanded: () => key.currentState?.onXPArrived(),
-        onComplete: () => e?.remove(),
-      ),
-    );
-    Overlay.of(context).insert(e);
+    
+    // Launch 3 coins rapidly, dividing the earned coins evenly for the visual
+    int perChip = (earnedCoins / 3).ceil();
+    
+    for (int i = 0; i < 3; i++) {
+      Future.delayed(Duration(milliseconds: i * 200), () {
+        if (!mounted) return;
+        
+        // Ensure the last chip makes the total exact if there's a remainder
+        int displayAmount = (i == 2) ? (earnedCoins - (perChip * 2)) : perChip;
+        if (displayAmount <= 0 && earnedCoins > 0) displayAmount = 1;
+
+        OverlayEntry? e;
+        e = OverlayEntry(
+          builder: (_) => _FlyingXPChip(
+            from: src,
+            to: dest,
+            label: '+$displayAmount',
+            arcDir: i.isEven ? 1 : -1,
+            onLanded: () => key.currentState?.onXPArrived(),
+            onComplete: () => e?.remove(),
+          ),
+        );
+        Overlay.of(context).insert(e);
+      });
+    }
   }
 
   /// Step 2 — when journey completes: turn bar green, then fire chips to profile ring.
@@ -306,16 +346,25 @@ class _LearningViewState extends State<LearningView>
   /// Reloads completed IDs after returning from RoleplaySetupScreen, then fires
   /// the correct animations depending on what changed.
   Future<void> _reloadAndAnimate(
-      {required int ji, required Set<int> prevCompleted}) async {
+      {required int ji, required Set<int> prevCompleted, required int earnedCoins}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final newDone = (prefs.getStringList('completed_level_ids') ?? [])
           .map(int.parse)
           .toSet();
+          
+      final Map<int, int> coins = {};
+      for (final id in newDone) {
+        coins[id] = prefs.getInt('level_${id}_coins') ?? 30;
+      }
+      
       if (!mounted) return;
 
       final newlyCompleted = newDone.difference(prevCompleted);
-      setState(() => _completedIds = newDone);
+      setState(() {
+        _completedIds = newDone;
+        _levelCoins = coins;
+      });
 
       if (newlyCompleted.isEmpty) return; // user quit without completing
 
@@ -328,7 +377,7 @@ class _LearningViewState extends State<LearningView>
       final src = Offset(sz.width / 2, sz.height * 0.5);
 
       // Step 1: chip to journey bar
-      _launchChipToJourneyBar(src: src, ji: ji);
+      _launchChipToJourneyBar(src: src, ji: ji, earnedCoins: earnedCoins);
 
       // Step 2: after chip lands, check if this journey just reached 10/10
       await Future.delayed(const Duration(milliseconds: 1050));
@@ -359,21 +408,25 @@ class _LearningViewState extends State<LearningView>
           final prevCompleted = Set<int>.from(_completedIds);
           Navigator.pop(context);
           // Navigate immediately — no forced delay
-          Navigator.push(
+          Navigator.push<int>(
             context,
             MaterialPageRoute(
-              builder: (_) => RoleplaySetupScreen(
-                mode: 'prefilled',
-                scenario: level.scenario,
-                persona: _personaFor(level.category),
-                difficulty: 'Medium',
-                category: level.category,
-                levelId: level.id, // ← enables completion on end-call
+              builder: (_) => LearningSessionScreen(
+                level: level,
+                isAlreadyCompleted: _completedIds.contains(level.id),
               ),
             ),
             // On return, detect completion and fire the right animation
-          ).then(
-              (_) => _reloadAndAnimate(ji: ji, prevCompleted: prevCompleted));
+          ).then((coinsEarned) async {
+            if (coinsEarned != null) {
+              final prefs = await SharedPreferences.getInstance();
+              final done = (prefs.getStringList('completed_level_ids') ?? []).map(int.parse).toSet();
+              done.add(level.id);
+              await prefs.setStringList('completed_level_ids', done.map((id) => id.toString()).toList());
+              await prefs.setInt('level_${level.id}_coins', coinsEarned);
+            }
+            _reloadAndAnimate(ji: ji, prevCompleted: prevCompleted, earnedCoins: coinsEarned ?? 0);
+          });
         },
       ),
     );
@@ -443,6 +496,7 @@ class _LearningViewState extends State<LearningView>
               index: j,
               subtitle: _kJourneySubtitles[j],
               completedInJourney: _completedInJourney(j),
+              coinsEarned: _coinsInJourney(j),
               starsInJourney: _starsInJourney(j),
               isLocked: _isJourneyLocked(j),
               prevJourneyStars: j > 0 ? _starsInJourney(j - 1) : null,
@@ -692,6 +746,7 @@ class _JourneyHeader extends StatefulWidget {
   final int index;
   final String subtitle;
   final int completedInJourney;
+  final int coinsEarned;
   final int starsInJourney;
   final bool isLocked;
   final int? prevJourneyStars;
@@ -701,6 +756,7 @@ class _JourneyHeader extends StatefulWidget {
     required this.index,
     required this.subtitle,
     required this.completedInJourney,
+    required this.coinsEarned,
     required this.starsInJourney,
     required this.isLocked,
     this.prevJourneyStars,
@@ -873,6 +929,7 @@ class _JourneyHeaderState extends State<_JourneyHeader>
                         _JourneyXPBar(
                           key: widget.xpBarKey,
                           completed: widget.completedInJourney,
+                          coinsEarned: widget.coinsEarned,
                         ),
                     ],
                   ),
@@ -889,9 +946,10 @@ class _JourneyHeaderState extends State<_JourneyHeader>
 // ─── Per-journey XP progress bar ─────────────────────────────────────────────
 class _JourneyXPBar extends StatefulWidget {
   final int completed;
+  final int coinsEarned;
   static const int total = _kPerJourney;
 
-  const _JourneyXPBar({super.key, required this.completed});
+  const _JourneyXPBar({super.key, required this.completed, required this.coinsEarned});
 
   @override
   State<_JourneyXPBar> createState() => _JourneyXPBarState();
@@ -1024,11 +1082,21 @@ class _JourneyXPBarState extends State<_JourneyXPBar>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('$xpEarned / $totalXP XP',
-                                style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700)),
+                            Row(
+                              children: [
+                                Text('$xpEarned / $totalXP XP',
+                                    style: const TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700)),
+                                const SizedBox(width: 8),
+                                Text('🪙 ${widget.coinsEarned} / ${_JourneyXPBar.total * 20}',
+                                    style: const TextStyle(
+                                        color: Color(0xFFFFD700),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700)),
+                              ],
+                            ),
                             Text(
                                 '${widget.completed} / ${_JourneyXPBar.total} done',
                                 style: const TextStyle(
@@ -1083,7 +1151,7 @@ class _JourneyXPBarState extends State<_JourneyXPBar>
                                     color: AppColors.success,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w800)),
-                            Text('$totalXP XP',
+                            Text('$totalXP XP • 🪙 ${_JourneyXPBar.total * 30}',
                                 style: const TextStyle(
                                     color: AppColors.success,
                                     fontSize: 10,
@@ -1925,7 +1993,7 @@ class _ScenarioSheetState extends State<_ScenarioSheet>
                     color: AppColors.primary.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(widget.level.category,
+                  child: Text(widget.level.journeyTitle,
                       style: const TextStyle(
                           color: AppColors.primaryLight,
                           fontSize: 11,
@@ -1955,7 +2023,7 @@ class _ScenarioSheetState extends State<_ScenarioSheet>
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.4)),
                       const SizedBox(height: 8),
-                      Text(widget.level.prompt,
+                      Text(widget.level.responsePrompt,
                           style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 13,
