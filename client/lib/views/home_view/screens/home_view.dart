@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lottie/lottie.dart';
 
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/common_widgets/sky_campus_background.dart';
@@ -11,6 +12,7 @@ import 'package:communiq/models/user_profile.dart';
 import 'package:communiq/views/contest_view/screens/leaderboard_page.dart';
 import 'package:communiq/views/home_view/widgets/ai_insight_card.dart';
 import 'package:communiq/views/home_view/widgets/contest_card.dart';
+import 'package:communiq/views/home_view/widgets/continue_card.dart';
 import 'package:communiq/views/home_view/widgets/quick_actions_row.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 // HOME VIEW
@@ -160,19 +162,24 @@ class _HomeViewState extends State<HomeView> {
                   const SizedBox(height: 20),
 
                   // ── 2. Daily Inspiration ────────────────────────────────
+                  Center(
+                    child: Lottie.asset(
+                      'assets/icons/Thumbs Up.json',
+                      width: 216,
+                      height: 216,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   _DailyInspirationCard(profile: _profile),
 
                   const SizedBox(height: 16),
 
-                  // ── 3. Level / XP Bar ───────────────────────────────────
-                  if (_isLoading)
-                    _skeleton(56)
-                  else
-                    _LevelXpBar(profile: _profile),
+                  // ── 3. Continue Learning ────────────────────────────────
+                  const ContinueCard(),
 
                   const SizedBox(height: 16),
 
-                  // ── 3. Streak + Daily Focus ─────────────────────────────
+                  // ── 4. Streak + Daily Focus ─────────────────────────────
                   if (_isLoading)
                     _skeleton(90)
                   else
@@ -269,54 +276,54 @@ class _DailyInspirationCardState extends State<_DailyInspirationCard>
   // One quote per slot; rotates by day-of-year so it feels fresh every morning.
   static const _quotes = [
     (
-      text: 'Your voice is your superpower. Every conversation is a chance to use it.',
-      icon: Icons.record_voice_over_rounded,
-      accent: Color(0xFF5B52F0),
-    ),
-    (
-      text: 'Fluency is not perfection — it\'s the courage to keep speaking.',
-      icon: Icons.waves_rounded,
+      text: 'Every session you complete is a feather in your wing. Keep flapping — you\'re closer to soaring than you think.',
+      icon: Icons.chat_bubble_outline_rounded,
       accent: Color(0xFF38BDF8),
     ),
     (
-      text: 'Confidence grows every time you choose to speak instead of staying silent.',
-      icon: Icons.psychology_rounded,
-      accent: Color(0xFF7C3AED),
-    ),
-    (
-      text: 'Great communicators aren\'t born — they\'re built, one session at a time.',
-      icon: Icons.construction_rounded,
-      accent: Color(0xFF10B981),
-    ),
-    (
-      text: 'The right words at the right moment can change everything.',
-      icon: Icons.auto_awesome_rounded,
-      accent: Color(0xFFF59E0B),
-    ),
-    (
-      text: 'Speak clearly, listen deeply, and the world opens up.',
-      icon: Icons.hearing_rounded,
+      text: 'I\'ve watched many learners give up right before their breakthrough. Don\'t be one of them. Practice today.',
+      icon: Icons.chat_bubble_outline_rounded,
       accent: Color(0xFF38BDF8),
     ),
     (
-      text: 'Every expert was once a beginner who refused to quit.',
-      icon: Icons.emoji_events_rounded,
-      accent: Color(0xFFF59E0B),
+      text: 'Even in the darkest night, I find my way. Your voice is your light — trust it, use it, let it guide you.',
+      icon: Icons.chat_bubble_outline_rounded,
+      accent: Color(0xFF38BDF8),
     ),
     (
-      text: 'Progress happens the moment you practice, not the moment you\'re perfect.',
-      icon: Icons.trending_up_rounded,
-      accent: Color(0xFF10B981),
+      text: 'Words are your wings. The more you practice, the higher and farther you\'ll soar. Start today.',
+      icon: Icons.chat_bubble_outline_rounded,
+      accent: Color(0xFF38BDF8),
     ),
     (
-      text: 'A strong vocabulary is a passport to any room in the world.',
-      icon: Icons.menu_book_rounded,
-      accent: Color(0xFF5B52F0),
+      text: 'Patience, young one. Fluency isn\'t built in a day — but every conversation you have builds it brick by brick.',
+      icon: Icons.chat_bubble_outline_rounded,
+      accent: Color(0xFF38BDF8),
     ),
     (
-      text: 'Your accent is a sign of bravery — you\'re speaking in another person\'s language.',
-      icon: Icons.language_rounded,
-      accent: Color(0xFF7C3AED),
+      text: 'Wise owls don\'t fear silence. We listen deeply, then speak with purpose. Try that in your next session.',
+      icon: Icons.chat_bubble_outline_rounded,
+      accent: Color(0xFF38BDF8),
+    ),
+    (
+      text: 'I\'ve seen the greatest communicators start with a single shaky sentence. Yours counts too. Keep going.',
+      icon: Icons.chat_bubble_outline_rounded,
+      accent: Color(0xFF38BDF8),
+    ),
+    (
+      text: 'Consistency is the spell that transforms beginners into masters. Show up today — tomorrow will thank you.',
+      icon: Icons.chat_bubble_outline_rounded,
+      accent: Color(0xFF38BDF8),
+    ),
+    (
+      text: 'The world is full of conversations waiting for your voice. Don\'t let fear keep them waiting any longer.',
+      icon: Icons.chat_bubble_outline_rounded,
+      accent: Color(0xFF38BDF8),
+    ),
+    (
+      text: 'Your accent? That\'s courage made audible. You\'re speaking in someone else\'s language. That\'s remarkable.',
+      icon: Icons.chat_bubble_outline_rounded,
+      accent: Color(0xFF38BDF8),
     ),
   ];
 
@@ -406,12 +413,12 @@ class _DailyInspirationCardState extends State<_DailyInspirationCard>
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: _quote.accent.withValues(alpha: 0.12),
+                            color: AppColors.secondary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(
-                            _quote.icon,
-                            color: _quote.accent,
+                          child: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            color: AppColors.secondary,
                             size: 20,
                           ),
                         ),
@@ -424,7 +431,7 @@ class _DailyInspirationCardState extends State<_DailyInspirationCard>
                             children: [
                               // Label
                               const Text(
-                                'DAILY INSPIRATION',
+                                'WHISPERWING SAYS',
                                 style: TextStyle(
                                   color: AppColors.secondary,
                                   fontSize: 10,
@@ -575,85 +582,163 @@ class _LevelXpBar extends StatelessWidget {
     final progress = profile?.xpProgress ?? 0.0;
     final toNext = profile?.xpToNextLevel ?? 300;
     final label = profile?.levelLabel ?? 'Starter';
+    final nextLabel = profile != null && toNext > 0
+        ? UserProfile.levelLabels[(level).clamp(0, UserProfile.levelLabels.length - 1)]
+        : null;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.glassBorder.withValues(alpha: 0.5)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Level badge
-          Container(
-            width: 42,
-            height: 42,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primary,
-            ),
-            child: Center(
-              child: Text(
-                '$level',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 17,
+          Row(
+            children: [
+              // Rank badge
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.violet],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    '$level',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              const SizedBox(width: 12),
+
+              // Label + rank name
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       label,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
                       ),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      toNext > 0 && nextLabel != null
+                          ? 'Next rank: $nextLabel'
+                          : 'Max rank reached!',
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // XP pill
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('⚡', style: TextStyle(fontSize: 12)),
+                    const SizedBox(width: 4),
                     Text(
                       '$xp XP',
                       style: const TextStyle(
                         color: AppColors.primaryLight,
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 7),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 6,
-                    backgroundColor:
-                        AppColors.surfaceVariant,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppColors.primary),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // Progress bar
+          Stack(
+            children: [
+              // Track
+              Container(
+                height: 8,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              // Fill with glow
+              FractionallySizedBox(
+                widthFactor: progress.clamp(0.0, 1.0),
+                child: Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, AppColors.primaryLight],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.5),
+                        blurRadius: 6,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  toNext > 0
-                      ? '$toNext XP to Level ${level + 1}'
-                      : 'Max level reached!',
-                  style: const TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                  ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // Bottom stat row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                toNext > 0 ? '$toNext XP to level up' : 'Fully levelled up!',
+                style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+              ),
+              Text(
+                '${(progress * 100).round()}%',
+                style: const TextStyle(
+                  color: AppColors.primaryLight,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -672,14 +757,18 @@ class _StreakFocusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final streak = profile?.streak ?? 0;
-    final goal = profile?.levelLabel ?? 'Communication';
+    final xp = profile?.xp ?? 0;
+    final level = profile?.level ?? 1;
+    final label = profile?.levelLabel ?? 'Starter';
 
     return Row(
       children: [
         // Streak card
         Expanded(
           child: _MiniStatCard(
-            icon: Icons.local_fire_department_rounded,
+            iconWidget: const Center(
+              child: Text('🔥', style: TextStyle(fontSize: 18)),
+            ),
             iconColor: const Color(0xFFEF4444),
             iconBg: const Color(0xFFEF4444),
             label: 'Day Streak',
@@ -692,15 +781,17 @@ class _StreakFocusRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        // Goal card
+        // XP card
         Expanded(
           child: _MiniStatCard(
-            icon: Icons.flag_rounded,
-            iconColor: AppColors.secondary,
-            iconBg: AppColors.secondary,
-            label: 'Focus',
-            value: goal,
-            subtitle: 'Your level goal',
+            iconWidget: const Center(
+              child: Text('⚡', style: TextStyle(fontSize: 18)),
+            ),
+            iconColor: AppColors.primary,
+            iconBg: AppColors.primary,
+            label: 'Total XP',
+            value: '$xp XP',
+            subtitle: 'Lv $level · $label',
           ),
         ),
       ],
@@ -709,7 +800,8 @@ class _StreakFocusRow extends StatelessWidget {
 }
 
 class _MiniStatCard extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final Widget? iconWidget;
   final Color iconColor;
   final Color iconBg;
   final String label;
@@ -717,7 +809,8 @@ class _MiniStatCard extends StatelessWidget {
   final String subtitle;
 
   const _MiniStatCard({
-    required this.icon,
+    this.icon,
+    this.iconWidget,
     required this.iconColor,
     required this.iconBg,
     required this.label,
@@ -744,7 +837,7 @@ class _MiniStatCard extends StatelessWidget {
               color: iconBg.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: iconColor, size: 18),
+            child: iconWidget ?? Icon(icon, color: iconColor, size: 18),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1021,16 +1114,13 @@ class _SkillGrid extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
+                    color: AppColors.primary,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color:
-                            AppColors.primary.withValues(alpha: 0.25)),
                   ),
                   child: Text(
                     'Avg ${profile!.overallSkillAvg!.round()}',
                     style: const TextStyle(
-                      color: AppColors.primaryLight,
+                      color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1220,22 +1310,22 @@ class _LeaderboardCard extends StatelessWidget {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: rankColor.withValues(alpha: 0.3),
+            color: AppColors.glassBorder.withValues(alpha: 0.5),
           ),
         ),
         child: Row(
           children: [
-            // Trophy icon
+            // Leaderboard icon
             Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: rankColor.withValues(alpha: 0.12),
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Icon(
-                Icons.emoji_events_rounded,
-                color: rankColor,
+                Icons.leaderboard_rounded,
+                color: Colors.white,
                 size: 24,
               ),
             ),
@@ -1274,13 +1364,13 @@ class _LeaderboardCard extends StatelessWidget {
             Container(
               width: 32,
               height: 32,
-              decoration: BoxDecoration(
-                color: rankColor.withValues(alpha: 0.10),
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.arrow_forward_ios_rounded,
-                color: rankColor,
+                color: Colors.white,
                 size: 14,
               ),
             ),
@@ -1461,30 +1551,17 @@ class _SessionRow extends StatelessWidget {
 
     final isAbandoned = status == 'abandoned';
 
-    // Score tier
-    Color scoreColor = AppColors.textMuted;
-    Color scoreBg = AppColors.surfaceVariant;
-    String scoreStr = '—';
-    if (score != null) {
-      scoreStr = '${score.round()}';
-      if (score >= 80) {
-        scoreColor = AppColors.emerald;
-        scoreBg = AppColors.emerald.withValues(alpha: 0.12);
-      } else if (score >= 60) {
-        scoreColor = AppColors.warning;
-        scoreBg = AppColors.warning.withValues(alpha: 0.12);
-      } else {
-        scoreColor = AppColors.error;
-        scoreBg = AppColors.error.withValues(alpha: 0.12);
-      }
-    }
+    // Score — always use primary color
+    const scoreColor = AppColors.primary;
+    final scoreBg = score != null
+        ? AppColors.primary.withValues(alpha: 0.12)
+        : AppColors.surfaceVariant;
+    final scoreStr = score != null ? '${score.round()}' : '—';
 
     // Accent colour for the left bar
     final accentColor = isAbandoned
         ? AppColors.textMuted.withValues(alpha: 0.4)
-        : score == null
-            ? AppColors.primary.withValues(alpha: 0.5)
-            : scoreColor;
+        : AppColors.primary.withValues(alpha: 0.6);
 
     String? timeAgo;
     if (endedAt != null) {
@@ -1521,17 +1598,15 @@ class _SessionRow extends StatelessWidget {
                     height: 42,
                     decoration: BoxDecoration(
                       color: isAbandoned
-                          ? AppColors.textMuted.withValues(alpha: 0.08)
-                          : AppColors.primary.withValues(alpha: 0.10),
+                          ? AppColors.textMuted.withValues(alpha: 0.15)
+                          : AppColors.primary,
                       borderRadius: BorderRadius.circular(13),
                     ),
                     child: Icon(
                       isAbandoned
                           ? Icons.cancel_outlined
                           : Icons.record_voice_over_rounded,
-                      color: isAbandoned
-                          ? AppColors.textMuted
-                          : AppColors.primary,
+                      color: Colors.white,
                       size: 19,
                     ),
                   ),
@@ -1603,26 +1678,24 @@ class _SessionRow extends StatelessWidget {
                       width: 52,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: scoreBg,
+                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: scoreColor.withValues(alpha: 0.25)),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             scoreStr,
-                            style: TextStyle(
-                              color: scoreColor,
+                            style: const TextStyle(
+                              color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 17,
                             ),
                           ),
-                          Text(
+                          const Text(
                             'Score',
                             style: TextStyle(
-                              color: scoreColor.withValues(alpha: 0.7),
+                              color: Colors.white70,
                               fontSize: 9,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,

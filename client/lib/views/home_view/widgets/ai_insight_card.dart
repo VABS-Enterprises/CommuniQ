@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
-import 'package:communiq/core/constants/glow.dart';
-
 class AIInsightCard extends StatelessWidget {
   const AIInsightCard({super.key});
 
@@ -14,9 +12,8 @@ class AIInsightCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.primaryLight.withValues(alpha: 0.2),
+          color: AppColors.glassBorder.withValues(alpha: 0.5),
         ),
-        boxShadow: AppGlow.magentaGlow(blurRadius: 16, spreadRadius: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
