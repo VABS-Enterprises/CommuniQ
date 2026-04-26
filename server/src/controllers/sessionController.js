@@ -340,12 +340,26 @@ async function endSession(req, res) {
       leveledUp,
     });
 
+    // Rolling per-skill averages — used by the progress/improvement cards on Home.
+    // Formula: newAvg = (prevAvg * prevSessions + newScore) / (prevSessions + 1)
+    const prevProgress = user.skillProgress || {};
+    const updatedSkillProgress = {};
+    for (const [skill, score] of Object.entries(evaluation.scores || {})) {
+      const prev = prevProgress[skill] || { avg: 0, sessions: 0 };
+      const newSessions = prev.sessions + 1;
+      updatedSkillProgress[skill] = {
+        avg: Math.round((prev.avg * prev.sessions + score) / newSessions),
+        sessions: newSessions,
+      };
+    }
+
     // Robustness2: use FieldValue.increment for atomic XP update (prevents race conditions)
     const userUpdates = {
       xp: FieldValue.increment(xpAwarded),
       level: newLevel,
       streak: newStreak,
       lastActiveDate: FieldValue.serverTimestamp(),
+      skillProgress: updatedSkillProgress,
     };
     if (newBadges.length > 0) {
       userUpdates.badges = FieldValue.arrayUnion(...newBadges);

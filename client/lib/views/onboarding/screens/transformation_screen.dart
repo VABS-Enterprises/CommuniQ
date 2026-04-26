@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/models/onboarding_data.dart';
-import 'package:communiq/views/onboarding/screens/roleplay_intro_screen.dart';
+import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
 import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
 
 /// Social proof + transformation screen shown after Level Selection.
-/// Slot: between LevelSelectionScreen and RoleplayIntroScreen.
+/// Slot: between LevelSelectionScreen and GoalConfirmationScreen.
 class TransformationScreen extends StatefulWidget {
   const TransformationScreen({super.key, required this.data});
 
@@ -90,25 +90,14 @@ class _TransformationScreenState extends State<TransformationScreen>
     }
   }
 
-  String _testimonial() {
-    switch (widget.data.level) {
+  List<String> _getMilestones(String level) {
+    switch (level) {
       case 'Intermediate':
-        return 'I used to panic when a client asked something unexpected. Now I actually enjoy those moments.';
+        return ['Clarity', 'Natural Flow', 'Full Command'];
       case 'Advanced':
-        return 'I thought I was already good at communicating. CommuniQ showed me the difference between good and unforgettable.';
+        return ['Presence', 'Authority', 'Mastery'];
       default:
-        return 'After 3 weeks, I got a callback from every company I interviewed with. I couldn\'t believe the difference.';
-    }
-  }
-
-  String _testimonialPerson() {
-    switch (widget.data.level) {
-      case 'Intermediate':
-        return 'Rohan M. · 29 · Product Manager';
-      case 'Advanced':
-        return 'Sneha K. · 31 · Senior Consultant';
-      default:
-        return 'Arjun P. · 23 · Software Engineer';
+        return ['Foundation', 'Confidence', 'Control'];
     }
   }
 
@@ -126,19 +115,9 @@ class _TransformationScreenState extends State<TransformationScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
 
-                // Back + frozen progress (step 4 complete)
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: _backButton(),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(child: buildProgressBar(4)),
-                  ],
-                ),
+                buildOnboardingHeader(context, 4),
 
                 const SizedBox(height: 32),
 
@@ -176,7 +155,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                         ),
                         const SizedBox(height: 14),
                         const Text(
-                          "Here's what changes\nin 3 weeks",
+                          "Here's what you'll\nunlock",
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 28,
@@ -214,14 +193,14 @@ class _TransformationScreenState extends State<TransformationScreen>
 
                 const SizedBox(height: 16),
 
-                // ── Testimonial ────────────────────────────────────────────
+                // ── 3-week journey progress bar ────────────────────────────
                 FadeTransition(
                   opacity: _anim(0.50, 0.90),
                   child: SlideTransition(
                     position: Tween<Offset>(
                             begin: const Offset(0, 0.2), end: Offset.zero)
                         .animate(_anim(0.50, 0.90)),
-                    child: _buildTestimonial(),
+                    child: _buildProgressGraph(level),
                   ),
                 ),
 
@@ -238,7 +217,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                       label: 'I want this for myself',
                       onPressed: () => Navigator.push(
                         context,
-                        slideRoute(RoleplayIntroScreen(data: widget.data)),
+                        slideRoute(GoalConfirmationScreen(data: widget.data)),
                       ),
                     ),
                   ),
@@ -312,7 +291,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                       ),
                       const SizedBox(width: 8),
                       const Text(
-                        'After 3 weeks',
+                        'After training',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 12,
@@ -401,50 +380,94 @@ class _TransformationScreenState extends State<TransformationScreen>
     );
   }
 
-  // ── Testimonial ────────────────────────────────────────────────────────────
+  // ── Progress Graph ────────────────────────────────────────────────────────
 
-  Widget _buildTestimonial() {
+  Widget _buildProgressGraph(String level) {
+    final milestones = _getMilestones(level);
+    final animation = _anim(0.42, 0.96);
+
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.07),
+        color: AppColors.cardSurface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.20),
-          width: 1,
-        ),
+        border: Border.all(color: AppColors.glassBorder),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.format_quote_rounded,
-              color: AppColors.primaryLight, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _testimonial(),
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13.5,
-                    height: 1.6,
-                    fontStyle: FontStyle.italic,
+          // Header
+          Row(
+            children: [
+              const Text(
+                'Skill Progression',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              const Icon(Icons.show_chart_rounded,
+                  color: AppColors.primaryLight, size: 16),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Graph canvas
+          AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) {
+              return SizedBox(
+                height: 88,
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: _ProgressGraphPainter(
+                    progress: animation.value,
+                    bgColor: AppColors.cardSurface,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  _testimonialPerson(),
-                  style: const TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          // X-axis milestone labels
+          AnimatedBuilder(
+            animation: animation,
+            builder: (context, _) {
+              final p = animation.value;
+              const xThresholds = [0.0, 0.33, 0.67, 1.0];
+              final labels = ['Now', ...milestones];
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(4, (i) {
+                  final reached = p >= xThresholds[i] - 0.04;
+                  final align = i == 0
+                      ? CrossAxisAlignment.start
+                      : i == 3
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.center;
+                  return Column(
+                    crossAxisAlignment: align,
+                    children: [
+                      Text(
+                        labels[i],
+                        style: TextStyle(
+                          color: reached
+                              ? AppColors.textSecondary
+                              : AppColors.textMuted,
+                          fontSize: 10.5,
+                          fontWeight:
+                              reached ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              );
+            },
           ),
         ],
       ),
@@ -486,4 +509,130 @@ class _Pair {
   final String before;
   final String after;
   const _Pair({required this.before, required this.after});
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Progress Graph Painter
+// Draws an animated bezier line chart rising from low (left) to high (right),
+// with gradient fill underneath and glowing dots at each milestone.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ProgressGraphPainter extends CustomPainter {
+  const _ProgressGraphPainter({
+    required this.progress,
+    required this.bgColor,
+  });
+
+  final double progress; // 0.0 → 1.0
+  final Color bgColor;
+
+  // Normalised data points — x: time (0=now, 1=week3), y: skill (0=top, 1=bottom)
+  static const _pts = [
+    Offset(0.00, 0.90), // Now  — low skill
+    Offset(0.33, 0.65), // Week 1
+    Offset(0.67, 0.32), // Week 2
+    Offset(1.00, 0.07), // Week 3 — high skill
+  ];
+
+  static const _indigo = Color(0xFF6366F1);
+  static const _violet = Color(0xFF7C3AED);
+  static const _indigoLight = Color(0xFF818CF8);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
+
+    final w = size.width;
+    final h = size.height;
+
+    // Convert normalised points to canvas coords
+    final pts = _pts.map((p) => Offset(p.dx * w, p.dy * h)).toList();
+
+    // Build smooth cubic-bezier path through all points
+    final path = Path()..moveTo(pts[0].dx, pts[0].dy);
+    for (int i = 0; i < pts.length - 1; i++) {
+      final cpx = (pts[i].dx + pts[i + 1].dx) / 2;
+      path.cubicTo(
+        cpx, pts[i].dy,
+        cpx, pts[i + 1].dy,
+        pts[i + 1].dx, pts[i + 1].dy,
+      );
+    }
+
+    // Compute the animated portion of the path
+    final metrics = path.computeMetrics().toList();
+    if (metrics.isEmpty) return;
+    final metric = metrics.first;
+    final drawLen = metric.length * progress.clamp(0.0, 1.0);
+    final drawn = metric.extractPath(0, drawLen);
+
+    // End-point of the animated line (for closing the fill shape)
+    Offset endPt = pts[0];
+    if (progress > 0) {
+      final t = metric.getTangentForOffset(drawLen);
+      if (t != null) endPt = t.position;
+    }
+
+    // ── 1. Subtle horizontal grid lines ──────────────────────────────────
+    final gridPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.05)
+      ..strokeWidth = 1;
+    for (int i = 1; i < 4; i++) {
+      final y = h * i / 4;
+      canvas.drawLine(Offset(0, y), Offset(w, y), gridPaint);
+    }
+
+    // ── 2. Gradient fill under the drawn curve ────────────────────────────
+    if (progress > 0.01) {
+      final fillPath = Path.from(drawn)
+        ..lineTo(endPt.dx, h)
+        ..lineTo(pts[0].dx, h)
+        ..close();
+
+      canvas.drawPath(
+        fillPath,
+        Paint()..color = _indigo.withValues(alpha: 0.15),
+      );
+    }
+
+    // ── 3. Animated gradient line ─────────────────────────────────────────
+    canvas.drawPath(
+      drawn,
+      Paint()
+        ..color = _indigo
+        ..strokeWidth = 2.5
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    // ── 4. Glowing milestone dots ─────────────────────────────────────────
+    for (final pt in pts) {
+      if (pt.dx > endPt.dx + 2) continue; // not yet reached
+
+      // Outer glow
+      canvas.drawCircle(
+        pt, 9,
+        Paint()
+          ..color = _indigo.withValues(alpha: 0.18)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+      );
+      // Background fill (matches card)
+      canvas.drawCircle(pt, 5, Paint()..color = bgColor);
+      // Border ring
+      canvas.drawCircle(
+        pt, 5,
+        Paint()
+          ..color = _indigo
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      // Inner dot
+      canvas.drawCircle(pt, 2.2, Paint()..color = _indigoLight);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ProgressGraphPainter old) =>
+      old.progress != progress || old.bgColor != bgColor;
 }

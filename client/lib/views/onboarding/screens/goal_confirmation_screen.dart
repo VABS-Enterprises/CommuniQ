@@ -102,9 +102,9 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
 
-                buildOnboardingHeader(context, 6),
+                buildOnboardingHeader(context, 5),
 
                 const SizedBox(height: 28),
 

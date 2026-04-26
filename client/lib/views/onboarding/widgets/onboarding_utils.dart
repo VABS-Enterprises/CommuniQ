@@ -19,14 +19,7 @@ Widget buildProgressBar(int step, {int total = 6}) {
           margin: EdgeInsets.only(right: i < total - 1 ? 5 : 0),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(2),
-            gradient: filled
-                ? const LinearGradient(
-                    colors: AppColors.primaryGradient,
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  )
-                : null,
-            color: filled ? null : AppColors.surfaceVariant,
+            color: filled ? AppColors.primary : AppColors.surfaceVariant,
           ),
         ),
       );
@@ -70,16 +63,8 @@ class OnboardingBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Base gradient
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF0A0F1E), Color(0xFF060918)],
-            ),
-          ),
-        ),
+        // Base fill
+        const ColoredBox(color: Color(0xFF060918)),
         // Top-left ambient orb
         Positioned(
           top: -80,
@@ -116,9 +101,7 @@ class _GlowOrb extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [color, Colors.transparent],
-        ),
+        color: color,
       ),
     );
   }
@@ -255,12 +238,14 @@ class OnboardingSelectCard extends StatelessWidget {
 class OnboardingButton extends StatefulWidget {
   final String label;
   final bool enabled;
+  final bool showGradient;
   final VoidCallback? onPressed;
 
   const OnboardingButton({
     super.key,
     required this.label,
     this.enabled = true,
+    this.showGradient = false,
     this.onPressed,
   });
 
@@ -293,14 +278,7 @@ class _OnboardingButtonState extends State<OnboardingButton> {
           width: double.infinity,
           height: 58,
           decoration: BoxDecoration(
-            gradient: widget.enabled
-                ? const LinearGradient(
-                    colors: AppColors.primaryGradient,
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  )
-                : null,
-            color: widget.enabled ? null : AppColors.surfaceVariant,
+            color: widget.enabled ? AppColors.primary : AppColors.surfaceVariant,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [],
           ),

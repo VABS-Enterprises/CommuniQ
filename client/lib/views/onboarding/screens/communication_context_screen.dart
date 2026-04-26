@@ -69,7 +69,7 @@ class _CommunicationContextScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
 
                 buildOnboardingHeader(context, 1),
 

@@ -94,19 +94,9 @@ class _CommitmentScreenState extends State<CommitmentScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
 
-                // Back + progress (step 6 complete)
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: _backButton(),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(child: buildProgressBar(6)),
-                  ],
-                ),
+                buildOnboardingHeader(context, 6),
 
                 const SizedBox(height: 32),
 

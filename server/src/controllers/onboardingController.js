@@ -12,17 +12,18 @@ const LEVEL_MAP = { Beginner: 1, Intermediate: 2, Advanced: 3 };
  */
 async function saveOnboarding(req, res) {
   const uid = req.uid;
-  const { contexts, challenges, speakingStyle, speakingNote, level, primaryGoal } =
+  const { contexts, challenges, speakingStyle, speakingNote, level, primaryGoal, commitmentDays } =
     req.body;
 
   console.log('\n[Onboarding] ── Incoming POST /onboarding ──────────────────');
-  console.log(`[Onboarding]   uid           : ${uid}`);
-  console.log(`[Onboarding]   contexts      : ${JSON.stringify(contexts)}`);
-  console.log(`[Onboarding]   challenges    : ${JSON.stringify(challenges)}`);
-  console.log(`[Onboarding]   speakingStyle : ${speakingStyle ?? '—'}`);
-  console.log(`[Onboarding]   speakingNote  : ${speakingNote ?? '—'}`);
-  console.log(`[Onboarding]   level         : ${level ?? '—'}`);
-  console.log(`[Onboarding]   primaryGoal   : ${primaryGoal ?? '—'}`);
+  console.log(`[Onboarding]   uid            : ${uid}`);
+  console.log(`[Onboarding]   contexts       : ${JSON.stringify(contexts)}`);
+  console.log(`[Onboarding]   challenges     : ${JSON.stringify(challenges)}`);
+  console.log(`[Onboarding]   speakingStyle  : ${speakingStyle ?? '—'}`);
+  console.log(`[Onboarding]   speakingNote   : ${speakingNote ?? '—'}`);
+  console.log(`[Onboarding]   level          : ${level ?? '—'}`);
+  console.log(`[Onboarding]   primaryGoal    : ${primaryGoal ?? '—'}`);
+  console.log(`[Onboarding]   commitmentDays : ${commitmentDays ?? '—'}`);
   console.log('[Onboarding] ────────────────────────────────────────────────');
 
   if (!Array.isArray(contexts) || contexts.length === 0) {
@@ -44,6 +45,7 @@ async function saveOnboarding(req, res) {
           speakingNote: speakingNote.trim(),
         }),
         ...(typeof primaryGoal === 'string' && { primaryGoal }),
+        ...([2, 3, 5].includes(commitmentDays) && { commitmentDays }),
         completedAt: FieldValue.serverTimestamp(),
       },
       onboardingCompleted: true,

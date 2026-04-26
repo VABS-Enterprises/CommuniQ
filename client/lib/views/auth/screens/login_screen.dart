@@ -1,8 +1,9 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
-import 'package:communiq/common_widgets/gradient_button.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
 import 'package:communiq/core/services/auth_service.dart';
+import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,11 +12,54 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+
+  late AnimationController _entranceCtrl;
+  late Animation<double> _fadeTop;
+  late Animation<Offset> _slideTop;
+  late Animation<double> _fadeCard;
+  late Animation<Offset> _slideCard;
+  late Animation<double> _fadeBottom;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..forward();
+
+    _fadeTop = CurvedAnimation(
+        parent: _entranceCtrl,
+        curve: const Interval(0.0, 0.55, curve: Curves.easeOut));
+    _slideTop = Tween<Offset>(begin: const Offset(0, -0.2), end: Offset.zero)
+        .animate(CurvedAnimation(
+            parent: _entranceCtrl,
+            curve: const Interval(0.0, 0.55, curve: Curves.easeOut)));
+    _fadeCard = CurvedAnimation(
+        parent: _entranceCtrl,
+        curve: const Interval(0.2, 0.75, curve: Curves.easeOut));
+    _slideCard = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
+        .animate(CurvedAnimation(
+            parent: _entranceCtrl,
+            curve: const Interval(0.2, 0.75, curve: Curves.easeOut)));
+    _fadeBottom = CurvedAnimation(
+        parent: _entranceCtrl,
+        curve: const Interval(0.45, 1.0, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _entranceCtrl.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   void _showError(String message) {
     if (!mounted) return;
@@ -35,11 +79,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       await AuthService.signInWithGoogle();
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
+      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
     } on CancelledException {
-      // User dismissed the picker — stay on screen.
+      // dismissed
     } catch (e) {
       _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -52,16 +94,13 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text.isEmpty) {
       return _showError('Please fill in both fields.');
     }
-
     setState(() => _isLoading = true);
     try {
       await AuthService.signInWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text,
       );
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
+      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
     } catch (e) {
       _showError(e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -88,185 +127,267 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 20),
-              Center(
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.surface,
-                    border: Border.all(color: AppColors.primary, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.35),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/hummingbird.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.mic_rounded,
-                        color: AppColors.primary,
-                        size: 32,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                'Welcome Back',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Continue your communication journey',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 15),
-              ),
-              const SizedBox(height: 48),
+      body: OnboardingBackground(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 12),
 
-              _buildTextField(
-                controller: _emailController,
-                label: 'Email Address',
-                icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 20),
-
-              _buildTextField(
-                controller: _passwordController,
-                label: 'Password',
-                icon: Icons.lock_outline,
-                obscureText: _obscurePassword,
-                isPassword: true,
-              ),
-
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: _handleForgotPassword,
-                  child: const Text(
-                    'Forgot Password?',
-                    style: TextStyle(
-                      color: AppColors.primaryLight,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 28),
-              _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.primary))
-                  : GradientButton(
-                      text: 'Sign In', onPressed: _handleEmailLogin),
-
-              if (!_isLoading) ...[
-                const SizedBox(height: 32),
+                // ── Back button row ──────────────────────────────────────────
                 Row(
                   children: [
-                    Expanded(
-                        child: Divider(color: AppColors.border, thickness: 1)),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text('Or continue with',
-                          style: TextStyle(
-                              color: AppColors.textMuted, fontSize: 13)),
+                    GestureDetector(
+                      onTap: () => Navigator.maybePop(context),
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppColors.cardSurface,
+                          borderRadius: BorderRadius.circular(11),
+                          border: Border.all(
+                              color: AppColors.glassBorder, width: 1),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: AppColors.textPrimary,
+                          size: 18,
+                        ),
+                      ),
                     ),
-                    Expanded(
-                        child: Divider(color: AppColors.border, thickness: 1)),
                   ],
                 ),
+
                 const SizedBox(height: 32),
-                SizedBox(
-                  height: 56,
-                  child: OutlinedButton.icon(
-                    onPressed: _handleGoogleLogin,
-                    icon: Image.asset(
-                      'assets/icons/google_logo.png',
-                      width: 22,
-                      height: 22,
+
+                // ── Logo + headline ──────────────────────────────────────────
+                FadeTransition(
+                  opacity: _fadeTop,
+                  child: SlideTransition(
+                    position: _slideTop,
+                    child: Column(
+                      children: [
+                        // Glowing logo circle
+                        Container(
+                          width: 76,
+                          height: 76,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: AppColors.primaryGradient,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary
+                                    .withValues(alpha: 0.45),
+                                blurRadius: 36,
+                                spreadRadius: 4,
+                              ),
+                              BoxShadow(
+                                color: AppColors.violet
+                                    .withValues(alpha: 0.25),
+                                blurRadius: 60,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/hummingbird.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.mic_rounded,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        ShaderMask(
+                          shaderCallback: (b) => const LinearGradient(
+                            colors: [Colors.white, Color(0xFFBCC8FF)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ).createShader(b),
+                          blendMode: BlendMode.srcIn,
+                          child: const Text(
+                            'Welcome back',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 30,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5,
+                              height: 1.1,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Continue your communication journey',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14.5,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
                     ),
-                    label: const Text('Continue with Google',
-                        style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.border, width: 2),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // ── Glass form card ──────────────────────────────────────────
+                FadeTransition(
+                  opacity: _fadeCard,
+                  child: SlideTransition(
+                    position: _slideCard,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: AppColors.cardSurface
+                                .withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                                color: AppColors.glassBorder, width: 1),
+                          ),
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment.stretch,
+                            children: [
+                              _buildField(
+                                controller: _emailController,
+                                label: 'Email Address',
+                                icon: Icons.email_outlined,
+                                keyboardType:
+                                    TextInputType.emailAddress,
+                              ),
+                              const SizedBox(height: 18),
+                              _buildField(
+                                controller: _passwordController,
+                                label: 'Password',
+                                icon: Icons.lock_outline,
+                                obscureText: _obscurePassword,
+                                isPassword: true,
+                              ),
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: _handleForgotPassword,
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize
+                                            .shrinkWrap,
+                                  ),
+                                  child: const Text(
+                                    'Forgot Password?',
+                                    style: TextStyle(
+                                      color: AppColors.primaryLight,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // ── CTA + socials ────────────────────────────────────────────
+                FadeTransition(
+                  opacity: _fadeBottom,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _isLoading
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                  color: AppColors.primary))
+                          : OnboardingButton(
+                              label: 'Sign In',
+                              onPressed: _handleEmailLogin,
+                            ),
+
+                      if (!_isLoading) ...[
+                        const SizedBox(height: 28),
+                        _buildDivider(),
+                        const SizedBox(height: 28),
+                        _buildGoogleButton(),
+                      ],
+
+                      const SizedBox(height: 32),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            "Don't have an account?  ",
+                            style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 14),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.pushReplacement(
+                              context,
+                              PageRouteBuilder(
+                                pageBuilder: (_, __, ___) =>
+                                    const SignupScreen(),
+                                transitionsBuilder:
+                                    (_, anim, __, child) =>
+                                        FadeTransition(
+                                            opacity: anim,
+                                            child: child),
+                              ),
+                            ),
+                            child: const Text(
+                              'Sign Up',
+                              style: TextStyle(
+                                color: AppColors.primaryLight,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 40),
+                    ],
                   ),
                 ),
               ],
-
-              const SizedBox(height: 40),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Don't have an account? ",
-                      style:
-                          TextStyle(color: AppColors.textSecondary)),
-                  GestureDetector(
-                    onTap: () => Navigator.pushReplacement(
-                      context,
-                      PageRouteBuilder(
-                        pageBuilder: (_, __, ___) =>
-                            const SignupScreen(),
-                        transitionsBuilder:
-                            (_, anim, __, child) =>
-                                FadeTransition(
-                                    opacity: anim, child: child),
-                      ),
-                    ),
-                    child: const Text('Sign Up',
-                        style: TextStyle(
-                            color: AppColors.primaryLight,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
@@ -277,23 +398,30 @@ class _LoginScreenState extends State<LoginScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           obscureText: obscureText,
           keyboardType: keyboardType,
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 15,
+          ),
           decoration: InputDecoration(
             hintText: 'Enter your ${label.toLowerCase()}',
             hintStyle: TextStyle(
-                color: AppColors.textMuted.withValues(alpha: 0.5)),
-            prefixIcon:
-                Icon(icon, color: AppColors.textMuted, size: 20),
+                color: AppColors.textMuted.withValues(alpha: 0.5),
+                fontSize: 14),
+            prefixIcon: Icon(icon, color: AppColors.textMuted, size: 19),
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(
@@ -301,7 +429,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
                       color: AppColors.textMuted,
-                      size: 20,
+                      size: 19,
                     ),
                     onPressed: () => setState(
                         () => _obscurePassword = !_obscurePassword),
@@ -310,22 +438,73 @@ class _LoginScreenState extends State<LoginScreen> {
             filled: true,
             fillColor: AppColors.surface,
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide:
-                    const BorderSide(color: AppColors.border)),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                  color: AppColors.glassBorder, width: 1),
+            ),
             enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide:
-                    const BorderSide(color: AppColors.border)),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                  color: AppColors.glassBorder, width: 1),
+            ),
             focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide:
-                    const BorderSide(color: AppColors.primary)),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                  color: AppColors.primary, width: 1.5),
+            ),
             contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 16),
+                horizontal: 16, vertical: 15),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(
+            child: Divider(
+                color: AppColors.glassBorder, thickness: 1)),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'or continue with',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12.5),
+          ),
+        ),
+        Expanded(
+            child: Divider(
+                color: AppColors.glassBorder, thickness: 1)),
+      ],
+    );
+  }
+
+  Widget _buildGoogleButton() {
+    return SizedBox(
+      height: 54,
+      child: OutlinedButton.icon(
+        onPressed: _handleGoogleLogin,
+        icon: Image.asset(
+          'assets/icons/google_logo.png',
+          width: 21,
+          height: 21,
+        ),
+        label: const Text(
+          'Continue with Google',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          backgroundColor: AppColors.surfaceVariant,
+          side: BorderSide(color: AppColors.glassBorder, width: 1),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+        ),
+      ),
     );
   }
 }

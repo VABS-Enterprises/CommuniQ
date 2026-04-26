@@ -161,15 +161,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     opacity: _fadeTitle,
                     child: SlideTransition(
                       position: _slideTitle,
-                      child: ShaderMask(
-                        shaderCallback: (bounds) => const LinearGradient(
-                          colors: [Colors.white, Color(0xFFBCC8FF)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ).createShader(bounds),
-                        blendMode: BlendMode.srcIn,
-                        child: const Text(
-                          'Speak Like You\nMean It',
+                      child: const Text(
+                          'Speak It Like You\nMean It',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.white,
@@ -179,7 +172,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             letterSpacing: -0.8,
                           ),
                         ),
-                      ),
                     ),
                   ),
 
@@ -285,12 +277,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               height: 228,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.05),
-                    Colors.transparent,
-                  ],
-                ),
+                color: AppColors.primary.withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -302,12 +289,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               height: 185,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.09),
-                    Colors.transparent,
-                  ],
-                ),
+                color: AppColors.primary.withValues(alpha: 0.09),
               ),
             ),
           ),
@@ -334,15 +316,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               height: 122,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const RadialGradient(
-                  center: Alignment(-0.3, -0.3),
-                  radius: 0.85,
-                  colors: [
-                    Color(0xFF818CF8),
-                    Color(0xFF5B52F0),
-                    Color(0xFF3730A3),
-                  ],
-                ),
+                color: AppColors.primary,
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.primary
@@ -397,19 +371,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   Widget _buildStat(String value, String label) {
     return Column(
       children: [
-        ShaderMask(
-          shaderCallback: (b) => const LinearGradient(
-            colors: AppColors.primaryGradient,
-          ).createShader(b),
-          blendMode: BlendMode.srcIn,
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.3,
-            ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: AppColors.primaryLight,
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
           ),
         ),
         const SizedBox(height: 2),
@@ -471,9 +439,8 @@ class _CosmicBgPainter extends CustomPainter {
   void _drawOrb(Canvas canvas,
       {required Offset offset, required double radius, required Color color}) {
     final paint = Paint()
-      ..shader = RadialGradient(
-        colors: [color, Colors.transparent],
-      ).createShader(Rect.fromCircle(center: offset, radius: radius));
+      ..color = color
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.55);
     canvas.drawCircle(offset, radius, paint);
   }
 

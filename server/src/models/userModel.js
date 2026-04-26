@@ -3,19 +3,38 @@ const { FieldValue } = require('firebase-admin/firestore');
 /*
  * Firestore shape — users/{uid}
  * ─────────────────────────────
- * uid            string     Firebase Auth uid
- * email          string
- * name           string
- * photoURL       string     profile picture (from Google or null)
- * provider       string     "google" | "email"
- * createdAt      timestamp
- * lastLoginAt    timestamp  updated on every sign-in
- * xp             number     starts at 0
- * level          number     1–5, unlocked by XP thresholds
- * streak         number     consecutive days practiced
- * lastActiveDate timestamp  updated on every completed session
- * badges         string[]   e.g. ["first_session", "7_day_streak"]
- * isPremium      boolean    false by default
+ * uid              string      Firebase Auth uid
+ * email            string
+ * name             string
+ * photoURL         string      profile picture (from Google or null)
+ * provider         string      "google" | "email"
+ * createdAt        timestamp
+ * lastLoginAt      timestamp   updated on every sign-in
+ * xp               number      starts at 0
+ * level            number      1–5, unlocked by XP thresholds
+ * streak           number      consecutive days practiced
+ * lastActiveDate   timestamp   updated on every completed session
+ * badges           string[]    e.g. ["first_session", "7_day_streak"]
+ * isPremium        boolean     false by default
+ *
+ * skillProgress    object      rolling per-skill averages, updated on session end
+ *   clarity        { avg: number, sessions: number }
+ *   fluency        { avg: number, sessions: number }
+ *   confidence     { avg: number, sessions: number }
+ *   vocabulary     { avg: number, sessions: number }
+ *   grammar        { avg: number, sessions: number }
+ *   pronunciation  { avg: number, sessions: number }
+ *
+ * onboarding       object      merged by POST /onboarding
+ *   contexts       string[]
+ *   challenges     string[]
+ *   speakingStyle  string?
+ *   speakingNote   string?
+ *   primaryGoal    string?
+ *   commitmentDays number?     2 | 3 | 5 — days/week the user committed to
+ *   completedAt    timestamp
+ *
+ * onboardingCompleted  boolean
  */
 
 /**

@@ -4,7 +4,6 @@ import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/services/onboarding_service.dart';
 import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
-import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
 import 'package:communiq/views/onboarding/widgets/onboarding_utils.dart';
 
 class RoleplayIntroScreen extends StatefulWidget {
@@ -72,16 +71,15 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
     super.dispose();
   }
 
-  Future<void> _skip() async {
-    debugPrint('[Onboarding] Step 5/6 — Skipped goal, saving partial data');
+  Future<void> _goToSignup() async {
+    debugPrint('[Onboarding] Step 6/6 — Completing onboarding → Signup');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isFirstLaunch', false);
     await OnboardingService.saveLocally(widget.data);
     if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
+    Navigator.push(
       context,
       slideRoute(SignupScreen(onboardingData: widget.data)),
-      (_) => false,
     );
   }
 
@@ -95,9 +93,9 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               children: [
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
 
-                buildOnboardingHeader(context, 5),
+                buildOnboardingHeader(context, 6),
 
                 const Spacer(flex: 1),
 
@@ -116,23 +114,15 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                     position: _slideContent,
                     child: Column(
                       children: [
-                        ShaderMask(
-                          shaderCallback: (b) => const LinearGradient(
-                            colors: [Colors.white, Color(0xFFBCC8FF)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ).createShader(b),
-                          blendMode: BlendMode.srcIn,
-                          child: const Text(
-                            'Your first roleplay\nawaits',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 30,
-                              fontWeight: FontWeight.w800,
-                              height: 1.2,
-                              letterSpacing: -0.5,
-                            ),
+                        const Text(
+                          'Your first roleplay\nawaits',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w800,
+                            height: 1.2,
+                            letterSpacing: -0.5,
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -150,7 +140,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
 
                         _buildScenarioCard(),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
 
                         // Feature pills
                         _buildFeatureRow(),
@@ -162,25 +152,20 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                 const Spacer(flex: 2),
 
                 OnboardingButton(
-                  label: "Let's Go",
-                  onPressed: () {
-                    debugPrint('[Onboarding] Step 5/6 — Proceeding to goals');
-                    Navigator.push(
-                      context,
-                      slideRoute(GoalConfirmationScreen(data: widget.data)),
-                    );
-                  },
+                  label: "Let's Get a Demo",
+                  showGradient: false,
+                  onPressed: _goToSignup,
                 ),
 
                 const SizedBox(height: 12),
 
                 TextButton(
-                  onPressed: _skip,
+                  onPressed: _goToSignup,
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.textMuted,
                   ),
                   child: const Text(
-                    'Skip for now',
+                    'Skip for now →',
                     style: TextStyle(fontSize: 14),
                   ),
                 ),
@@ -227,25 +212,16 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           // Core mic button
           Transform.scale(
             scale: _micScale.value,
-            child: Container(
+              child: Container(
               width: 90,
               height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: AppColors.primaryGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: AppColors.primary,
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.primary.withValues(alpha: _micGlow.value),
-                    blurRadius: 50,
-                    spreadRadius: 8,
-                  ),
-                  BoxShadow(
-                    color: AppColors.violet.withValues(alpha: _micGlow.value * 0.5),
-                    blurRadius: 70,
+                    blurRadius: 40,
                     spreadRadius: 4,
                   ),
                 ],
