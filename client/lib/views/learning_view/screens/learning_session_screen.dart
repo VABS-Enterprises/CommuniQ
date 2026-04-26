@@ -21,27 +21,38 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
   int _currentPageIndex = 0;
   int _coins = 0;
 
-  // State for each page (0: MCQ, 1: Response)
-  // 0 = unsubmitted, 1 = submitted/evaluation
-  final List<bool> _isSubmitted = [false, false];
-
-  // MCQ State
-  int? _selectedOptionIndex;
-  late final List<String> _mcqOptions;
-  late final int _correctOptionIndex;
-  int _mcqAttempts = 0;
-  bool _isMcqWrong = false;
+  // State for each page (N MCQs + 1 Response)
+  late List<bool> _isSubmitted;
+  
+  // MCQ States (one for each MCQ)
+  late List<int?> _selectedOptionIndices;
+  late List<List<String>> _mcqOptionsList;
+  late List<int> _correctOptionIndices;
+  late List<int> _mcqAttemptsList;
+  late List<bool> _isMcqWrongList;
 
   @override
   void initState() {
     super.initState();
-    final options = [
-      widget.level.mcqCorrectOption,
-      ...widget.level.mcqIncorrectOptions,
-    ];
-    options.shuffle();
-    _correctOptionIndex = options.indexOf(widget.level.mcqCorrectOption);
-    _mcqOptions = options;
+    final mcqCount = widget.level.mcqs.length;
+    final totalPages = mcqCount + 1; // +1 for Response page
+    
+    _isSubmitted = List.filled(totalPages, false);
+    _selectedOptionIndices = List.filled(mcqCount, null);
+    _mcqAttemptsList = List.filled(mcqCount, 0);
+    _isMcqWrongList = List.filled(mcqCount, false);
+    _mcqOptionsList = [];
+    _correctOptionIndices = [];
+
+    for (var mcq in widget.level.mcqs) {
+      final options = [
+        mcq.correctOption,
+        ...mcq.incorrectOptions,
+      ];
+      options.shuffle();
+      _correctOptionIndices.add(options.indexOf(mcq.correctOption));
+      _mcqOptionsList.add(options);
+    }
   }
 
   // Response State
@@ -52,27 +63,32 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
 
   void _submitCurrentPage() {
     setState(() {
-      if (_currentPageIndex == 0 && _isMcqWrong) {
-        _isMcqWrong = false;
-        _selectedOptionIndex = null;
-        return;
-      }
+      final mcqCount = widget.level.mcqs.length;
+      
+      // Handle MCQ pages
+      if (_currentPageIndex < mcqCount) {
+        if (_isMcqWrongList[_currentPageIndex]) {
+          _isMcqWrongList[_currentPageIndex] = false;
+          _selectedOptionIndices[_currentPageIndex] = null;
+          return;
+        }
 
-      if (_currentPageIndex == 0) {
-        if (_selectedOptionIndex != _correctOptionIndex) {
-          _mcqAttempts++;
-          _isMcqWrong = true;
+        if (_selectedOptionIndices[_currentPageIndex] != _correctOptionIndices[_currentPageIndex]) {
+          _mcqAttemptsList[_currentPageIndex]++;
+          _isMcqWrongList[_currentPageIndex] = true;
           return;
         } else {
-          _isSubmitted[0] = true;
+          _isSubmitted[_currentPageIndex] = true;
           if (!widget.isAlreadyCompleted) {
-            int earned = 10 - (_mcqAttempts * 3);
+            int earned = 10 - (_mcqAttemptsList[_currentPageIndex] * 3);
             if (earned < 1) earned = 1;
             _coins += earned;
           }
         }
-      } else {
-        _isSubmitted[1] = true;
+      } 
+      // Handle Response page
+      else {
+        _isSubmitted[_currentPageIndex] = true;
         if (!widget.isAlreadyCompleted) {
           _coins += 10; // 10 coins for the response page
         }
@@ -81,7 +97,8 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
   }
 
   void _nextPage() {
-    if (_currentPageIndex < 1) {
+    final totalPages = widget.level.mcqs.length + 1;
+    if (_currentPageIndex < totalPages - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -102,13 +119,16 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
   }
 
   bool _canSubmit() {
-    if (_currentPageIndex == 0 && _isMcqWrong) return true; // Allow try again
-    if (_isSubmitted[_currentPageIndex]) return false;
-    if (_currentPageIndex == 0) return _selectedOptionIndex != null;
-    if (_currentPageIndex == 1) {
+    final mcqCount = widget.level.mcqs.length;
+    
+    if (_currentPageIndex < mcqCount) {
+      if (_isMcqWrongList[_currentPageIndex]) return true; // Allow try again
+      if (_isSubmitted[_currentPageIndex]) return false;
+      return _selectedOptionIndices[_currentPageIndex] != null;
+    } else {
+      if (_isSubmitted[_currentPageIndex]) return false;
       return _isTextResponse ? _textController.text.trim().isNotEmpty : _hasRecorded;
     }
-    return false;
   }
 
   @override
@@ -120,6 +140,8 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final totalPages = widget.level.mcqs.length + 1;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -171,7 +193,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
             child: Row(
-              children: List.generate(2, (index) {
+              children: List.generate(totalPages, (index) {
                 final isActive = index <= _currentPageIndex;
                 return Expanded(
                   child: Container(
@@ -197,7 +219,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
                 });
               },
               children: [
-                _buildMcqPage(),
+                ...List.generate(widget.level.mcqs.length, (i) => _buildMcqPage(i)),
                 _buildResponsePage(),
               ],
             ),
@@ -241,6 +263,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
                     child: AnimatedBuilder(
                       animation: _textController,
                       builder: (context, _) {
+                        bool isWrong = _currentPageIndex < widget.level.mcqs.length && _isMcqWrongList[_currentPageIndex];
                         return ElevatedButton(
                           onPressed: _canSubmit() ? _submitCurrentPage : null,
                           style: ElevatedButton.styleFrom(
@@ -253,7 +276,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
                             ),
                           ),
                           child: Text(
-                            (_currentPageIndex == 0 && _isMcqWrong) ? 'Try Again' : 'Submit',
+                            isWrong ? 'Try Again' : 'Submit',
                             style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                         );
@@ -271,7 +294,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    icon: _currentPageIndex == 1 
+                    icon: _currentPageIndex == totalPages - 1 
                         ? const Icon(Icons.check_rounded)
                         : const Icon(Icons.arrow_forward_ios_rounded),
                     onPressed: _isSubmitted[_currentPageIndex] ? _nextPage : null,
@@ -288,21 +311,22 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
   }
 
   // ─── MCQ Page ──────────────────────────────────────────────────────────────
-  Widget _buildMcqPage() {
-    if (_isSubmitted[0]) return _buildEvaluationScreen(widget.level.mcqCorrectFeedback, true);
-    if (_isMcqWrong) return _buildEvaluationScreen(widget.level.mcqIncorrectFeedback, false);
+  Widget _buildMcqPage(int index) {
+    final mcq = widget.level.mcqs[index];
+    if (_isSubmitted[index]) return _buildEvaluationScreen(mcq.correctFeedback, true);
+    if (_isMcqWrongList[index]) return _buildEvaluationScreen(mcq.incorrectFeedback, false);
 
     return _buildPageContainer(
-      title: 'Knowledge Check',
-      description: widget.level.mcqQuestion.isNotEmpty ? widget.level.mcqQuestion : widget.level.scenario,
+      title: 'Step ${index + 1}: Knowledge Check',
+      description: mcq.question.isNotEmpty ? mcq.question : widget.level.scenario,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: List.generate(_mcqOptions.length, (index) {
-          final isSelected = _selectedOptionIndex == index;
+        children: List.generate(_mcqOptionsList[index].length, (optionIdx) {
+          final isSelected = _selectedOptionIndices[index] == optionIdx;
           return GestureDetector(
             onTap: () {
               setState(() {
-                _selectedOptionIndex = index;
+                _selectedOptionIndices[index] = optionIdx;
               });
             },
             child: AnimatedContainer(
@@ -337,7 +361,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      _mcqOptions[index],
+                      _mcqOptionsList[index][optionIdx],
                       style: const TextStyle(color: Colors.white, fontSize: 16),
                     ),
                   ),
@@ -352,7 +376,8 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
 
   // ─── Response Page ─────────────────────────────────────────────────────────
   Widget _buildResponsePage() {
-    if (_isSubmitted[1]) {
+    final responseIdx = widget.level.mcqs.length;
+    if (_isSubmitted[responseIdx]) {
       return _buildEvaluationScreen(
         widget.level.responseSuccessFeedback.isNotEmpty 
           ? widget.level.responseSuccessFeedback 
@@ -362,7 +387,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
     }
 
     return _buildPageContainer(
-      title: 'Craft Your Response',
+      title: 'Final Step: Craft Your Response',
       description: widget.level.responsePrompt.isNotEmpty 
           ? widget.level.responsePrompt 
           : 'Choose how you want to answer this scenario:\n\n${widget.level.scenario}',
@@ -546,7 +571,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
           const SizedBox(height: 8),
           if (isCorrect)
             Text(
-              '+${_currentPageIndex == 0 ? (10 - (_mcqAttempts * 3) < 1 ? 1 : 10 - (_mcqAttempts * 3)) : 10} Coins',
+              '+${_currentPageIndex < widget.level.mcqs.length ? (10 - (_mcqAttemptsList[_currentPageIndex] * 3) < 1 ? 1 : 10 - (_mcqAttemptsList[_currentPageIndex] * 3)) : 10} Coins',
               style: const TextStyle(
                 color: Color(0xFFFFD700),
                 fontSize: 18,
