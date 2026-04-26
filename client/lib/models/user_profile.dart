@@ -30,6 +30,9 @@ class UserProfile {
   /// Total completed sessions (populated separately from session history).
   final int sessionsCompleted;
 
+  /// Learning module progress: list of completed scenarios with coins/scores.
+  final List<Map<String, dynamic>> learningProgress;
+
   const UserProfile({
     required this.uid,
     required this.email,
@@ -42,6 +45,7 @@ class UserProfile {
     required this.isPremium,
     this.skillProgress = const {},
     this.sessionsCompleted = 0,
+    this.learningProgress = const [],
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -66,6 +70,9 @@ class UserProfile {
       isPremium: json['isPremium'] as bool? ?? false,
       skillProgress: skillMap,
       sessionsCompleted: (json['_sessionsCompleted'] as num?)?.toInt() ?? 0,
+      learningProgress: (json['learning_progress'] as List<dynamic>?)
+              ?.cast<Map<String, dynamic>>() ??
+          [],
     );
   }
 
@@ -83,6 +90,7 @@ class UserProfile {
           (k, v) => MapEntry(k, {'avg': v.avg, 'sessions': v.sessions}),
         ),
         '_sessionsCompleted': sessionsCompleted,
+        'learning_progress': learningProgress,
       };
 
   /// Returns a copy with [sessionsCompleted] filled in.
@@ -98,6 +106,7 @@ class UserProfile {
         isPremium: isPremium,
         skillProgress: skillProgress,
         sessionsCompleted: count,
+        learningProgress: learningProgress,
       );
 
   // ── XP thresholds ──────────────────────────────────────────────────────────

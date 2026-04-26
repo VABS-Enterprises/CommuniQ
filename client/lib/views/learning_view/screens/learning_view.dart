@@ -8,6 +8,7 @@ import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart'
 import 'package:communiq/views/learning_view/screens/learning_session_screen.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/constants/api_constants.dart';
+import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/common_widgets/sky_campus_background.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -121,9 +122,33 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
 
   Future<void> _load() async {
     try {
-      final p    = await SharedPreferences.getInstance();
-      // await p.clear(); // <--- SIMPLE CODE LINE TO RESET (Active for testing)
+      final p = await SharedPreferences.getInstance();
       
+      // Step 1: Sync from server (best effort)
+      try {
+        final profile = await SessionService.instance.fetchProfile();
+        if (profile.learningProgress.isNotEmpty) {
+          final Set<String> doneIdsStr = {};
+          for (final entry in profile.learningProgress) {
+            final id = entry['id']?.toString();
+            if (id != null) {
+              doneIdsStr.add(id);
+              if (entry['coins'] != null) {
+                await p.setInt('level_${id}_coins', entry['coins'] as int);
+              }
+              if (entry['ai_evaluated_score'] != null) {
+                await p.setInt('level_${id}_score', entry['ai_evaluated_score'] as int);
+              }
+            }
+          }
+          if (doneIdsStr.isNotEmpty) {
+            await p.setStringList('completed_level_ids', doneIdsStr.toList());
+          }
+        }
+      } catch (e) {
+        debugPrint('[LearningView] Sync from server failed: $e');
+      }
+
       final lvls = await LevelService.instance.fetchLevels();
       final doneIds = (p.getStringList('completed_level_ids') ?? []).map(int.parse).toSet();
       int total = 0;

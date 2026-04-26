@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/services/profile_cache_service.dart';
+import 'package:communiq/core/services/level_service.dart';
 
 /// Thrown when the user dismisses the Google sign-in picker without selecting
 /// an account. Callers should catch this and stay on the current screen.
@@ -188,6 +189,7 @@ class AuthService {
         _googleSignIn.signOut(),
         _auth.signOut(),
         ProfileCacheService.clear(),
+        LevelService.instance.clearProgress(),
       ]);
       debugPrint('[AuthService] signOut ✓');
     } catch (e) {
