@@ -209,15 +209,6 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
       _evalError = null;
     });
 
-    // Already-completed levels skip AI evaluation
-    if (widget.isAlreadyCompleted) {
-      setState(() {
-        _isEvaluating = false;
-        _isSubmitted[_currentPageIndex] = true;
-      });
-      return;
-    }
-
     try {
       final result = await LearningService.evaluateLearningResponse(
         question: widget.level.responsePrompt.isNotEmpty
@@ -229,12 +220,26 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
             : widget.level.title,
         difficulty: _difficultyForJourney(widget.level.journeyId),
       );
+      
       if (!mounted) return;
       setState(() {
         _evalResult = result;
         _isEvaluating = false;
         _isSubmitted[_currentPageIndex] = true;
-        _coins += 10;
+        
+        // Only award coins if this is the first time completing the level
+        if (!widget.isAlreadyCompleted) {
+          final score = result.overallScore;
+          int responseCoins = 1;
+          if (score > 75) {
+            responseCoins = 10;
+          } else if (score > 50) {
+            responseCoins = 7;
+          } else if (score > 30) {
+            responseCoins = 4;
+          }
+          _coins += responseCoins;
+        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -262,7 +267,10 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
         curve: Curves.easeInOut,
       );
     } else {
-      Navigator.pop(context, _coins);
+      Navigator.pop(context, {
+        'coins': _coins,
+        'score': _evalResult?.overallScore,
+      });
     }
   }
 
@@ -389,7 +397,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
                   decoration: BoxDecoration(
                     color: ((_currentPageIndex > 0 && _isSubmitted[_currentPageIndex]) ||
                             (_currentPageIndex > 0 && _isSubmitted[_currentPageIndex - 1]))
-                        ? Colors.white.withOpacity(0.05)
+                        ? AppColors.primary
                         : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
@@ -451,7 +459,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
                 Container(
                   decoration: BoxDecoration(
                     color: _isSubmitted[_currentPageIndex]
-                        ? AppColors.primaryLight.withOpacity(0.2)
+                        ? AppColors.primary
                         : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
@@ -460,9 +468,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
                         ? const Icon(Icons.check_rounded)
                         : const Icon(Icons.arrow_forward_ios_rounded),
                     onPressed: _isSubmitted[_currentPageIndex] ? _nextPage : null,
-                    color: _isSubmitted[_currentPageIndex]
-                        ? AppColors.primaryLight
-                        : Colors.white24,
+                    color: Colors.white,
                     disabledColor: Colors.white24,
                   ),
                 ),
@@ -478,61 +484,126 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
 
   Widget _buildMcqPage(int index) {
     final mcq = widget.level.mcqs[index];
-    if (_isSubmitted[index]) return _buildEvaluationScreen(mcq.correctFeedback, true);
-    if (_isMcqWrongList[index]) return _buildEvaluationScreen(mcq.incorrectFeedback, false);
+    final isSubmitted = _isSubmitted[index];
+    final isWrong = _isMcqWrongList[index];
 
     return _buildPageContainer(
       title: 'Step ${index + 1}: Knowledge Check',
       description: mcq.question.isNotEmpty ? mcq.question : widget.level.scenario,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: List.generate(_mcqOptionsList[index].length, (optionIdx) {
-          final isSelected = _selectedOptionIndices[index] == optionIdx;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedOptionIndices[index] = optionIdx),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary.withOpacity(0.2)
-                    : AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.border,
-                  width: isSelected ? 2 : 1,
+        children: [
+          ...List.generate(_mcqOptionsList[index].length, (optionIdx) {
+            final isSelected = _selectedOptionIndices[index] == optionIdx;
+            final isCorrectOption = optionIdx == _correctOptionIndices[index];
+            
+            Color itemColor = AppColors.surface;
+            Color borderColor = AppColors.border;
+            if (isSubmitted && isCorrectOption) {
+              itemColor = Colors.green.withOpacity(0.15);
+              borderColor = Colors.green;
+            } else if (isWrong && isSelected) {
+              itemColor = Colors.red.withOpacity(0.15);
+              borderColor = Colors.red;
+            } else if (isSelected) {
+              itemColor = AppColors.primary.withOpacity(0.15);
+              borderColor = AppColors.primary;
+            }
+
+            return GestureDetector(
+              onTap: (isSubmitted || isWrong) ? null : () => setState(() => _selectedOptionIndices[index] = optionIdx),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: itemColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: borderColor.withOpacity(0.5),
+                    width: (isSelected || (isSubmitted && isCorrectOption)) ? 2 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? borderColor : Colors.white54,
+                          width: 2,
+                        ),
+                        color: isSelected ? borderColor : Colors.transparent,
+                      ),
+                      child: isSelected
+                          ? const Icon(Icons.check, size: 16, color: Colors.white)
+                          : null,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        _mcqOptionsList[index][optionIdx],
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ),
+                    if (isSubmitted && isCorrectOption)
+                      const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                    if (isWrong && isSelected)
+                      const Icon(Icons.cancel_rounded, color: Colors.red, size: 20),
+                  ],
                 ),
               ),
-              child: Row(
+            );
+          }),
+          if (isSubmitted || isWrong) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: (isSubmitted ? Colors.green : Colors.red).withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isSelected ? AppColors.primary : Colors.white54,
-                        width: 2,
+                  Row(
+                    children: [
+                      Icon(
+                        isSubmitted ? Icons.check_circle_rounded : Icons.error_rounded,
+                        color: isSubmitted ? Colors.green : Colors.red,
+                        size: 18,
                       ),
-                      color: isSelected ? AppColors.primary : Colors.transparent,
-                    ),
-                    child: isSelected
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
-                        : null,
+                      const SizedBox(width: 8),
+                      Text(
+                        isSubmitted ? 'Well Done!' : 'Not Quite',
+                        style: TextStyle(
+                          color: isSubmitted ? Colors.green : Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      if (isSubmitted) ...[
+                        const Spacer(),
+                        Text(
+                          '+${(10 - (_mcqAttemptsList[index] * 3) < 1 ? 1 : 10 - (_mcqAttemptsList[index] * 3))} Coins',
+                          style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      _mcqOptionsList[index][optionIdx],
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isSubmitted ? mcq.correctFeedback : mcq.incorrectFeedback,
+                    style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
                   ),
                 ],
               ),
             ),
-          );
-        }),
+          ],
+        ],
       ),
     );
   }
@@ -786,7 +857,11 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
           const SizedBox(height: 8),
           if (isCorrect)
             Text(
-              '+${_currentPageIndex < widget.level.mcqs.length ? (10 - (_mcqAttemptsList[_currentPageIndex] * 3) < 1 ? 1 : 10 - (_mcqAttemptsList[_currentPageIndex] * 3)) : 10} Coins',
+              '+${_currentPageIndex < widget.level.mcqs.length 
+                ? (10 - (_mcqAttemptsList[_currentPageIndex] * 3) < 1 ? 1 : 10 - (_mcqAttemptsList[_currentPageIndex] * 3)) 
+                : (_evalResult != null 
+                    ? (_evalResult!.overallScore > 75 ? 10 : (_evalResult!.overallScore > 50 ? 7 : (_evalResult!.overallScore > 30 ? 4 : 1)))
+                    : 10)} Coins',
               style: const TextStyle(
                 color: Color(0xFFFFD700),
                 fontSize: 18,
@@ -864,8 +939,8 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  '+10 Coins',
+                Text(
+                  '+${score > 75 ? 10 : (score > 50 ? 7 : (score > 30 ? 4 : 1))} Coins',
                   style: TextStyle(
                     color: Color(0xFFFFD700),
                     fontSize: 18,
