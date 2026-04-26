@@ -2,12 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'package:communiq/core/theme/app_theme.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
 import 'package:communiq/views/onboarding/screens/welcome_screen.dart';
+import 'package:communiq/views/onboarding/screens/splash_screen.dart';
 
 /// The server URL used for all API calls.
 ///
@@ -22,7 +24,8 @@ const _kServerUrl = String.fromEnvironment(
 );
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   bool firebaseOk = false;
   String? firebaseError;
@@ -37,10 +40,12 @@ void main() async {
 
   if (!firebaseOk) {
     runApp(_FirebaseErrorApp(error: firebaseError ?? 'Unknown error'));
+    FlutterNativeSplash.remove();
     return;
   }
 
   runApp(const MyApp());
+  FlutterNativeSplash.remove();
 }
 
 /// Shown only when Firebase itself fails to initialize (rare, fatal).
@@ -136,7 +141,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'CommuniQ',
       theme: AppTheme.darkTheme,
-      home: const AuthGuard(),
+      home: const SplashScreen(),
     );
   }
 }

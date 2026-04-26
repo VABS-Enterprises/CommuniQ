@@ -6,6 +6,8 @@ import 'package:communiq/core/services/level_service.dart';
 import 'package:communiq/models/communiq_level.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
 import 'package:communiq/views/learning_view/screens/learning_session_screen.dart';
+import 'package:communiq/core/services/api_service.dart';
+import 'package:communiq/core/constants/api_constants.dart';
 
 // ─── Node state ───────────────────────────────────────────────────────────────
 enum _NodeState { completed, current, locked }
@@ -111,15 +113,39 @@ class _LearningViewState extends State<LearningView>
     try {
       final levels = await LevelService.instance.fetchLevels();
       final prefs = await SharedPreferences.getInstance();
-      // await prefs.clear(); // RESET PROGRESS AS REQUESTED
       
-      final done = (prefs.getStringList('completed_level_ids') ?? [])
-          .map(int.parse)
-          .toSet();
-          
-      final Map<int, int> coins = {};
-      for (final id in done) {
-        coins[id] = prefs.getInt('level_${id}_coins') ?? 20;
+      Set<int> done = {};
+      Map<int, int> coins = {};
+
+      try {
+        final response = await ApiService.get(ApiConstants.userProfile);
+        final user = response['user'];
+        if (user != null) {
+          if (user['learning_progress'] != null) {
+            final List<dynamic> progress = user['learning_progress'];
+            for (var p in progress) {
+              final id = p['id'] as int;
+              done.add(id);
+              coins[id] = p['coins'] as int;
+            }
+          }
+
+          // Cache locally
+          await prefs.setStringList('completed_level_ids', done.map((id) => id.toString()).toList());
+          for (final id in done) {
+             await prefs.setInt('level_${id}_coins', coins[id] ?? 30);
+          }
+        }
+      } catch (e) {
+        debugPrint('Failed to load profile from backend: $e');
+        // Fallback to local cache
+        done = (prefs.getStringList('completed_level_ids') ?? [])
+            .map(int.parse)
+            .toSet();
+            
+        for (final id in done) {
+          coins[id] = prefs.getInt('level_${id}_coins') ?? 30;
+        }
       }
       
       if (mounted) {
@@ -422,8 +448,39 @@ class _LearningViewState extends State<LearningView>
               final prefs = await SharedPreferences.getInstance();
               final done = (prefs.getStringList('completed_level_ids') ?? []).map(int.parse).toSet();
               done.add(level.id);
+
+              final coins = <int, int>{};
+              for (final id in done) {
+                if (id == level.id) {
+                  coins[id] = coinsEarned;
+                } else {
+                  coins[id] = prefs.getInt('level_${id}_coins') ?? 30;
+                }
+              }
+
+              // Update local cache
               await prefs.setStringList('completed_level_ids', done.map((id) => id.toString()).toList());
               await prefs.setInt('level_${level.id}_coins', coinsEarned);
+
+              // Update backend
+              try {
+                final List<Map<String, dynamic>> progressList = [];
+                for (final id in done) {
+                  final lvl = _levels.firstWhere((l) => l.id == id, orElse: () => level);
+                  progressList.add({
+                    'id': id,
+                    'scenario_name': lvl.title,
+                    'journey_name': lvl.journeyTitle,
+                    'journey_number': lvl.journeyId,
+                    'coins': coins[id] ?? 30,
+                  });
+                }
+                await ApiService.patch(ApiConstants.userProfile, body: {
+                  'learning_progress': progressList,
+                });
+              } catch (e) {
+                debugPrint('Failed to sync progress to backend: $e');
+              }
             }
             _reloadAndAnimate(ji: ji, prevCompleted: prevCompleted, earnedCoins: coinsEarned ?? 0);
           });
