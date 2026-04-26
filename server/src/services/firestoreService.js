@@ -161,7 +161,32 @@ async function getUserSessions(userId, limitCount = 20) {
     .orderBy('startedAt', 'desc')
     .limit(limitCount)
     .get();
-  return snap.docs.map((doc) => doc.data());
+  return snap.docs.map((doc) => _serializeSessionDoc(doc.data()));
+}
+
+/**
+ * Convert Firestore Timestamp fields in a session document to ISO-8601 strings
+ * so the Flutter client always receives plain strings, never raw Timestamp objects.
+ *
+ * Firestore Admin returns Timestamp objects (with .toDate()) from doc.data().
+ * JSON.stringify() serialises them as { _seconds, _nanoseconds } — a Map in Dart —
+ * which causes a runtime cast error when Flutter does `as String?`.
+ */
+function _serializeSessionDoc(data) {
+  const result = { ...data };
+  for (const key of ['startedAt', 'endedAt']) {
+    const val = result[key];
+    if (val == null) continue;
+    if (typeof val.toDate === 'function') {
+      // Firestore Admin Timestamp object
+      result[key] = val.toDate().toISOString();
+    } else if (typeof val._seconds === 'number') {
+      // Already-serialised Firestore Timestamp ({ _seconds, _nanoseconds })
+      result[key] = new Date(val._seconds * 1000).toISOString();
+    }
+    // If it's already a string, leave it as-is
+  }
+  return result;
 }
 
 // ─── Evaluation Reports ───────────────────────────────────────────────────────

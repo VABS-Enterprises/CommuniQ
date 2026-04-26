@@ -1,14 +1,26 @@
+import 'dart:io' show Platform;
+
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
-/// Server URL is configured at build time via --dart-define=SERVER_URL=...
-/// Debug builds default to the Android emulator host loopback (10.0.2.2:3000).
-/// Release builds default to the Render cloud backend.
-const _kServerUrl = String.fromEnvironment(
-  'SERVER_URL',
-  defaultValue: kDebugMode ? 'http://10.0.2.2:3000' : 'https://communiq.onrender.com',
-);
+/// Resolves the backend URL at runtime.
+///
+/// Priority:
+///   1. --dart-define=SERVER_URL=... (build-time override, e.g. for staging/prod)
+///   2. Debug: Android emulator  → http://10.0.2.2:3000
+///             iOS simulator     → http://localhost:3000
+///   3. Release → production cloud backend
+String _resolveServerUrl() {
+  const defined = String.fromEnvironment('SERVER_URL');
+  if (defined.isNotEmpty) return defined;
+  if (kDebugMode) {
+    return Platform.isAndroid
+        ? 'http://10.0.2.2:3000'
+        : 'http://localhost:3000';
+  }
+  return 'https://communiq.onrender.com';
+}
 
 /// Singleton Dio client that attaches the Firebase ID token to every request.
 /// Dio is used (rather than package:http) because SessionService needs multipart
@@ -20,7 +32,7 @@ class ApiService {
 
   late final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: _kServerUrl,
+      baseUrl: _resolveServerUrl(),
       // 90 s: Render free-tier Node server can take 50–80 s to cold-start.
       connectTimeout: const Duration(seconds: 90),
       receiveTimeout: const Duration(seconds: 90),

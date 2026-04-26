@@ -17,7 +17,7 @@ class GoalConfirmationScreen extends StatefulWidget {
 
 class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
     with SingleTickerProviderStateMixin {
-  String? _selected;
+  final Set<String> _selected = {};
   late AnimationController _entranceCtrl;
 
   static const _goals = [
@@ -83,8 +83,9 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
   }
 
   void _finish() {
-    final fullData = widget.data.copyWith(primaryGoal: _selected!);
-    debugPrint('[Onboarding] Step 6/6 — Goal: "$_selected"');
+    final goalString = _selected.join(', ');
+    final fullData = widget.data.copyWith(primaryGoal: goalString);
+    debugPrint('[Onboarding] Step 6/6 — Goals: "$goalString"');
     Navigator.push(
       context,
       slideRoute(CommitmentScreen(data: fullData)),
@@ -131,7 +132,7 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  "We'll build your first week around this goal",
+                  "Pick all that apply — we'll build your plan around them",
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 14,
@@ -164,8 +165,14 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
                         ),
                         child: _GoalCard(
                           goal: goal,
-                          isSelected: _selected == goal.label,
-                          onTap: () => setState(() => _selected = goal.label),
+                          isSelected: _selected.contains(goal.label),
+                          onTap: () => setState(() {
+                            if (_selected.contains(goal.label)) {
+                              _selected.remove(goal.label);
+                            } else {
+                              _selected.add(goal.label);
+                            }
+                          }),
                         ),
                       );
                     },
@@ -175,8 +182,12 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
                 const SizedBox(height: 16),
 
                 OnboardingButton(
-                  label: 'Begin My Journey',
-                  enabled: _selected != null,
+                  label: _selected.isEmpty
+                      ? 'Begin My Journey'
+                      : _selected.length == 1
+                          ? 'Begin My Journey'
+                          : 'Begin My Journey (${_selected.length} goals)',
+                  enabled: _selected.isNotEmpty,
                   onPressed: _finish,
                 ),
 

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
+import 'package:communiq/core/services/profile_cache_service.dart';
 
 /// Thrown when the user dismisses the Google sign-in picker without selecting
 /// an account. Callers should catch this and stay on the current screen.
@@ -171,12 +172,16 @@ class AuthService {
     }
   }
 
-  /// Signs the user out from both Firebase and Google.
+  /// Signs the user out from both Firebase and Google, and clears the local
+  /// profile cache so a stale profile is never shown to the next user.
   static Future<void> signOut() async {
     debugPrint('[AuthService] signOut →');
     try {
-      await _googleSignIn.signOut();
-      await _auth.signOut();
+      await Future.wait([
+        _googleSignIn.signOut(),
+        _auth.signOut(),
+        ProfileCacheService.clear(),
+      ]);
       debugPrint('[AuthService] signOut ✓');
     } catch (e) {
       debugPrint('[AuthService] signOut ✗ $e');

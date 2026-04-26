@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
+import 'package:communiq/core/services/profile_cache_service.dart';
 import 'package:communiq/models/scenario_model.dart';
 import 'package:communiq/models/session_result_model.dart'
     show OpeningResult, SessionEndResult, TurnResult;
@@ -16,23 +17,100 @@ class SessionService {
 
   Dio get _dio => ApiService.instance.dio;
 
+  // ─── Profile stream ────────────────────────────────────────────────────────
+
+  /// Emits whenever the profile is refreshed from the network.
+  /// Screens subscribe to this to update UI without re-fetching.
+  final _profileController = StreamController<UserProfile>.broadcast();
+  Stream<UserProfile> get profileUpdates => _profileController.stream;
+
   // ─── User profile ──────────────────────────────────────────────────────────
 
-  /// Fetches the current user's Firestore profile from GET /auth/me.
+  /// Returns the cached profile immediately (zero latency), then fires a
+  /// background network refresh.  If no cache exists, awaits the first fetch.
+  ///
+  /// Pattern: stale-while-revalidate.
+  ///   - Cache hit  → return cached instantly; background refresh updates [profileUpdates].
+  ///   - Cache miss → await network fetch, cache the result, return it.
   Future<UserProfile> fetchProfile() async {
+    final cached = await ProfileCacheService.load();
+
+    if (cached != null) {
+      debugPrint('[SessionService] fetchProfile ← cache hit, refreshing in background');
+      _refreshInBackground();
+      return cached;
+    }
+
+    // No cache yet — must wait for the network.
+    debugPrint('[SessionService] fetchProfile ← no cache, fetching from network');
+    return _fetchFromNetwork();
+  }
+
+  /// Re-fetches the profile from the network, saves to cache, and pushes the
+  /// result to [profileUpdates].  Silently swallows errors so background
+  /// refreshes never crash the app.
+  void _refreshInBackground() {
+    _fetchFromNetwork().then((fresh) {
+      ProfileCacheService.save(fresh);
+      _profileController.add(fresh);
+      debugPrint('[SessionService] background refresh ✓');
+    }).catchError((e) {
+      debugPrint('[SessionService] background refresh failed (silenced): $e');
+    });
+  }
+
+  /// Forces a fresh network fetch (ignores cache).  Used by pull-to-refresh.
+  /// Saves result to cache and pushes to [profileUpdates].
+  Future<UserProfile> refreshProfile() async {
+    final fresh = await _fetchFromNetwork();
+    await ProfileCacheService.save(fresh);
+    _profileController.add(fresh);
+    return fresh;
+  }
+
+  /// Core network fetch: GET /user/profile + optional GET /sessions/history.
+  Future<UserProfile> _fetchFromNetwork() async {
     try {
-      debugPrint('[SessionService] fetchProfile →');
-      final response = await _dio.get(ApiConstants.authMe);
-      final data = (response.data as Map<String, dynamic>?)?['user']
-          as Map<String, dynamic>?;
-      if (data == null) throw Exception('Profile data missing in response');
-      debugPrint('[SessionService] fetchProfile ✓');
-      return UserProfile.fromJson(data);
+      debugPrint('[SessionService] _fetchFromNetwork →');
+
+      final profileResponse = await _dio.get(ApiConstants.userProfile);
+      final profileData =
+          (profileResponse.data as Map<String, dynamic>?)?['user']
+              as Map<String, dynamic>?;
+      if (profileData == null) throw Exception('Profile data missing');
+
+      // Session count is optional — a missing Firestore index or 5xx must not
+      // prevent the profile from rendering.
+      int completed = 0;
+      try {
+        final sessionsResponse = await _dio.get(ApiConstants.sessionsHistory);
+        final sessions =
+            (sessionsResponse.data as Map<String, dynamic>?)?['sessions']
+                as List? ??
+                [];
+        completed = sessions
+            .where((s) => (s as Map<String, dynamic>)['status'] == 'completed')
+            .length;
+      } catch (e) {
+        debugPrint('[SessionService] sessions history failed (non-fatal): $e');
+      }
+
+      final profile =
+          UserProfile.fromJson(profileData).copyWithSessions(completed);
+      debugPrint('[SessionService] _fetchFromNetwork ✓  sessions=$completed');
+      return profile;
     } on DioException catch (e) {
-      debugPrint('[SessionService] fetchProfile ✗ DioException: $e');
+      debugPrint('[SessionService] _fetchFromNetwork ✗ DioException: $e');
+      // Last-resort fallback to /auth/me (lighter endpoint, no skillProgress).
+      try {
+        final r = await _dio.get(ApiConstants.authMe);
+        final d = (r.data as Map<String, dynamic>?)?['user']
+            as Map<String, dynamic>?;
+        if (d != null) return UserProfile.fromJson(d);
+      } catch (_) {}
       throw Exception(_dioMessage(e, 'Could not load profile'));
     } catch (e) {
-      debugPrint('[SessionService] fetchProfile ✗ $e');
+      debugPrint('[SessionService] _fetchFromNetwork ✗ $e');
       rethrow;
     }
   }

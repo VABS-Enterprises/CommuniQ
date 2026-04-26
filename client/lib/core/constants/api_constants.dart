@@ -20,4 +20,11 @@ class ApiConstants {
 
   // CP2: LiveKit token endpoint — used when live voice mode is enabled
   static const String sessionsLivekitToken = '/sessions/livekit-token';
+
+  // User profile (full Firestore doc, includes skillProgress)
+  static const String userProfile = '/user/profile';
+
+  // Leaderboards
+  static const String leaderboard = '/leaderboard';
+  static const String leaderboardWeekly = '/leaderboard/weekly';
 }
