@@ -203,10 +203,34 @@ async function evaluateContestAnswer(sessionId, userAnswer, contestType, motion,
   }
 }
 
+/**
+ * Transcribe an audio buffer using Groq Whisper via the ai-server.
+ * @param {Buffer} audioBuffer   — raw audio bytes
+ * @param {string} filename      — original filename (used to derive MIME type)
+ * @returns {string}             — transcript text
+ */
+async function transcribeAudio(audioBuffer, filename) {
+  const form = new FormData();
+  const mimeType = getAudioMimeType(filename);
+  form.append('file', audioBuffer, { filename, contentType: mimeType });
+
+  try {
+    const response = await axios.post(
+      `${FASTAPI_URL}/transcribe`,
+      form,
+      { headers: _aiHeaders(form.getHeaders()), timeout: 30000 }
+    );
+    return response.data.text;
+  } catch (err) {
+    handleAxiosError(err, 'transcribe');
+  }
+}
+
 module.exports = {
   sendTurnToFastApi,
   sendOpeningToFastApi,
   evaluateSession,
   evaluateLearningAnswer,
   evaluateContestAnswer,
+  transcribeAudio,
 };

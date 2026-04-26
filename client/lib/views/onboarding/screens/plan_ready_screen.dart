@@ -489,7 +489,8 @@ class _RevealView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: AnimatedBuilder(
         animation: revealCtrl,
-        builder: (_, __) => Column(
+        builder: (_, __) => SingleChildScrollView(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 12),
@@ -554,7 +555,7 @@ class _RevealView extends StatelessWidget {
               ),
             ),
 
-            const Spacer(),
+            const SizedBox(height: 16),
 
             // ── 4. CTA ─────────────────────────────────────────────────────
             FadeTransition(
@@ -585,6 +586,7 @@ class _RevealView extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

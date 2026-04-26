@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
+import 'package:communiq/models/demo_evaluation_result.dart';
 import 'package:communiq/models/onboarding_data.dart';
 
 class OnboardingService {
@@ -89,6 +91,52 @@ class OnboardingService {
       debugPrint('[Onboarding]   error: $e');
       debugPrint('[Onboarding] ─────────────────────────────────────────────');
       debugPrint('');
+    }
+  }
+
+  // ── Demo evaluation ───────────────────────────────────────────────────────
+
+  /// Sends the user's typed self-introduction to the backend for AI evaluation.
+  /// Unauthenticated — available before account creation.
+  /// Throws on network/server errors; callers should handle and show UI feedback.
+  static Future<DemoEvaluationResult> evaluateDemoIntro(
+      String introduction) async {
+    debugPrint('[Onboarding] Evaluating demo intro (${introduction.length} chars)');
+    final response = await ApiService.post(
+      ApiConstants.onboardingDemo,
+      body: {'userIntroduction': introduction},
+    );
+    final result = DemoEvaluationResult.fromJson(response);
+    debugPrint('[Onboarding] Demo eval complete — overall=${result.overallScore}');
+    return result;
+  }
+
+  /// Uploads a WAV audio file to the backend and returns the Whisper transcript.
+  /// Throws on network/server errors; callers should handle and show UI feedback.
+  static Future<String> transcribeDemoAudio(String audioPath) async {
+    debugPrint('[Onboarding] Uploading audio for Whisper transcription…');
+    final filename = audioPath.split('/').last;
+    final formData = FormData.fromMap({
+      'audio': await MultipartFile.fromFile(audioPath, filename: filename),
+    });
+    try {
+      final response = await ApiService.instance.dio.post(
+        ApiConstants.onboardingTranscribe,
+        data: formData,
+      );
+      final text = (response.data as Map<String, dynamic>)['text'] as String;
+      debugPrint('[Onboarding] Whisper transcript (${text.length} chars): '
+          '"${text.substring(0, text.length.clamp(0, 80))}…"');
+      return text;
+    } on DioException catch (e) {
+      // Extract the human-readable message from the server's JSON error body.
+      final body = e.response?.data;
+      String? serverMsg;
+      if (body is Map) {
+        serverMsg = (body['detail'] ?? body['error'])?.toString();
+      }
+      debugPrint('[Onboarding] Transcription error (${e.response?.statusCode}): $serverMsg');
+      throw Exception(serverMsg ?? 'Transcription failed. Please try again.');
     }
   }
 

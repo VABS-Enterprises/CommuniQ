@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import evaluate, session, tts
+from app.api.v1 import evaluate, session, transcribe, tts
 
 router = APIRouter()
 
@@ -22,3 +22,4 @@ router = APIRouter()
 router.include_router(evaluate.router)
 router.include_router(session.router)
 router.include_router(tts.router)
+router.include_router(transcribe.router)

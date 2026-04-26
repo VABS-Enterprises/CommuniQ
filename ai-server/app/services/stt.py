@@ -9,6 +9,14 @@ MIN_AUDIO_BYTES = 1024                 # 1 KB  — anything smaller is not real 
 # Longer prompts can cause Whisper to output the prompt text when audio is unclear.
 _WHISPER_PROMPT = "Indian English. Um, uh, like."
 
+# Whisper returns these strings when it receives silence or background noise.
+# Strip punctuation/spaces before comparing so ". " and "." both match.
+_SILENCE_TOKENS = frozenset({
+    "", ".", "..", "...", "....", ".....",
+    "[silence]", "[blank_audio]", "[music]", "[applause]",
+    "(silence)", "(blank audio)",
+})
+
 
 async def transcribe(
     audio_bytes: bytes,
@@ -64,10 +72,11 @@ async def transcribe(
     text = transcription if isinstance(transcription, str) else transcription.text
     text = text.strip()
 
-    if not text:
+    normalised = text.lower().strip("., !?\t\n")
+    if not text or normalised in _SILENCE_TOKENS:
         raise ValueError(
-            "Whisper returned an empty transcript. "
-            "The audio may contain no speech or be too noisy."
+            "No speech detected in the recording. "
+            "Please speak clearly into the microphone and try again."
         )
 
     return text
