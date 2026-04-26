@@ -1,0 +1,1494 @@
+{
+  "app": "CommuniQ",
+  "version": "5.0",
+  "total_levels": 20,
+  "journeys": [
+    {
+      "id": 1,
+      "title": "Core Human Interaction",
+      "level_range": "1-10"
+    },
+    {
+      "id": 1,
+      "title": "Everyday Conversations"
+    },
+    {
+      "id": 2,
+      "title": "Expressing Yourself"
+    },
+    {
+      "id": 3,
+      "title": "Workplace Basics"
+    },
+    {
+      "id": 4,
+      "title": "Active Listening & Empathy"
+    },
+    {
+      "id": 5,
+      "title": "Navigating Disagreements"
+    }
+  ],
+  "levels": [
+    {
+      "id": 1,
+      "journey_id": 1,
+      "journey_title": "Core Human Interaction",
+      "title": "Saying No Without Hurting Someone",
+      "scenario": "Your friend texts you in the evening asking if you can help them finish an assignment tonight. You are tired, have your own work, but still want to maintain the relationship.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Which response handles the situation most effectively?",
+          "correct_option": "I’d really like to help, but I’ve got some pending work tonight. Could we plan for tomorrow instead?",
+          "incorrect_options": [
+            "I’m a bit tied up tonight, maybe later.",
+            "I don’t think I’ll be able to help today.",
+            "Tonight’s a bit difficult for me."
+          ],
+          "correct_feedback": "Balances willingness, clarity, and offers an alternative.",
+          "incorrect_feedback": "These responses are polite but vague or incomplete."
+        },
+        {
+          "step": 2,
+          "question": "Which response may create uncertainty or confusion?",
+          "correct_option": "I might not be available tonight.",
+          "incorrect_options": [
+            "I won’t be able to help today, let’s connect tomorrow.",
+            "I have some work lined up this evening.",
+            "I’d prefer to help you tomorrow if that works."
+          ],
+          "correct_feedback": "Uncertain wording creates ambiguity.",
+          "incorrect_feedback": "These options communicate clearly."
+        },
+        {
+          "step": 3,
+          "question": "Which response is polite but slightly incomplete?",
+          "correct_option": "I don’t think I can manage it today, sorry.",
+          "incorrect_options": [
+            "I’d love to help, maybe tomorrow?",
+            "I have commitments, can we do it later?",
+            "I can help tomorrow instead."
+          ],
+          "correct_feedback": "It lacks a forward path.",
+          "incorrect_feedback": "These provide continuation or clarity."
+        },
+        {
+          "step": 4,
+          "question": "Which response best shows empathy while setting a boundary?",
+          "correct_option": "I get that you need help, and I’d usually jump in, but I have something pending tonight—can we look at it tomorrow?",
+          "incorrect_options": [
+            "I won’t be able to help.",
+            "That sounds urgent but I’m busy.",
+            "I can’t do this today."
+          ],
+          "correct_feedback": "Combines empathy, clarity, and an alternative.",
+          "incorrect_feedback": "These lack emotional balance."
+        },
+        {
+          "step": 5,
+          "question": "Which response could feel slightly dismissive?",
+          "correct_option": "I’m busy.",
+          "incorrect_options": [
+            "Tonight might not work for me.",
+            "I won’t be able to help today.",
+            "I have things to finish tonight."
+          ],
+          "correct_feedback": "Too short and lacks empathy.",
+          "incorrect_feedback": "These are more considerate."
+        }
+      ],
+      "response": {
+        "prompt": "After a long day, your friend asks for help immediately. Write a short response (1–2 sentences) that is polite, clear, and empathetic.",
+        "success_feedback": "Great response! You balanced clarity, empathy, and tone effectively."
+      }
+    },
+    {
+      "id": 2,
+      "journey_id": 1,
+      "journey_title": "Core Human Interaction",
+      "title": "Handling Criticism in a Meeting",
+      "scenario": "You’re presenting an idea in a team meeting when a colleague says: 'I’m not sure this approach is very practical.' You feel your idea does make sense, but you also don’t want to sound defensive or dismissive.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Which response handles the situation most effectively?",
+          "correct_option": "That’s fair—maybe I didn’t explain it clearly. Let me walk through the logic again.",
+          "incorrect_options": [
+            "I see your point, but I think it can still work if we execute it properly.",
+            "I think it is practical, we just need to consider the bigger picture.",
+            "I understand your concern, though I believe this approach addresses the key issue we discussed earlier."
+          ],
+          "correct_feedback": "Reduces tension, takes ownership, and regains control.",
+          "incorrect_feedback": "These shift too quickly into defending."
+        },
+        {
+          "step": 2,
+          "question": "Which response may create subtle defensiveness?",
+          "correct_option": "I see your point, but I think it can still work.",
+          "incorrect_options": [
+            "That’s a valid concern—let me explain how I was thinking about it.",
+            "I get what you mean, maybe I didn’t frame it well.",
+            "That’s helpful—let me clarify a bit."
+          ],
+          "correct_feedback": "'But' cancels acknowledgment.",
+          "incorrect_feedback": "These maintain openness."
+        },
+        {
+          "step": 3,
+          "question": "Which response is polite but slightly weak?",
+          "correct_option": "Maybe I didn’t explain it well.",
+          "incorrect_options": [
+            "Let me walk through my reasoning again.",
+            "I think there might be a misunderstanding.",
+            "Happy to clarify how I approached this."
+          ],
+          "correct_feedback": "Uncertainty reduces confidence.",
+          "incorrect_feedback": "Others maintain ownership."
+        },
+        {
+          "step": 4,
+          "question": "Which response shows best confidence without being dismissive?",
+          "correct_option": "I understand your concern—here’s how I was thinking about it.",
+          "incorrect_options": [
+            "I think it still works.",
+            "That’s not necessarily true.",
+            "Let’s just go with this approach."
+          ],
+          "correct_feedback": "Balanced acknowledgment and confidence.",
+          "incorrect_feedback": "Others are shallow or dismissive."
+        },
+        {
+          "step": 5,
+          "question": "Which response feels slightly dismissive?",
+          "correct_option": "That’s not necessarily true.",
+          "incorrect_options": [
+            "I see what you mean.",
+            "Let’s explore that further.",
+            "That’s an interesting point."
+          ],
+          "correct_feedback": "Directly challenges the person.",
+          "incorrect_feedback": "Others keep discussion open."
+        }
+      ],
+      "response": {
+        "prompt": "Write a 1–2 sentence response that maintains confidence and keeps the discussion constructive.",
+        "success_feedback": "Excellent—strong balance of confidence and collaboration."
+      }
+    },
+    {
+      "id": 3,
+      "journey_id": 1,
+      "journey_title": "Core Human Interaction",
+      "title": "Joining a Group Conversation",
+      "scenario": "You’re at a social event where a group is already in conversation and laughing. You want to join naturally without interrupting awkwardly.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Which response handles the situation most effectively?",
+          "correct_option": "That sounds interesting—mind if I join?",
+          "incorrect_options": [
+            "Hey, what are you guys talking about?",
+            "Hi… can I sit here?",
+            "Wait silently and smile"
+          ],
+          "correct_feedback": "Acknowledges + asks smoothly.",
+          "incorrect_feedback": "Others are abrupt, hesitant, or passive."
+        },
+        {
+          "step": 2,
+          "question": "Which response may feel slightly intrusive?",
+          "correct_option": "Hey, what are you guys talking about?",
+          "incorrect_options": [
+            "Mind if I join?",
+            "That sounds fun—what’s going on?",
+            "Can I join you guys?"
+          ],
+          "correct_feedback": "Jumps in without easing.",
+          "incorrect_feedback": "Others ease into flow."
+        },
+        {
+          "step": 3,
+          "question": "Which response is polite but low-confidence?",
+          "correct_option": "Hi… can I sit here?",
+          "incorrect_options": [
+            "Mind if I join?",
+            "That sounds interesting—can I join?",
+            "Hey, what are you discussing?"
+          ],
+          "correct_feedback": "Hesitation reduces presence.",
+          "incorrect_feedback": "Others are more confident."
+        },
+        {
+          "step": 4,
+          "question": "Which shows best social awareness?",
+          "correct_option": "That sounds interesting—what happened?",
+          "incorrect_options": [
+            "What are you talking about?",
+            "I’ll just join you guys.",
+            "Interrupt mid-sentence"
+          ],
+          "correct_feedback": "Builds naturally.",
+          "incorrect_feedback": "Others disrupt flow."
+        },
+        {
+          "step": 5,
+          "question": "Which feels disengaged?",
+          "correct_option": "Yeah okay.",
+          "incorrect_options": [
+            "That’s interesting.",
+            "Oh nice.",
+            "Sounds fun."
+          ],
+          "correct_feedback": "Low effort response.",
+          "incorrect_feedback": "Others show engagement."
+        }
+      ],
+      "response": {
+        "prompt": "Join the group naturally in 1–2 sentences.",
+        "success_feedback": "Nice—this felt natural and socially aware."
+      }
+    },
+    {
+      "id": 4,
+      "journey_id": 1,
+      "journey_title": "Core Human Interaction",
+      "title": "Handling Interruptions",
+      "scenario": "You’re explaining something important when someone interrupts you mid-sentence.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective?",
+          "correct_option": "Yeah, that’s a good point—let me just finish what I was saying.",
+          "incorrect_options": [
+            "Let me finish.",
+            "Stop interrupting.",
+            "Stay silent"
+          ],
+          "correct_feedback": "Balances acknowledgment and control.",
+          "incorrect_feedback": "Others are aggressive or passive."
+        },
+        {
+          "step": 2,
+          "question": "Slightly aggressive?",
+          "correct_option": "Let me finish.",
+          "incorrect_options": [
+            "Just one second—I’ll finish this thought.",
+            "That’s interesting—let me complete this first.",
+            "I’ll wrap up quickly."
+          ],
+          "correct_feedback": "Too direct.",
+          "incorrect_feedback": "Others soften tone."
+        },
+        {
+          "step": 3,
+          "question": "Too passive?",
+          "correct_option": "Stop talking entirely.",
+          "incorrect_options": [
+            "Let me finish this.",
+            "Just one sec.",
+            "I’ll complete this."
+          ],
+          "correct_feedback": "Loses control.",
+          "incorrect_feedback": "Others maintain control."
+        },
+        {
+          "step": 4,
+          "question": "Best EI?",
+          "correct_option": "That’s interesting—just to complete what I was saying…",
+          "incorrect_options": [
+            "Wait.",
+            "No, let me talk.",
+            "That’s not what I meant."
+          ],
+          "correct_feedback": "Acknowledges and continues.",
+          "incorrect_feedback": "Others lack balance."
+        },
+        {
+          "step": 5,
+          "question": "Dismissive?",
+          "correct_option": "Whatever.",
+          "incorrect_options": [
+            "Let me finish.",
+            "Hold on.",
+            "One sec."
+          ],
+          "correct_feedback": "Signals disengagement.",
+          "incorrect_feedback": "Others remain respectful."
+        }
+      ],
+      "response": {
+        "prompt": "Respond to interruption and continue your point in 1–2 sentences.",
+        "success_feedback": "Strong composure and assertiveness."
+      }
+    },
+    {
+      "id": 5,
+      "journey_id": 1,
+      "journey_title": "Core Human Interaction",
+      "title": "Ending a Conversation Smoothly",
+      "scenario": "You’ve been having a good conversation, but now you need to leave.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective?",
+          "correct_option": "This was great talking—I should get going now.",
+          "incorrect_options": [
+            "Okay bye.",
+            "Walk away silently",
+            "I have to leave."
+          ],
+          "correct_feedback": "Warm + clear.",
+          "incorrect_feedback": "Others abrupt."
+        },
+        {
+          "step": 2,
+          "question": "Slightly abrupt?",
+          "correct_option": "Okay bye.",
+          "incorrect_options": [
+            "Nice talking to you—I’ll head out.",
+            "I should get going.",
+            "Let’s catch up again."
+          ],
+          "correct_feedback": "Too abrupt.",
+          "incorrect_feedback": "Others smoother."
+        },
+        {
+          "step": 3,
+          "question": "Polite but incomplete?",
+          "correct_option": "I have to leave.",
+          "incorrect_options": [
+            "This was great—I should go.",
+            "Enjoyed this.",
+            "Let’s connect again."
+          ],
+          "correct_feedback": "No warmth.",
+          "incorrect_feedback": "Others add closure."
+        },
+        {
+          "step": 4,
+          "question": "Best EI?",
+          "correct_option": "I really enjoyed this—let’s catch up again.",
+          "incorrect_options": [
+            "I’m leaving.",
+            "Okay I’m done.",
+            "Bye."
+          ],
+          "correct_feedback": "Warm + future connection.",
+          "incorrect_feedback": "Others flat."
+        },
+        {
+          "step": 5,
+          "question": "Dismissive?",
+          "correct_option": "I gotta go.",
+          "incorrect_options": [
+            "Nice talking to you.",
+            "Catch up later.",
+            "Let’s connect."
+          ],
+          "correct_feedback": "Cold tone.",
+          "incorrect_feedback": "Others respectful."
+        }
+      ],
+      "response": {
+        "prompt": "Exit naturally in 1–2 sentences.",
+        "success_feedback": "Smooth and respectful closing."
+      }
+    },
+    {
+      "id": 6,
+      "journey_id": 1,
+      "journey_title": "Core Human Interaction",
+      "title": "Giving Honest Feedback",
+      "scenario": "A friend shares their work proudly, but it needs improvement.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective?",
+          "correct_option": "I like the idea—maybe we can refine a few parts.",
+          "incorrect_options": [
+            "It’s okay but needs work.",
+            "This isn’t strong.",
+            "Looks good."
+          ],
+          "correct_feedback": "Balanced honesty.",
+          "incorrect_feedback": "Others harsh or avoidant."
+        },
+        {
+          "step": 2,
+          "question": "Slightly harsh?",
+          "correct_option": "This isn’t very strong.",
+          "incorrect_options": [
+            "Could improve a bit.",
+            "We can refine areas.",
+            "Nice start—tweak it."
+          ],
+          "correct_feedback": "Too blunt.",
+          "incorrect_feedback": "Others softer."
+        },
+        {
+          "step": 3,
+          "question": "Avoids responsibility?",
+          "correct_option": "Looks good.",
+          "incorrect_options": [
+            "Nice start—refine it.",
+            "Improve structure.",
+            "Has potential."
+          ],
+          "correct_feedback": "Avoids truth.",
+          "incorrect_feedback": "Others constructive."
+        },
+        {
+          "step": 4,
+          "question": "Best EI?",
+          "correct_option": "I like the direction—maybe improve flow a bit.",
+          "incorrect_options": [
+            "This needs fixing.",
+            "Not great.",
+            "Redo this."
+          ],
+          "correct_feedback": "Encouraging + helpful.",
+          "incorrect_feedback": "Others harsh."
+        },
+        {
+          "step": 5,
+          "question": "Dismissive?",
+          "correct_option": "Whatever.",
+          "incorrect_options": [
+            "Nice start.",
+            "Good effort.",
+            "Let’s improve."
+          ],
+          "correct_feedback": "Disengaged.",
+          "incorrect_feedback": "Others caring."
+        }
+      ],
+      "response": {
+        "prompt": "Give honest feedback in 1–2 sentences.",
+        "success_feedback": "Balanced and constructive feedback."
+      }
+    },
+    {
+      "id": 7,
+      "journey_id": 1,
+      "journey_title": "Core Human Interaction",
+      "title": "Handling Disagreement",
+      "scenario": "Someone strongly disagrees with your opinion.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective?",
+          "correct_option": "I see your point, though I’d look at it slightly differently.",
+          "incorrect_options": [
+            "You’re wrong.",
+            "No.",
+            "That’s incorrect."
+          ],
+          "correct_feedback": "Respectful disagreement.",
+          "incorrect_feedback": "Others confrontational."
+        },
+        {
+          "step": 2,
+          "question": "Confrontational?",
+          "correct_option": "You’re wrong.",
+          "incorrect_options": [
+            "I see your view.",
+            "Interesting point.",
+            "Let’s explore both."
+          ],
+          "correct_feedback": "Direct attack.",
+          "incorrect_feedback": "Others balanced."
+        },
+        {
+          "step": 3,
+          "question": "Too passive?",
+          "correct_option": "Maybe you’re right.",
+          "incorrect_options": [
+            "I see it differently.",
+            "Here’s my view.",
+            "Compare both."
+          ],
+          "correct_feedback": "No stance.",
+          "incorrect_feedback": "Others contribute."
+        },
+        {
+          "step": 4,
+          "question": "Best EI?",
+          "correct_option": "That’s a fair point—here’s how I see it.",
+          "incorrect_options": [
+            "No.",
+            "Wrong.",
+            "Not true."
+          ],
+          "correct_feedback": "Balanced.",
+          "incorrect_feedback": "Others lack empathy."
+        },
+        {
+          "step": 5,
+          "question": "Dismissive?",
+          "correct_option": "Whatever.",
+          "incorrect_options": [
+            "Interesting point.",
+            "Let’s explore.",
+            "I think differently."
+          ],
+          "correct_feedback": "Shuts down.",
+          "incorrect_feedback": "Others engage."
+        }
+      ],
+      "response": {
+        "prompt": "Respond confidently but respectfully in 1–2 sentences.",
+        "success_feedback": "Strong respectful disagreement."
+      }
+    },
+    {
+      "id": 8,
+      "journey_id": 1,
+      "journey_title": "Core Human Interaction",
+      "title": "Following Up",
+      "scenario": "You sent a message 2 days ago but got no reply.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective?",
+          "correct_option": "Hey, just checking in—did you get a chance to look at this?",
+          "incorrect_options": [
+            "Why no reply?",
+            "Hello??",
+            "Respond."
+          ],
+          "correct_feedback": "Polite nudge.",
+          "incorrect_feedback": "Others aggressive."
+        },
+        {
+          "step": 2,
+          "question": "Aggressive?",
+          "correct_option": "Why didn’t you reply?",
+          "incorrect_options": [
+            "Just checking.",
+            "Any update?",
+            "Following up."
+          ],
+          "correct_feedback": "Blaming tone.",
+          "incorrect_feedback": "Others polite."
+        },
+        {
+          "step": 3,
+          "question": "Too passive?",
+          "correct_option": "No follow-up at all.",
+          "incorrect_options": [
+            "Checking in.",
+            "Any update?",
+            "Following up."
+          ],
+          "correct_feedback": "No action.",
+          "incorrect_feedback": "Others effective."
+        },
+        {
+          "step": 4,
+          "question": "Best EI?",
+          "correct_option": "I know you might be busy—just following up.",
+          "incorrect_options": [
+            "Reply fast.",
+            "Still waiting.",
+            "Update?"
+          ],
+          "correct_feedback": "Empathy.",
+          "incorrect_feedback": "Others pushy."
+        },
+        {
+          "step": 5,
+          "question": "Impatient?",
+          "correct_option": "Hello??",
+          "incorrect_options": [
+            "Checking in.",
+            "Following up.",
+            "Any update?"
+          ],
+          "correct_feedback": "Impatient tone.",
+          "incorrect_feedback": "Others respectful."
+        }
+      ],
+      "response": {
+        "prompt": "Follow up politely in 1–2 sentences.",
+        "success_feedback": "Good balance of clarity and patience."
+      }
+    },
+    {
+      "id": 9,
+      "journey_id": 1,
+      "journey_title": "Core Human Interaction",
+      "title": "Responding to Late Reply",
+      "scenario": "Someone replies late and acts casual.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective?",
+          "correct_option": "No worries—thanks for getting back!",
+          "incorrect_options": [
+            "Finally.",
+            "Took long.",
+            "Okay."
+          ],
+          "correct_feedback": "Graceful response.",
+          "incorrect_feedback": "Others confrontational."
+        },
+        {
+          "step": 2,
+          "question": "Passive-aggressive?",
+          "correct_option": "Took you long enough.",
+          "incorrect_options": [
+            "No worries.",
+            "Thanks.",
+            "Got it."
+          ],
+          "correct_feedback": "Hidden frustration.",
+          "incorrect_feedback": "Others neutral."
+        },
+        {
+          "step": 3,
+          "question": "Low effort?",
+          "correct_option": "Okay.",
+          "incorrect_options": [
+            "Thanks.",
+            "Got it.",
+            "No worries."
+          ],
+          "correct_feedback": "Too flat.",
+          "incorrect_feedback": "Others engaging."
+        },
+        {
+          "step": 4,
+          "question": "Best EI?",
+          "correct_option": "Appreciate the reply—here’s what I needed.",
+          "incorrect_options": [
+            "Why late?",
+            "Explain.",
+            "You ignored me."
+          ],
+          "correct_feedback": "Moves forward.",
+          "incorrect_feedback": "Others emotional."
+        },
+        {
+          "step": 5,
+          "question": "Dismissive?",
+          "correct_option": "K.",
+          "incorrect_options": [
+            "Thanks.",
+            "Got it.",
+            "Appreciate it."
+          ],
+          "correct_feedback": "Cold.",
+          "incorrect_feedback": "Others respectful."
+        }
+      ],
+      "response": {
+        "prompt": "Respond maturely in 1–2 sentences.",
+        "success_feedback": "Emotionally intelligent response."
+      }
+    },
+    {
+      "id": 10,
+      "journey_id": 1,
+      "journey_title": "Core Human Interaction",
+      "title": "Asking for Clarification",
+      "scenario": "You didn’t fully understand something explained to you.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective?",
+          "correct_option": "Just to make sure I understood correctly…",
+          "incorrect_options": [
+            "What?",
+            "That doesn’t make sense.",
+            "Okay."
+          ],
+          "correct_feedback": "Polite clarification.",
+          "incorrect_feedback": "Others rude or passive."
+        },
+        {
+          "step": 2,
+          "question": "Rude?",
+          "correct_option": "What?",
+          "incorrect_options": [
+            "Explain again?",
+            "Didn’t catch that.",
+            "Clarify that part?"
+          ],
+          "correct_feedback": "Abrupt.",
+          "incorrect_feedback": "Others polite."
+        },
+        {
+          "step": 3,
+          "question": "Too passive?",
+          "correct_option": "Okay.",
+          "incorrect_options": [
+            "Clarify?",
+            "Explain again?",
+            "Help me understand."
+          ],
+          "correct_feedback": "No learning intent.",
+          "incorrect_feedback": "Others better."
+        },
+        {
+          "step": 4,
+          "question": "Best EI?",
+          "correct_option": "Could you clarify that part for me?",
+          "incorrect_options": [
+            "Makes no sense.",
+            "You’re confusing.",
+            "Explain properly."
+          ],
+          "correct_feedback": "Respectful learning.",
+          "incorrect_feedback": "Others harsh."
+        },
+        {
+          "step": 5,
+          "question": "Dismissive?",
+          "correct_option": "That makes no sense.",
+          "incorrect_options": [
+            "Didn’t get that.",
+            "Explain again?",
+            "Help me understand."
+          ],
+          "correct_feedback": "Blaming tone.",
+          "incorrect_feedback": "Others respectful."
+        }
+      ],
+      "response": {
+        "prompt": "Ask for clarification in 1–2 sentences.",
+        "success_feedback": "Clear and respectful curiosity."
+      }
+    },
+    {
+      "id": 11,
+      "journey_id": 1,
+      "journey_title": "Everyday Conversations",
+      "title": "Reviving a Dying Conversation",
+      "scenario": "You’re talking to someone new. The conversation slows down slightly, and there’s a small pause.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Which response handles this best?",
+          "correct_option": "That’s interesting—how did you get into that?",
+          "incorrect_options": [
+            "So… what else do you usually do?",
+            "Nice.",
+            "Yeah…"
+          ],
+          "correct_feedback": "Builds from context naturally and adds curiosity.",
+          "incorrect_feedback": "Others either restart awkwardly or reduce engagement."
+        },
+        {
+          "step": 2,
+          "question": "Which feels slightly forced?",
+          "correct_option": "So… what else do you usually do?",
+          "incorrect_options": [
+            "That’s interesting—how did that start?",
+            "What got you interested in that?",
+            "That sounds fun—how’s it been for you?"
+          ],
+          "correct_feedback": "Feels like restarting instead of continuing.",
+          "incorrect_feedback": "Others extend flow naturally."
+        },
+        {
+          "step": 3,
+          "question": "Which is polite but low engagement?",
+          "correct_option": "Nice.",
+          "incorrect_options": [
+            "That’s interesting.",
+            "Tell me more about that.",
+            "How did you get into it?"
+          ],
+          "correct_feedback": "Acknowledges but doesn’t continue.",
+          "incorrect_feedback": "Others build momentum."
+        },
+        {
+          "step": 4,
+          "question": "Which shows best conversational intelligence?",
+          "correct_option": "That sounds interesting—what’s been your experience with it?",
+          "incorrect_options": [
+            "Okay.",
+            "Cool.",
+            "Nice."
+          ],
+          "correct_feedback": "Adds depth and invites sharing.",
+          "incorrect_feedback": "Others are surface-level."
+        },
+        {
+          "step": 5,
+          "question": "Which feels subtly disengaged?",
+          "correct_option": "Yeah…",
+          "incorrect_options": [
+            "That’s interesting.",
+            "Tell me more.",
+            "How did that start?"
+          ],
+          "correct_feedback": "Signals low energy.",
+          "incorrect_feedback": "Others show interest."
+        }
+      ],
+      "response": {
+        "prompt": "Continue the conversation naturally in 1–2 sentences.",
+        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+      }
+    },
+    {
+      "id": 12,
+      "journey_id": 2,
+      "journey_title": "Expressing Yourself",
+      "title": "Expressing an Opinion Thoughtfully",
+      "scenario": "In a group discussion, you want to share your view without sounding rigid.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective response?",
+          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "incorrect_options": [
+            "A response that is slightly defensive in tone",
+            "A response that is polite but vague",
+            "A response that is neutral but lacks direction"
+          ],
+          "correct_feedback": "Balances clarity, tone, and intent.",
+          "incorrect_feedback": "Others miss subtle communication elements."
+        },
+        {
+          "step": 2,
+          "question": "Which creates subtle friction?",
+          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "incorrect_options": [
+            "A response that keeps tone neutral",
+            "A response that acknowledges before replying",
+            "A response that invites discussion"
+          ],
+          "correct_feedback": "Tone introduces friction.",
+          "incorrect_feedback": "Others maintain flow."
+        },
+        {
+          "step": 3,
+          "question": "Polite but weak?",
+          "correct_option": "A response that avoids taking a clear stance.",
+          "incorrect_options": [
+            "A response that adds direction",
+            "A response that clarifies intent",
+            "A response that provides next steps"
+          ],
+          "correct_feedback": "Avoids ownership.",
+          "incorrect_feedback": "Others stronger."
+        },
+        {
+          "step": 4,
+          "question": "Best emotional intelligence?",
+          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "incorrect_options": [
+            "A factual response",
+            "A neutral response",
+            "A slightly reactive response"
+          ],
+          "correct_feedback": "Empathy + clarity.",
+          "incorrect_feedback": "Others lack depth."
+        },
+        {
+          "step": 5,
+          "question": "Subtly dismissive?",
+          "correct_option": "A short minimal reply that closes conversation.",
+          "incorrect_options": [
+            "A warm response",
+            "A structured response",
+            "A thoughtful reply"
+          ],
+          "correct_feedback": "Feels cold.",
+          "incorrect_feedback": "Others maintain connection."
+        }
+      ],
+      "response": {
+        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
+        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+      }
+    },
+    {
+      "id": 13,
+      "journey_id": 3,
+      "journey_title": "Workplace Basics",
+      "title": "Requesting a Deadline Extension",
+      "scenario": "You need more time but want to sound responsible.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective response?",
+          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "incorrect_options": [
+            "A response that is slightly defensive in tone",
+            "A response that is polite but vague",
+            "A response that is neutral but lacks direction"
+          ],
+          "correct_feedback": "Balances clarity, tone, and intent.",
+          "incorrect_feedback": "Others miss subtle communication elements."
+        },
+        {
+          "step": 2,
+          "question": "Which creates subtle friction?",
+          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "incorrect_options": [
+            "A response that keeps tone neutral",
+            "A response that acknowledges before replying",
+            "A response that invites discussion"
+          ],
+          "correct_feedback": "Tone introduces friction.",
+          "incorrect_feedback": "Others maintain flow."
+        },
+        {
+          "step": 3,
+          "question": "Polite but weak?",
+          "correct_option": "A response that avoids taking a clear stance.",
+          "incorrect_options": [
+            "A response that adds direction",
+            "A response that clarifies intent",
+            "A response that provides next steps"
+          ],
+          "correct_feedback": "Avoids ownership.",
+          "incorrect_feedback": "Others stronger."
+        },
+        {
+          "step": 4,
+          "question": "Best emotional intelligence?",
+          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "incorrect_options": [
+            "A factual response",
+            "A neutral response",
+            "A slightly reactive response"
+          ],
+          "correct_feedback": "Empathy + clarity.",
+          "incorrect_feedback": "Others lack depth."
+        },
+        {
+          "step": 5,
+          "question": "Subtly dismissive?",
+          "correct_option": "A short minimal reply that closes conversation.",
+          "incorrect_options": [
+            "A warm response",
+            "A structured response",
+            "A thoughtful reply"
+          ],
+          "correct_feedback": "Feels cold.",
+          "incorrect_feedback": "Others maintain connection."
+        }
+      ],
+      "response": {
+        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
+        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+      }
+    },
+    {
+      "id": 14,
+      "journey_id": 4,
+      "journey_title": "Active Listening & Empathy",
+      "title": "Responding to Emotional Distress",
+      "scenario": "A friend seems emotionally overwhelmed.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective response?",
+          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "incorrect_options": [
+            "A response that is slightly defensive in tone",
+            "A response that is polite but vague",
+            "A response that is neutral but lacks direction"
+          ],
+          "correct_feedback": "Balances clarity, tone, and intent.",
+          "incorrect_feedback": "Others miss subtle communication elements."
+        },
+        {
+          "step": 2,
+          "question": "Which creates subtle friction?",
+          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "incorrect_options": [
+            "A response that keeps tone neutral",
+            "A response that acknowledges before replying",
+            "A response that invites discussion"
+          ],
+          "correct_feedback": "Tone introduces friction.",
+          "incorrect_feedback": "Others maintain flow."
+        },
+        {
+          "step": 3,
+          "question": "Polite but weak?",
+          "correct_option": "A response that avoids taking a clear stance.",
+          "incorrect_options": [
+            "A response that adds direction",
+            "A response that clarifies intent",
+            "A response that provides next steps"
+          ],
+          "correct_feedback": "Avoids ownership.",
+          "incorrect_feedback": "Others stronger."
+        },
+        {
+          "step": 4,
+          "question": "Best emotional intelligence?",
+          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "incorrect_options": [
+            "A factual response",
+            "A neutral response",
+            "A slightly reactive response"
+          ],
+          "correct_feedback": "Empathy + clarity.",
+          "incorrect_feedback": "Others lack depth."
+        },
+        {
+          "step": 5,
+          "question": "Subtly dismissive?",
+          "correct_option": "A short minimal reply that closes conversation.",
+          "incorrect_options": [
+            "A warm response",
+            "A structured response",
+            "A thoughtful reply"
+          ],
+          "correct_feedback": "Feels cold.",
+          "incorrect_feedback": "Others maintain connection."
+        }
+      ],
+      "response": {
+        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
+        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+      }
+    },
+    {
+      "id": 15,
+      "journey_id": 3,
+      "journey_title": "Workplace Basics",
+      "title": "Admitting a Mistake",
+      "scenario": "You made a mistake affecting others.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective response?",
+          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "incorrect_options": [
+            "A response that is slightly defensive in tone",
+            "A response that is polite but vague",
+            "A response that is neutral but lacks direction"
+          ],
+          "correct_feedback": "Balances clarity, tone, and intent.",
+          "incorrect_feedback": "Others miss subtle communication elements."
+        },
+        {
+          "step": 2,
+          "question": "Which creates subtle friction?",
+          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "incorrect_options": [
+            "A response that keeps tone neutral",
+            "A response that acknowledges before replying",
+            "A response that invites discussion"
+          ],
+          "correct_feedback": "Tone introduces friction.",
+          "incorrect_feedback": "Others maintain flow."
+        },
+        {
+          "step": 3,
+          "question": "Polite but weak?",
+          "correct_option": "A response that avoids taking a clear stance.",
+          "incorrect_options": [
+            "A response that adds direction",
+            "A response that clarifies intent",
+            "A response that provides next steps"
+          ],
+          "correct_feedback": "Avoids ownership.",
+          "incorrect_feedback": "Others stronger."
+        },
+        {
+          "step": 4,
+          "question": "Best emotional intelligence?",
+          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "incorrect_options": [
+            "A factual response",
+            "A neutral response",
+            "A slightly reactive response"
+          ],
+          "correct_feedback": "Empathy + clarity.",
+          "incorrect_feedback": "Others lack depth."
+        },
+        {
+          "step": 5,
+          "question": "Subtly dismissive?",
+          "correct_option": "A short minimal reply that closes conversation.",
+          "incorrect_options": [
+            "A warm response",
+            "A structured response",
+            "A thoughtful reply"
+          ],
+          "correct_feedback": "Feels cold.",
+          "incorrect_feedback": "Others maintain connection."
+        }
+      ],
+      "response": {
+        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
+        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+      }
+    },
+    {
+      "id": 16,
+      "journey_id": 1,
+      "journey_title": "Everyday Conversations",
+      "title": "Responding to Good News",
+      "scenario": "A friend shares exciting news.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective response?",
+          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "incorrect_options": [
+            "A response that is slightly defensive in tone",
+            "A response that is polite but vague",
+            "A response that is neutral but lacks direction"
+          ],
+          "correct_feedback": "Balances clarity, tone, and intent.",
+          "incorrect_feedback": "Others miss subtle communication elements."
+        },
+        {
+          "step": 2,
+          "question": "Which creates subtle friction?",
+          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "incorrect_options": [
+            "A response that keeps tone neutral",
+            "A response that acknowledges before replying",
+            "A response that invites discussion"
+          ],
+          "correct_feedback": "Tone introduces friction.",
+          "incorrect_feedback": "Others maintain flow."
+        },
+        {
+          "step": 3,
+          "question": "Polite but weak?",
+          "correct_option": "A response that avoids taking a clear stance.",
+          "incorrect_options": [
+            "A response that adds direction",
+            "A response that clarifies intent",
+            "A response that provides next steps"
+          ],
+          "correct_feedback": "Avoids ownership.",
+          "incorrect_feedback": "Others stronger."
+        },
+        {
+          "step": 4,
+          "question": "Best emotional intelligence?",
+          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "incorrect_options": [
+            "A factual response",
+            "A neutral response",
+            "A slightly reactive response"
+          ],
+          "correct_feedback": "Empathy + clarity.",
+          "incorrect_feedback": "Others lack depth."
+        },
+        {
+          "step": 5,
+          "question": "Subtly dismissive?",
+          "correct_option": "A short minimal reply that closes conversation.",
+          "incorrect_options": [
+            "A warm response",
+            "A structured response",
+            "A thoughtful reply"
+          ],
+          "correct_feedback": "Feels cold.",
+          "incorrect_feedback": "Others maintain connection."
+        }
+      ],
+      "response": {
+        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
+        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+      }
+    },
+    {
+      "id": 17,
+      "journey_id": 2,
+      "journey_title": "Expressing Yourself",
+      "title": "Explaining an Idea Clearly",
+      "scenario": "You need to explain something clearly.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective response?",
+          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "incorrect_options": [
+            "A response that is slightly defensive in tone",
+            "A response that is polite but vague",
+            "A response that is neutral but lacks direction"
+          ],
+          "correct_feedback": "Balances clarity, tone, and intent.",
+          "incorrect_feedback": "Others miss subtle communication elements."
+        },
+        {
+          "step": 2,
+          "question": "Which creates subtle friction?",
+          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "incorrect_options": [
+            "A response that keeps tone neutral",
+            "A response that acknowledges before replying",
+            "A response that invites discussion"
+          ],
+          "correct_feedback": "Tone introduces friction.",
+          "incorrect_feedback": "Others maintain flow."
+        },
+        {
+          "step": 3,
+          "question": "Polite but weak?",
+          "correct_option": "A response that avoids taking a clear stance.",
+          "incorrect_options": [
+            "A response that adds direction",
+            "A response that clarifies intent",
+            "A response that provides next steps"
+          ],
+          "correct_feedback": "Avoids ownership.",
+          "incorrect_feedback": "Others stronger."
+        },
+        {
+          "step": 4,
+          "question": "Best emotional intelligence?",
+          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "incorrect_options": [
+            "A factual response",
+            "A neutral response",
+            "A slightly reactive response"
+          ],
+          "correct_feedback": "Empathy + clarity.",
+          "incorrect_feedback": "Others lack depth."
+        },
+        {
+          "step": 5,
+          "question": "Subtly dismissive?",
+          "correct_option": "A short minimal reply that closes conversation.",
+          "incorrect_options": [
+            "A warm response",
+            "A structured response",
+            "A thoughtful reply"
+          ],
+          "correct_feedback": "Feels cold.",
+          "incorrect_feedback": "Others maintain connection."
+        }
+      ],
+      "response": {
+        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
+        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+      }
+    },
+    {
+      "id": 18,
+      "journey_id": 4,
+      "journey_title": "Active Listening & Empathy",
+      "title": "Comforting Someone",
+      "scenario": "Someone feels disappointed.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective response?",
+          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "incorrect_options": [
+            "A response that is slightly defensive in tone",
+            "A response that is polite but vague",
+            "A response that is neutral but lacks direction"
+          ],
+          "correct_feedback": "Balances clarity, tone, and intent.",
+          "incorrect_feedback": "Others miss subtle communication elements."
+        },
+        {
+          "step": 2,
+          "question": "Which creates subtle friction?",
+          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "incorrect_options": [
+            "A response that keeps tone neutral",
+            "A response that acknowledges before replying",
+            "A response that invites discussion"
+          ],
+          "correct_feedback": "Tone introduces friction.",
+          "incorrect_feedback": "Others maintain flow."
+        },
+        {
+          "step": 3,
+          "question": "Polite but weak?",
+          "correct_option": "A response that avoids taking a clear stance.",
+          "incorrect_options": [
+            "A response that adds direction",
+            "A response that clarifies intent",
+            "A response that provides next steps"
+          ],
+          "correct_feedback": "Avoids ownership.",
+          "incorrect_feedback": "Others stronger."
+        },
+        {
+          "step": 4,
+          "question": "Best emotional intelligence?",
+          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "incorrect_options": [
+            "A factual response",
+            "A neutral response",
+            "A slightly reactive response"
+          ],
+          "correct_feedback": "Empathy + clarity.",
+          "incorrect_feedback": "Others lack depth."
+        },
+        {
+          "step": 5,
+          "question": "Subtly dismissive?",
+          "correct_option": "A short minimal reply that closes conversation.",
+          "incorrect_options": [
+            "A warm response",
+            "A structured response",
+            "A thoughtful reply"
+          ],
+          "correct_feedback": "Feels cold.",
+          "incorrect_feedback": "Others maintain connection."
+        }
+      ],
+      "response": {
+        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
+        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+      }
+    },
+    {
+      "id": 19,
+      "journey_id": 5,
+      "journey_title": "Navigating Disagreements",
+      "title": "Handling Passive Aggression",
+      "scenario": "Someone makes a subtle passive-aggressive remark.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective response?",
+          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "incorrect_options": [
+            "A response that is slightly defensive in tone",
+            "A response that is polite but vague",
+            "A response that is neutral but lacks direction"
+          ],
+          "correct_feedback": "Balances clarity, tone, and intent.",
+          "incorrect_feedback": "Others miss subtle communication elements."
+        },
+        {
+          "step": 2,
+          "question": "Which creates subtle friction?",
+          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "incorrect_options": [
+            "A response that keeps tone neutral",
+            "A response that acknowledges before replying",
+            "A response that invites discussion"
+          ],
+          "correct_feedback": "Tone introduces friction.",
+          "incorrect_feedback": "Others maintain flow."
+        },
+        {
+          "step": 3,
+          "question": "Polite but weak?",
+          "correct_option": "A response that avoids taking a clear stance.",
+          "incorrect_options": [
+            "A response that adds direction",
+            "A response that clarifies intent",
+            "A response that provides next steps"
+          ],
+          "correct_feedback": "Avoids ownership.",
+          "incorrect_feedback": "Others stronger."
+        },
+        {
+          "step": 4,
+          "question": "Best emotional intelligence?",
+          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "incorrect_options": [
+            "A factual response",
+            "A neutral response",
+            "A slightly reactive response"
+          ],
+          "correct_feedback": "Empathy + clarity.",
+          "incorrect_feedback": "Others lack depth."
+        },
+        {
+          "step": 5,
+          "question": "Subtly dismissive?",
+          "correct_option": "A short minimal reply that closes conversation.",
+          "incorrect_options": [
+            "A warm response",
+            "A structured response",
+            "A thoughtful reply"
+          ],
+          "correct_feedback": "Feels cold.",
+          "incorrect_feedback": "Others maintain connection."
+        }
+      ],
+      "response": {
+        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
+        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+      }
+    },
+    {
+      "id": 20,
+      "journey_id": 5,
+      "journey_title": "Navigating Disagreements",
+      "title": "De-escalating Conflict",
+      "scenario": "A conversation is becoming heated.",
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Most effective response?",
+          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "incorrect_options": [
+            "A response that is slightly defensive in tone",
+            "A response that is polite but vague",
+            "A response that is neutral but lacks direction"
+          ],
+          "correct_feedback": "Balances clarity, tone, and intent.",
+          "incorrect_feedback": "Others miss subtle communication elements."
+        },
+        {
+          "step": 2,
+          "question": "Which creates subtle friction?",
+          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "incorrect_options": [
+            "A response that keeps tone neutral",
+            "A response that acknowledges before replying",
+            "A response that invites discussion"
+          ],
+          "correct_feedback": "Tone introduces friction.",
+          "incorrect_feedback": "Others maintain flow."
+        },
+        {
+          "step": 3,
+          "question": "Polite but weak?",
+          "correct_option": "A response that avoids taking a clear stance.",
+          "incorrect_options": [
+            "A response that adds direction",
+            "A response that clarifies intent",
+            "A response that provides next steps"
+          ],
+          "correct_feedback": "Avoids ownership.",
+          "incorrect_feedback": "Others stronger."
+        },
+        {
+          "step": 4,
+          "question": "Best emotional intelligence?",
+          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "incorrect_options": [
+            "A factual response",
+            "A neutral response",
+            "A slightly reactive response"
+          ],
+          "correct_feedback": "Empathy + clarity.",
+          "incorrect_feedback": "Others lack depth."
+        },
+        {
+          "step": 5,
+          "question": "Subtly dismissive?",
+          "correct_option": "A short minimal reply that closes conversation.",
+          "incorrect_options": [
+            "A warm response",
+            "A structured response",
+            "A thoughtful reply"
+          ],
+          "correct_feedback": "Feels cold.",
+          "incorrect_feedback": "Others maintain connection."
+        }
+      ],
+      "response": {
+        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
+        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+      }
+    }
+  ]
+}

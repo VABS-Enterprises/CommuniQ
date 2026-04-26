@@ -55,6 +55,7 @@ function createUserDoc(uid, { email, name }) {
     lastActiveDate: null,
     badges: [],
     isPremium: false,
+    learning_progress: [],
   };
 }
 
@@ -77,6 +78,7 @@ function createGoogleUserDoc(uid, { email, name, photoURL }) {
     lastActiveDate: null,
     badges: [],
     isPremium: false,
+    learning_progress: [],
   };
 }
 

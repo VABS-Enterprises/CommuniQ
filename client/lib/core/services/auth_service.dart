@@ -16,9 +16,16 @@ class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  static Stream<User?> get authStateChanges => _auth.authStateChanges();
+  static Stream<User?> get authStateChanges {
+    debugPrint('[AuthService] authStateChanges stream requested');
+    return _auth.authStateChanges();
+  }
 
-  static User? get currentUser => _auth.currentUser;
+  static User? get currentUser {
+    final user = _auth.currentUser;
+    debugPrint('[AuthService] currentUser request → ${user?.uid ?? "null"}');
+    return user;
+  }
 
   /// Signs the user in with email and password.
   static Future<void> signInWithEmailPassword(

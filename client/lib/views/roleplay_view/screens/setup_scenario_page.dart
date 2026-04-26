@@ -13,26 +13,11 @@ import 'package:communiq/views/roleplay_view/screens/roleplay_conversation_scree
 
 const List<Map<String, dynamic>> _kPresets = [
   {
-    'key': 'assertiveness',
-    'title': 'Assertiveness',
-    'subtitle': 'Say no politely to extra work',
-    'icon': Icons.bolt,
-    'systemPrompt': 'You are a persistent but professional manager who wants an employee to take on '
-        'additional work beyond their current scope. You genuinely believe the project is '
-        'urgent and important. Be professional but firm — you have real business reasons. '
-        'The employee needs to practice assertively declining or renegotiating the request '
-        'without damaging the relationship.',
-    'defaultPersona': 'Strict Manager',
-    'defaultTone': 'Professional',
-    'defaultLevel': 'Medium',
-    'defaultRole': 'You as Employee',
-    'defaultTraits': 'Assertive',
-  },
-  {
     'key': 'job_interview',
     'title': 'Job Interview',
     'subtitle': 'Answer tough HR questions',
     'icon': Icons.work_outline,
+    'image': 'assets/images/scenarios/introduce_yourself.png',
     'systemPrompt': 'You are an experienced HR interviewer conducting a job interview for a mid-to-senior '
         'position at a reputable Indian tech company. Ask behavioral and situational questions '
         'using the STAR framework. Be professional and curious. Follow up on vague or incomplete '
@@ -49,6 +34,7 @@ const List<Map<String, dynamic>> _kPresets = [
     'title': 'Negotiation',
     'subtitle': 'Negotiate a raise or budget',
     'icon': Icons.handshake,
+    'image': 'assets/images/scenarios/salary_negotiation.png',
     'systemPrompt': 'You are a skeptical department head being approached for a salary raise or budget '
         'increase. You are not hostile, but you need solid justification — data, outcomes, '
         'market benchmarks. Challenge weak arguments respectfully. If presented with strong '
@@ -61,17 +47,61 @@ const List<Map<String, dynamic>> _kPresets = [
     'defaultTraits': 'Assertive',
   },
   {
+    'key': 'assertiveness',
+    'title': 'Technical Solving',
+    'subtitle': 'Master technical logic problems',
+    'icon': Icons.bolt,
+    'image': 'assets/images/scenarios/technical_solving.png',
+    'systemPrompt': 'You are a senior technical lead. Present a complex architectural or logical problem '
+        'and ask the user to explain their approach. Be helpful but probe for edge cases. '
+        'The user needs to practice explaining technical trade-offs clearly and logically.',
+    'defaultPersona': 'Strict Manager',
+    'defaultTone': 'Professional',
+    'defaultLevel': 'Medium',
+    'defaultRole': 'You as Employee',
+    'defaultTraits': 'Assertive',
+  },
+  {
+    'key': 'small_talk',
+    'title': 'Sales Pitch',
+    'subtitle': 'Pitch your product to a client',
+    'icon': Icons.chat_bubble_outline,
+    'image': 'assets/images/scenarios/sales_pitch.png',
+    'systemPrompt': 'You are a potential enterprise client. The user is pitching a new software solution. '
+        'Listen to their pitch, ask about ROI, and raise one common objection. See how the '
+        'user handles persuasion and objection management.',
+    'defaultPersona': 'Strict Manager',
+    'defaultTone': 'Neutral',
+    'defaultLevel': 'Medium',
+    'defaultRole': 'You as Speaker',
+    'defaultTraits': 'Logical',
+  },
+  {
     'key': 'leadership',
-    'title': 'Leadership',
-    'subtitle': 'Coach a struggling team member',
+    'title': 'Explain Concept',
+    'subtitle': 'Simplify complex technical ideas',
     'icon': Icons.groups,
-    'systemPrompt': 'You are a team member who has been underperforming lately — missing deadlines and '
-        'seeming disengaged. You are slightly defensive and unsure of yourself. You respond '
-        'well to empathy and honest feedback delivered with care. The user is playing the '
-        'manager and needs to practice giving constructive feedback and coaching in a direct '
-        'but supportive way.',
+    'image': 'assets/images/scenarios/complex_concept.png',
+    'systemPrompt': 'You are a non-technical project stakeholder. Ask the user to explain a technical '
+        'innovation or architecture. If they use too much jargon, ask for simplification. '
+        'Focus on how clearly they can communicate value to a non-technical audience.',
     'defaultPersona': 'Friendly Colleague',
     'defaultTone': 'Friendly',
+    'defaultLevel': 'Medium',
+    'defaultRole': 'You as Manager',
+    'defaultTraits': 'Emotional',
+  },
+  {
+    'key': 'feedback',
+    'title': 'Group Discussion',
+    'subtitle': 'Discussion on AI trends',
+    'icon': Icons.feedback_outlined,
+    'image': 'assets/images/scenarios/gd_ai.png',
+    'systemPrompt': 'You are a participants in a group discussion about the future of AI. '
+        'Help the user practice turn-taking, building on others arguments, and '
+        'presenting structured viewpoints in a high-pressure corporate setting.',
+    'defaultPersona': 'Friendly Colleague',
+    'defaultTone': 'Neutral',
     'defaultLevel': 'Medium',
     'defaultRole': 'You as Manager',
     'defaultTraits': 'Emotional',
@@ -79,48 +109,15 @@ const List<Map<String, dynamic>> _kPresets = [
   {
     'key': 'conflict',
     'title': 'Conflict Resolution',
-    'subtitle': 'De-escalate a workplace dispute',
+    'subtitle': 'Handle a difficult client escalation',
     'icon': Icons.balance,
-    'systemPrompt': 'You are a colleague who is frustrated and feels misunderstood after a team '
-        'disagreement. You are not aggressive but you are clearly upset — your concerns '
-        'have been dismissed in the past. You respond positively to genuine listening and '
-        'acknowledgement. The user needs to practice de-escalation, active listening, and '
-        'finding common ground.',
+    'image': 'assets/images/scenarios/difficult_client.png',
+    'systemPrompt': 'You are an upset client whose project was delayed. You are demanding an explanation. '
+        'The user needs to practice de-escalation, show empathy, and offer a professional '
+        'remedy without promising more than can be delivered.',
     'defaultPersona': 'Angry Client',
     'defaultTone': 'Aggressive',
     'defaultLevel': 'Hard',
-    'defaultRole': 'You as Manager',
-    'defaultTraits': 'Emotional',
-  },
-  {
-    'key': 'small_talk',
-    'title': 'Small Talk',
-    'subtitle': 'Network at a corporate event',
-    'icon': Icons.chat_bubble_outline,
-    'systemPrompt': 'You are a friendly professional at a corporate networking event. You are open, '
-        'warm, and genuinely interested in meeting new people. Ask questions, share '
-        'your own perspective, and help the user practice keeping a natural, engaging '
-        'conversation going. Keep topics light but professional — work, interests, '
-        'industry trends.',
-    'defaultPersona': 'Friendly Colleague',
-    'defaultTone': 'Friendly',
-    'defaultLevel': 'Easy',
-    'defaultRole': 'You as Speaker',
-    'defaultTraits': 'Logical',
-  },
-  {
-    'key': 'feedback',
-    'title': 'Giving Feedback',
-    'subtitle': 'Give constructive feedback to a peer',
-    'icon': Icons.feedback_outlined,
-    'systemPrompt': 'You are a peer colleague who has just received constructive feedback about your '
-        'work on a recent project. You are slightly defensive at first but genuinely open '
-        'to hearing honest, well-framed feedback. Respond realistically — push back on '
-        'vague criticism, acknowledge specific and fair points, and help the user practice '
-        'delivering feedback that is clear, kind, and actionable.',
-    'defaultPersona': 'Friendly Colleague',
-    'defaultTone': 'Neutral',
-    'defaultLevel': 'Medium',
     'defaultRole': 'You as Manager',
     'defaultTraits': 'Emotional',
   },
@@ -533,6 +530,45 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildScenarioImage(String asset) {
+    return Container(
+      width: double.infinity,
+      height: 180,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(asset, fit: BoxFit.cover),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.6),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

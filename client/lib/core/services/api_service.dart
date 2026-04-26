@@ -55,6 +55,27 @@ class ApiService {
     }
     return {};
   }
+
+  /// Convenience static wrapper for simple JSON GET calls.
+  static Future<Map<String, dynamic>> get(String endpoint) async {
+    final response = await instance.dio.get(endpoint);
+    if (response.data is Map<String, dynamic>) {
+      return response.data as Map<String, dynamic>;
+    }
+    return {};
+  }
+
+  /// Convenience static wrapper for simple JSON PATCH calls.
+  static Future<Map<String, dynamic>> patch(
+    String endpoint, {
+    Map<String, dynamic>? body,
+  }) async {
+    final response = await instance.dio.patch(endpoint, data: body);
+    if (response.data is Map<String, dynamic>) {
+      return response.data as Map<String, dynamic>;
+    }
+    return {};
+  }
 }
 
 /// Fetches the current user's Firebase ID token and attaches it as a Bearer
