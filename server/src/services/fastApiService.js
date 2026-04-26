@@ -9,6 +9,24 @@ const FASTAPI_URL = _rawFastApiUrl.startsWith('http')
   ? _rawFastApiUrl
   : `https://${_rawFastApiUrl}`;
 
+// Internal API key sent on every request to ai-server so ai-server can reject
+// calls that don't originate from this Node backend.
+// Must match AI_SERVER_INTERNAL_KEY in ai-server/.env.
+const AI_SERVER_KEY = process.env.AI_SERVER_INTERNAL_KEY || '';
+if (!AI_SERVER_KEY) {
+  console.warn(
+    '[fastApiService] AI_SERVER_INTERNAL_KEY is not set. ' +
+    'ai-server will accept requests from any caller. ' +
+    'Set AI_SERVER_INTERNAL_KEY in server/.env and ai-server/.env for production.'
+  );
+}
+
+function _aiHeaders(extra = {}) {
+  const headers = { ...extra };
+  if (AI_SERVER_KEY) headers['X-Ai-Server-Key'] = AI_SERVER_KEY;
+  return headers;
+}
+
 // Bug5 fix: derive correct MIME type from the audio file's extension
 const MIME_MAP = {
   wav: 'audio/wav',
@@ -81,7 +99,7 @@ async function sendTurnToFastApi(
 
   try {
     const response = await axios.post(`${FASTAPI_URL}/session/turn`, form, {
-      headers: form.getHeaders(),
+      headers: { ...form.getHeaders(), ..._aiHeaders() },
       // 90 s covers a cold-start wake-up (~50 s on free tier) + STT+LLM+TTS (~20 s).
       timeout: 90000,
     });
@@ -107,7 +125,7 @@ async function sendOpeningToFastApi(sessionId, systemPrompt) {
       `${FASTAPI_URL}/session/opening`,
       { sessionId, systemPrompt },
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: _aiHeaders({ 'Content-Type': 'application/json' }),
         timeout: 90000,
       }
     );
@@ -117,12 +135,20 @@ async function sendOpeningToFastApi(sessionId, systemPrompt) {
   }
 }
 
+/**
+ * Evaluate a completed roleplay session transcript.
+ * Calls the canonical POST /evaluate/roleplay endpoint.
+ * @param {string} sessionId
+ * @param {string} fullTranscript
+ * @param {string} scenarioType
+ * @returns {{ scores, fillerWordCount, fillerWords, strengths, improvements, recommendedNextType }}
+ */
 async function evaluateSession(sessionId, fullTranscript, scenarioType) {
   try {
     const response = await axios.post(
-      `${FASTAPI_URL}/session/evaluate`,
+      `${FASTAPI_URL}/evaluate/roleplay`,
       { sessionId, fullTranscript, scenarioType },
-      { timeout: 60000 }
+      { headers: _aiHeaders(), timeout: 60000 }
     );
     return response.data;
   } catch (err) {
@@ -130,4 +156,57 @@ async function evaluateSession(sessionId, fullTranscript, scenarioType) {
   }
 }
 
-module.exports = { sendTurnToFastApi, sendOpeningToFastApi, evaluateSession };
+/**
+ * Evaluate a user's answer to a learning module question.
+ * Calls POST /evaluate/learning on the ai-server.
+ * @param {string} sessionId
+ * @param {string} question
+ * @param {string} userAnswer
+ * @param {string} topic
+ * @param {string} difficulty  — 'beginner' | 'intermediate' | 'advanced'
+ * @param {string[]} [expectedKeyPoints]
+ * @returns {{ scores, overallScore, strengths, improvements, feedback }}
+ */
+async function evaluateLearningAnswer(sessionId, question, userAnswer, topic, difficulty, expectedKeyPoints = []) {
+  try {
+    const response = await axios.post(
+      `${FASTAPI_URL}/evaluate/learning`,
+      { sessionId, question, userAnswer, topic, difficulty, expectedKeyPoints },
+      { headers: _aiHeaders(), timeout: 50000 }
+    );
+    return response.data;
+  } catch (err) {
+    handleAxiosError(err, 'learning evaluate');
+  }
+}
+
+/**
+ * Evaluate a user's contribution in a contest (debate, GD, extempore, quiz).
+ * Calls POST /evaluate/contest on the ai-server.
+ * @param {string} sessionId
+ * @param {string} userAnswer
+ * @param {string} contestType  — 'debate' | 'gd' | 'extempore' | 'quiz'
+ * @param {string} motion       — debate topic, GD topic, or quiz question
+ * @param {string} [position]   — 'for' | 'against' | '' (not applicable for GD/extempore)
+ * @returns {{ scores, overallScore, strengths, improvements, feedback }}
+ */
+async function evaluateContestAnswer(sessionId, userAnswer, contestType, motion, position = '') {
+  try {
+    const response = await axios.post(
+      `${FASTAPI_URL}/evaluate/contest`,
+      { sessionId, userAnswer, contestType, motion, position },
+      { headers: _aiHeaders(), timeout: 50000 }
+    );
+    return response.data;
+  } catch (err) {
+    handleAxiosError(err, 'contest evaluate');
+  }
+}
+
+module.exports = {
+  sendTurnToFastApi,
+  sendOpeningToFastApi,
+  evaluateSession,
+  evaluateLearningAnswer,
+  evaluateContestAnswer,
+};

@@ -555,6 +555,13 @@ class AiTranscriptPoster(FrameProcessor):
                 await asyncio.sleep(delay)
 
     async def _post_turn(self, user_transcript: str, ai_transcript: str) -> None:
+        """
+        POST the completed turn pair to Node for Firestore persistence.
+
+        Retries up to _MAX_RETRIES times with exponential backoff on network
+        errors or 5xx responses.  4xx errors (bad request, session not found,
+        unauthorised) are not retried — they indicate a logic error.
+        """
         url = f"{NODE_BACKEND_URL}/sessions/internal/live-voice-turn"
         payload = {
             "sessionId": self._session_id,
@@ -563,25 +570,49 @@ class AiTranscriptPoster(FrameProcessor):
         }
         headers = {"X-Communiq-Worker-Secret": PIPECAT_WEBHOOK_SECRET}
 
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(url, json=payload, headers=headers)
-            if resp.status_code in (200, 201):
-                logger.info(
-                    "[%s] Turn synced — user=%d chars, ai=%d chars",
-                    self._session_id,
-                    len(user_transcript),
-                    len(ai_transcript),
-                )
-            else:
+        _MAX_RETRIES = 3
+        _BASE_DELAY  = 1.0  # seconds; doubles each attempt
+
+        for attempt in range(1, _MAX_RETRIES + 1):
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.post(url, json=payload, headers=headers)
+
+                if resp.status_code in (200, 201):
+                    logger.info(
+                        "[%s] Turn synced (attempt %d) — user=%d chars, ai=%d chars",
+                        self._session_id, attempt,
+                        len(user_transcript), len(ai_transcript),
+                    )
+                    return
+
+                # 4xx — don't retry (bad request, auth, session gone)
+                if 400 <= resp.status_code < 500:
+                    logger.warning(
+                        "[%s] live-voice-turn POST returned %d (not retrying): %s",
+                        self._session_id, resp.status_code, resp.text[:300],
+                    )
+                    return
+
+                # 5xx — retryable
                 logger.warning(
-                    "[%s] live-voice-turn POST returned %d: %s",
-                    self._session_id,
-                    resp.status_code,
-                    resp.text[:300],
+                    "[%s] live-voice-turn POST returned %d (attempt %d/%d)",
+                    self._session_id, resp.status_code, attempt, _MAX_RETRIES,
                 )
-        except Exception as exc:
-            logger.error("[%s] Failed to sync turn to Node: %s", self._session_id, exc)
+
+            except Exception as exc:
+                logger.warning(
+                    "[%s] live-voice-turn network error (attempt %d/%d): %s",
+                    self._session_id, attempt, _MAX_RETRIES, exc,
+                )
+
+            if attempt < _MAX_RETRIES:
+                await asyncio.sleep(_BASE_DELAY * (2 ** (attempt - 1)))
+
+        logger.error(
+            "[%s] Failed to sync turn after %d attempts — turn lost.",
+            self._session_id, _MAX_RETRIES,
+        )
 
 
 # ─── Bot entrypoint ───────────────────────────────────────────────────────────

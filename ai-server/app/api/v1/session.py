@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 from groq import AsyncGroq
 
 from app.config import settings
-from app.core.prompts import build_evaluator_prompt
-from app.dependencies import get_groq_client
+from app.core.prompts import build_evaluator_prompt, build_roleplay_evaluator_prompt
+from app.dependencies import get_groq_client, verify_internal_api_key
 from app.schemas.session import (
     EvaluateRequest,
     EvaluateResponse,
@@ -24,7 +24,7 @@ logger = logging.getLogger("communiq")
 
 LLM_MODEL = settings.llm_model
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_internal_api_key)])
 
 # Opening nudge sent as the first user message so the LLM starts the scene.
 _OPENING_USER_MESSAGE = "Start the interview now."
@@ -233,6 +233,9 @@ async def session_turn(
 
 
 # ─── POST /session/evaluate ───────────────────────────────────────────────────
+# DEPRECATED — kept as a backward-compatible alias for POST /evaluate/roleplay.
+# Node's fastApiService.js now calls /evaluate/roleplay directly.
+# This endpoint will be removed in a future release.
 
 @router.post("/session/evaluate", response_model=EvaluateResponse)
 async def session_evaluate(
@@ -240,22 +243,15 @@ async def session_evaluate(
     groq: Optional[AsyncGroq] = Depends(get_groq_client),
 ):
     """
-    Evaluate a completed session.
+    Deprecated alias for POST /evaluate/roleplay.
 
-    Called by the Node backend at POST /sessions/end after the session is
-    marked complete and the full transcript has been assembled from Firestore turns.
-
-    Accepts JSON:
-        { sessionId, fullTranscript, scenarioType }
-
-    Returns JSON:
-        { scores (0-100), fillerWordCount, fillerWords,
-          strengths, improvements, recommendedNextType }
+    Kept for backward compatibility — do not use for new integrations.
+    The canonical evaluation endpoint is POST /evaluate/roleplay.
     """
-    system_prompt = build_evaluator_prompt(req.scenarioType)
+    system_prompt = build_roleplay_evaluator_prompt(req.scenarioType)
 
     logger.info(
-        "Evaluation start — session=%s scenario=%s transcript=%d chars",
+        "[DEPRECATED /session/evaluate] Evaluation start — session=%s scenario=%s transcript=%d chars",
         req.sessionId, req.scenarioType, len(req.fullTranscript),
     )
 
@@ -277,7 +273,7 @@ async def session_evaluate(
         logger.error("Evaluation LLM request failed — session=%s: %s", req.sessionId, e)
         raise HTTPException(
             status_code=502, detail="Evaluation service unavailable. Please try again."
-        )
+        ) from e
 
     raw = response.choices[0].message.content or ""
 
@@ -290,11 +286,10 @@ async def session_evaluate(
         )
         raise HTTPException(
             status_code=500, detail=f"Evaluation parsing failed: {e}"
-        )
+        ) from e
 
     logger.info("Evaluation complete — session=%s", req.sessionId)
 
-    # Map snake_case evaluator output → camelCase Node contract
     return EvaluateResponse(
         scores=result["scores"],
         fillerWordCount=result["filler_count"],

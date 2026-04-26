@@ -3,11 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const { verifyToken } = require('../middleware/auth');
 
-// Path to the levels JSON file relative to the server root (server/src/..)
-// The file is at the root of the project: D:\Bhumik\All Projects\CapStone(StartUp)\communiq\CommuniQ\communiq_levels.json
-// server.js is at server/src/server.js
-// So we go up two levels to server root, then up one levels to project root.
-const LEVELS_PATH = path.join(__dirname, '..', '..', 'communiq_levels.json');
+// Path to the levels JSON file at the project root.
+// __dirname = server/src/routes → ../../.. = project root
+const LEVELS_PATH = path.join(__dirname, '..', '..', '..', 'communiq_levels.json');
 
 router.get('/', verifyToken, async (req, res) => {
   try {

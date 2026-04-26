@@ -49,8 +49,11 @@ async function saveOnboarding(req, res) {
         completedAt: FieldValue.serverTimestamp(),
       },
       onboardingCompleted: true,
-      ...(typeof level === 'string' && LEVEL_MAP[level] && {
-        level: LEVEL_MAP[level],
+      ...(typeof level === 'string' && (() => {
+        const normalised = level.charAt(0).toUpperCase() + level.slice(1).toLowerCase();
+        return LEVEL_MAP[normalised];
+      })() && {
+        level: LEVEL_MAP[level.charAt(0).toUpperCase() + level.slice(1).toLowerCase()],
       }),
     };
 

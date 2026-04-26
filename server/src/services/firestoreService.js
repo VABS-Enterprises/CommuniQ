@@ -127,6 +127,30 @@ async function abandonSession(sessionId) {
   });
 }
 
+/**
+ * Returns all sessions that are still 'in_progress' and started more than
+ * maxAgeMs milliseconds ago. Used by the stale session cleanup job.
+ *
+ * Queries only by status (equality — no composite index required) and filters
+ * by age in memory to avoid the need for a composite Firestore index.
+ */
+async function getStaleInProgressSessions(maxAgeMs = 2 * 60 * 60 * 1000) {
+  const snap = await db
+    .collection('sessions')
+    .where('status', '==', 'in_progress')
+    .get();
+
+  const cutoff = Date.now() - maxAgeMs;
+  return snap.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }))
+    .filter((session) => {
+      const startedAt = session.startedAt?.toDate
+        ? session.startedAt.toDate().getTime()
+        : new Date(session.startedAt).getTime();
+      return !isNaN(startedAt) && startedAt < cutoff;
+    });
+}
+
 async function getUserSessions(userId, limitCount = 20) {
   // Requires a Firestore composite index: sessions(userId ASC, startedAt DESC).
   // If you see "requires an index" errors, open the URL in the error message
@@ -226,6 +250,7 @@ module.exports = {
   appendLiveVoiceTurns,
   completeSession,
   abandonSession,
+  getStaleInProgressSessions,
   countCompletedSessions,
   getUserSessions,
   writeEvaluationReport,

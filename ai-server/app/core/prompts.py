@@ -114,6 +114,11 @@ _EVALUATION_JSON_SCHEMA = """{
 }"""
 
 
+def build_roleplay_evaluator_prompt(scenario_type: str) -> str:
+    """Alias used by the new /evaluate/roleplay endpoint."""
+    return build_evaluator_prompt(scenario_type)
+
+
 def build_evaluator_prompt(scenario_type: str) -> str:
     """
     Build the evaluation system prompt.
@@ -171,3 +176,239 @@ CRITICAL OUTPUT RULES:
 
 Output this exact JSON schema:
 {_EVALUATION_JSON_SCHEMA}""".strip()
+
+
+# ─── Learning module evaluation ───────────────────────────────────────────────
+
+_LEARNING_SCORING_RUBRIC = """
+SCORING GUIDE — use the FULL 0–100 range. Be honest and differentiated.
+
+ACCURACY — How factually correct and conceptually sound is the answer?
+  Assess: correct use of definitions, absence of misconceptions, appropriate application of concepts.
+  90–100: Fully correct. No factual errors, concepts applied precisely.
+  70–89:  Mostly correct with minor inaccuracies or slight misapplication of a concept.
+  50–69:  Partially correct. Core idea present but with notable gaps or errors.
+  30–49:  Significant errors. Misunderstands key concepts.
+  0–29:   Largely incorrect or completely off-topic.
+
+DEPTH — How thoroughly is the concept explained?
+  Assess: coverage of key points, explanation of why/how (not just what), nuance.
+  90–100: Comprehensive. Covers all key aspects with clear reasoning and nuance.
+  70–89:  Good depth. Explains most key points; minor gaps in reasoning.
+  50–69:  Surface-level. States the what but rarely explains the why or how.
+  30–49:  Shallow. Only scratches the surface; many key points missing.
+  0–29:   Barely engages with the topic.
+
+CLARITY — How well-structured and easy to understand is the answer?
+  Assess: logical flow, use of clear language, avoidance of jargon without explanation.
+  90–100: Crystal clear. Reader/listener needs no effort to follow.
+  70–89:  Mostly clear with occasional ambiguity or organisational gap.
+  50–69:  Understandable but requires effort — jumps around or uses unclear phrasing.
+  30–49:  Confusing in places. Hard to follow the argument or explanation.
+  0–29:   Very hard to understand.
+
+EXAMPLES — Does the answer use relevant examples, analogies, or illustrations?
+  Assess: quality and relevance of examples, whether they actually clarify the concept.
+  90–100: Strong, relevant examples that directly illuminate the concept.
+  70–89:  Good example(s) present; could be more specific or better tied to the concept.
+  50–69:  Generic or tangentially relevant example. Adds limited value.
+  30–49:  Weak or irrelevant example, or only a vague reference.
+  0–29:   No examples used, or examples actively confuse the point.
+"""
+
+_LEARNING_JSON_SCHEMA = """{
+  "scores": {
+    "accuracy":  <int 0-100>,
+    "depth":     <int 0-100>,
+    "clarity":   <int 0-100>,
+    "examples":  <int 0-100>
+  },
+  "overall_score": <int — mean of the four scores rounded to nearest integer>,
+  "strengths": [
+    "<specific strength observed — quote the user's words if possible>",
+    "<specific strength observed — quote the user's words if possible>"
+  ],
+  "improvements": [
+    "<specific, actionable improvement with before/after example>",
+    "<specific, actionable improvement with before/after example>"
+  ],
+  "feedback": "<2–3 sentence holistic comment on the answer quality>"
+}"""
+
+
+def build_learning_evaluator_prompt(
+    topic: str,
+    difficulty: str,
+    expected_key_points: list[str],
+) -> str:
+    """
+    Build the evaluation system prompt for a learning module answer.
+
+    topic              — e.g. "active listening", "public speaking basics"
+    difficulty         — "beginner" | "intermediate" | "advanced"
+    expected_key_points — list of points the ideal answer should cover (may be empty)
+    """
+    key_points_section = ""
+    if expected_key_points:
+        formatted = "\n".join(f"  - {pt}" for pt in expected_key_points)
+        key_points_section = f"\nIDEAL ANSWER SHOULD COVER:\n{formatted}\n"
+
+    return f"""You are an expert communication skills educator with 15 years of experience teaching Indian professionals and students.
+
+EVALUATION CONTEXT:
+- Topic: {topic}
+- Difficulty level: {difficulty}
+- Task: evaluate the user's written answer to a learning module question.{key_points_section}
+
+YOUR TASK:
+Read the question and the user's answer carefully.
+Evaluate the answer on four dimensions using the rubric below.
+Be honest and use the full scoring range — do not cluster scores.
+
+{_LEARNING_SCORING_RUBRIC}
+
+WRITING STRENGTHS (exactly 2 items — NO MORE, NO FEWER):
+- Must be specific observations from THIS answer — not generic praise.
+- Quote or closely paraphrase the user's actual words when possible.
+  ✗ Bad:  "Good answer."
+  ✓ Good: "You correctly identified that active listening involves paraphrasing — 'restating what the other person said in your own words' — which is the core technique."
+
+WRITING IMPROVEMENTS (exactly 2 items — NO MORE, NO FEWER):
+- Must be specific and actionable. Show a before/after where possible.
+  ✗ Bad:  "Add more examples."
+  ✓ Good: "Your explanation of 'clarity' stays abstract — instead of 'speak clearly', give a concrete technique: 'Use the PREP structure: Point, Reason, Example, Point again.'"
+
+CRITICAL OUTPUT RULES:
+1. Output ONLY a valid JSON object. Zero text outside the JSON.
+2. No markdown fences, no ```json, no explanation before or after.
+3. ALL score values must be integers (not floats) between 0 and 100.
+4. overall_score must be the integer mean of the four scores.
+5. strengths array must have EXACTLY 2 string items.
+6. improvements array must have EXACTLY 2 string items.
+7. feedback must be 2–3 sentences.
+
+Output this exact JSON schema:
+{_LEARNING_JSON_SCHEMA}""".strip()
+
+
+# ─── Contest evaluation ───────────────────────────────────────────────────────
+
+_CONTEST_SCORING_RUBRIC = """
+SCORING GUIDE — use the FULL 0–100 range. Be honest and differentiated.
+
+ARGUMENTATION — Logical structure, clarity of position, and validity of reasoning.
+  Assess: Is the main argument clearly stated? Is the reasoning logical and internally consistent?
+  90–100: Compelling, well-structured argument. Position is crystal clear and fully reasoned.
+  70–89:  Good argument with minor gaps or logical leaps.
+  50–69:  Argument present but underdeveloped or partially inconsistent.
+  30–49:  Weak or unclear argument. Reasoning is flawed or missing.
+  0–29:   No coherent argument. Random statements without logical connection.
+
+EVIDENCE — Use of facts, examples, data, or real-world references to support claims.
+  Assess: relevance, specificity, and credibility of evidence used.
+  90–100: Strong, specific, and well-chosen evidence that directly supports the argument.
+  70–89:  Good evidence present; could be more specific or better integrated.
+  50–69:  Generic or vague references. Evidence adds limited support.
+  30–49:  Weak evidence or assertions stated as facts without support.
+  0–29:   No evidence used.
+
+REBUTTAL — Awareness of and response to opposing views or counterarguments.
+  Assess: does the speaker anticipate objections? Do they address the other side?
+  (For GD/extempore where there is no opposing side, assess balance and acknowledgement of complexity.)
+  90–100: Clearly addresses the strongest counterargument and refutes it effectively.
+  70–89:  Acknowledges the other side; rebuttal could be stronger or more specific.
+  50–69:  Vague awareness of counterarguments. No real engagement with them.
+  30–49:  Ignores opposing views entirely.
+  0–29:   Actively contradicts or confuses the counterargument with own position.
+
+DELIVERY — Clarity, impact, and persuasiveness of communication.
+  Assess: sentence structure, word choice, confidence markers, engagement.
+  90–100: Persuasive, confident, and engaging. Language is precise and impactful.
+  70–89:  Mostly effective delivery with occasional weak phrasing.
+  50–69:  Adequate but flat. Lacks rhetorical punch or varies little in tone.
+  30–49:  Weak delivery. Unclear or excessively hedged language.
+  0–29:   Very poor delivery. Hard to engage with or understand.
+"""
+
+_CONTEST_JSON_SCHEMA = """{
+  "scores": {
+    "argumentation": <int 0-100>,
+    "evidence":      <int 0-100>,
+    "rebuttal":      <int 0-100>,
+    "delivery":      <int 0-100>
+  },
+  "overall_score": <int — mean of the four scores rounded to nearest integer>,
+  "strengths": [
+    "<specific strength observed — quote the user's words if possible>",
+    "<specific strength observed — quote the user's words if possible>"
+  ],
+  "improvements": [
+    "<specific, actionable improvement with before/after example>",
+    "<specific, actionable improvement with before/after example>"
+  ],
+  "feedback": "<2–3 sentence holistic comment on the contribution>"
+}"""
+
+_CONTEST_TYPE_DESCRIPTIONS: dict[str, str] = {
+    "debate":     "a formal debate",
+    "gd":         "a group discussion",
+    "extempore":  "an extempore speech",
+    "quiz":       "a quiz or knowledge contest",
+}
+
+
+def build_contest_evaluator_prompt(
+    contest_type: str,
+    motion: str,
+    position: str,
+) -> str:
+    """
+    Build the evaluation system prompt for a contest contribution.
+
+    contest_type — "debate" | "gd" | "extempore" | "quiz"
+    motion       — the topic, motion, or question
+    position     — "for" | "against" | "" (not applicable for GD/extempore)
+    """
+    contest_description = _CONTEST_TYPE_DESCRIPTIONS.get(
+        contest_type.lower().strip(), "a spoken contest"
+    )
+    position_line = (
+        f"- Position: {position.strip()}" if position and position.strip() else ""
+    )
+
+    return f"""You are an expert debate coach and communication evaluator with 15 years of experience training Indian students and professionals for competitive speaking.
+
+EVALUATION CONTEXT:
+- Contest type: {contest_description}
+- Motion / Topic: {motion}
+{position_line}
+
+YOUR TASK:
+Read the user's contribution carefully.
+Evaluate it on four dimensions using the rubric below.
+Be honest and use the full scoring range — do not cluster scores.
+
+{_CONTEST_SCORING_RUBRIC}
+
+WRITING STRENGTHS (exactly 2 items — NO MORE, NO FEWER):
+- Must be specific observations from THIS contribution — not generic praise.
+- Quote or closely paraphrase the user's actual words when possible.
+  ✗ Bad:  "Good argument."
+  ✓ Good: "Your opening hook — 'Every minute of inaction costs us 10 years of climate debt' — is punchy and immediately signals your position."
+
+WRITING IMPROVEMENTS (exactly 2 items — NO MORE, NO FEWER):
+- Must be specific and actionable. Show a before/after where possible.
+  ✗ Bad:  "Use more evidence."
+  ✓ Good: "You said 'studies show this is harmful' without citing a source. Replace with a specific reference: 'A 2023 WHO report found...' — this immediately raises credibility."
+
+CRITICAL OUTPUT RULES:
+1. Output ONLY a valid JSON object. Zero text outside the JSON.
+2. No markdown fences, no ```json, no explanation before or after.
+3. ALL score values must be integers (not floats) between 0 and 100.
+4. overall_score must be the integer mean of the four scores.
+5. strengths array must have EXACTLY 2 string items.
+6. improvements array must have EXACTLY 2 string items.
+7. feedback must be 2–3 sentences.
+
+Output this exact JSON schema:
+{_CONTEST_JSON_SCHEMA}""".strip()

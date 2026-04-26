@@ -2,8 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 const { db } = require('./config/firebase');
 const { version } = require('../package.json');
+const { startStaleSessionJob } = require('./services/staleSessionJob');
 
 const authRoutes = require('./routes/auth');
 const onboardingRoutes = require('./routes/onboarding');
@@ -34,6 +36,19 @@ app.use(
 );
 
 app.use(express.json({ limit: '512kb' }));
+
+// Global rate limiter — 300 requests per minute per IP.
+// Catches brute-force / runaway clients before they hit any route handler.
+// Per-route limiters in routes/sessions.js apply tighter limits on hot paths.
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests — please slow down' },
+  skip: (req) => req.path === '/health',
+});
+app.use(globalLimiter);
 
 // Health check — includes Firestore connectivity and version
 app.get('/health', async (req, res) => {
@@ -70,6 +85,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
   console.log(`CommuniQ backend running on port ${PORT}`);
+  startStaleSessionJob();
 });
 
 // Graceful shutdown — finish in-flight requests before exiting

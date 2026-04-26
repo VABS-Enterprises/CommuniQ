@@ -471,6 +471,41 @@ async function getSession(req, res) {
   }
 }
 
+// POST /sessions/internal/bot-crash (Pipecat worker only, X-Communiq-Worker-Secret)
+// Called when a Pipecat bot exits due to an unexpected error (not a clean participant-left).
+// Marks the session as abandoned and cleans up the LiveKit room so the session doesn't
+// remain permanently stuck in 'in_progress'.
+async function handleBotCrash(req, res) {
+  const { sessionId, reason } = req.body || {};
+
+  if (!sessionId) {
+    return res.status(400).json({ error: 'sessionId is required' });
+  }
+
+  try {
+    const session = await getSessionById(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    if (session.status !== 'in_progress') {
+      // Already ended — nothing to do (race condition between crash and user tapping End)
+      return res.status(200).json({ ok: true, status: session.status });
+    }
+
+    console.error(
+      `[bot-crash] session=${sessionId} reason=${reason || 'unknown'} — abandoning session`
+    );
+
+    await abandonSessionInDb(sessionId);
+    await livekit.deleteRoom(sessionId);
+
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error('handleBotCrash error:', err.message);
+    return res.status(500).json({ error: 'Could not handle bot crash' });
+  }
+}
+
 // POST /sessions/internal/live-voice-turn (Pipecat worker only, X-Communiq-Worker-Secret)
 // Appends user and/or AI transcript turns so /sessions/end evaluation sees live voice.
 async function appendLiveVoiceTurn(req, res) {
@@ -552,4 +587,5 @@ module.exports = {
   getSession,
   getLivekitToken,
   appendLiveVoiceTurn,
+  handleBotCrash,
 };
