@@ -8,6 +8,7 @@ import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart'
 import 'package:communiq/views/learning_view/screens/learning_session_screen.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/constants/api_constants.dart';
+import 'package:communiq/common_widgets/sky_campus_background.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DESIGN TOKENS
@@ -16,8 +17,8 @@ import 'package:communiq/core/constants/api_constants.dart';
 const _kBg        = Color(0xFF050816);
 const _kSurface   = Color(0xFF0F172A);
 const _kBorder    = Color(0x1AFFFFFF);
-const _kPath      = Color(0xFF7835FF);
-const _kPathLight = Color(0xFFAA88FF);
+const _kPath      = Color(0xFF5B52F0);
+const _kPathLight = Color(0xFF818CF8);
 
 // Hub illustrations are now managed via CommuniqLevel.imageAsset getter
 
@@ -57,9 +58,9 @@ const _kHubs = [
 
 const _kPerHub  = 1;
 const _kTLevels = 20;
-const _kCW      = 165.0;
-const _kCH      = 115.0;
-const _kZone    = 280.0;
+const _kCW      = 234.0;
+const _kCH      = 162.0;
+const _kZone    = 380.0;
 const _kTopPad  = 300.0;   // Extra top padding so milestone2 card fits above scenario 20
 const _kBotPad  = 160.0;
 const _kMilestoneGap = 220.0;
@@ -260,20 +261,24 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
       builder: (_) => _Sheet(
         level: level,
         onStart: () async {
-          Navigator.pop(context);
-          final res = await Navigator.push<int>(
-            context,
-            MaterialPageRoute(builder: (_) => LearningSessionScreen(level: level, isAlreadyCompleted: isDone)),
-          );
-          if (res != null && res > 0) {
-            _onLevelComplete(level, res);
+        Navigator.pop(context);
+        final res = await Navigator.push<dynamic>(
+          context,
+          MaterialPageRoute(builder: (_) => LearningSessionScreen(level: level, isAlreadyCompleted: isDone)),
+        );
+        if (res != null && res is Map) {
+          final coins = res['coins'] as int? ?? 0;
+          final score = res['score'] as int?;
+          if (coins > 0) {
+            _onLevelComplete(level, coins, score);
           }
-        },
+        }
+      },
       ),
     );
   }
 
-  void _onLevelComplete(CommuniqLevel level, int earnedCoins) async {
+  void _onLevelComplete(CommuniqLevel level, int earnedCoins, int? aiScore) async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _done.add(level.id);
@@ -284,6 +289,9 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
     });
     await prefs.setStringList('completed_level_ids', _done.map((id) => id.toString()).toList());
     await prefs.setInt('level_${level.id}_coins', earnedCoins);
+    if (aiScore != null) {
+      await prefs.setInt('level_${level.id}_score', aiScore);
+    }
 
     // Fly particles to milestone 1 for levels 1-10, milestone 2 for 11-20
     final milestoneKey = level.id <= 10 ? _milestone1Key : _milestone2Key;
@@ -305,7 +313,8 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
           'scenario_name': lvl.title,
           'journey_name': lvl.journeyTitle,
           'journey_number': lvl.journeyId,
-          'coins': prefs.getInt('level_${id}_coins') ?? 30,
+          'coins': prefs.getInt('level_${id}_coins') ?? 60,
+          'ai_evaluated_score': prefs.getInt('level_${id}_score'),
         });
       }
       await ApiService.patch(ApiConstants.userProfile, body: {'learning_progress': progressList});
@@ -344,20 +353,42 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
     final pct  = (_kTLevels > 0 ? _done.length / _kTLevels : 0.0).clamp(0.0, 1.0);
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          const Positioned.fill(child: _StarsBg()),
-          SafeArea(
-            bottom: false,
-            child: Column(children: [
+          // Background Layers (Manual Replicate of SkyCampusBackground without SafeArea)
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF0A1128), Color(0xFF060918), Color(0xFF020617)],
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: const Alignment(0, -0.2),
+                  radius: 1.2,
+                  colors: [const Color(0xFF5B52F0).withValues(alpha: 0.08), Colors.transparent],
+                ),
+              ),
+            ),
+          ),
+          
+          Column(
+            children: [
               _Header(pct: pct, coinKey: _coinKey, profileKey: _profileKey, totalCoins: _totalCoins),
               Expanded(
                 child: _loading
                     ? const Center(child: CircularProgressIndicator(color: _kPath))
-                    : _buildMap(hasData ? _curIdx : 0),
+                    : _buildMap(_done.length),
               ),
-            ]),
+            ],
           ),
         ],
       ),
@@ -394,8 +425,8 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
               Positioned.fill(
                 child: AnimatedBuilder(
                   animation: _shimCtrl,
-                  builder: (_, __) => RepaintBoundary(
-                    child: CustomPaint(painter: _PathPaint(_pathPts, _shimCtrl.value, activeIdx)),
+                  builder: (_, __) => CustomPaint(
+                    painter: _PathPaint(_pathPts, _shimCtrl.value, activeIdx),
                   ),
                 ),
               ),
@@ -455,8 +486,11 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
     final isLocked = st == _HS.locked;
     final isDone   = st == _HS.completed;
 
+    final hubWidth = _kCW + 160; // Tighter space for side title
+    final leftPos = isLeft ? center.dx - _kCW / 2 : center.dx - _kCW / 2 - 160;
+
     return Positioned(
-      left: center.dx - _kCW / 2,
+      left: leftPos,
       top:  center.dy - _kCH / 2 - 25,
       child: GestureDetector(
         onTap: () => _tap(j),
@@ -464,29 +498,44 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
           animation: _glowAnim,
           builder: (_, __) {
             final gv = isActive ? _glowAnim.value : (isLocked ? 0.0 : 0.45);
-            return SizedBox(
-              width: _kCW,
-              child: Column(
-                crossAxisAlignment: isLeft ? CrossAxisAlignment.start : CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(left: isLeft ? 4 : 0, right: isLeft ? 0 : 4),
-                    child: Opacity(
-                      opacity: isLocked ? 0.4 : 1.0,
-                      child: Text(level.title.toUpperCase(),
-                        textAlign: isLeft ? TextAlign.left : TextAlign.right,
-                        style: TextStyle(
-                          color: isActive ? def.glow : Colors.white,
-                          fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5,
-                          shadows: isActive ? [Shadow(color: def.glow.withValues(alpha: 0.8), blurRadius: 12)] : null,
-                        ),
-                      ),
-                    ),
+            
+            Widget title = Opacity(
+              opacity: isLocked ? 0.4 : 1.0,
+              child: SizedBox(
+                width: 150,
+                child: Text(level.title.toUpperCase(),
+                  textAlign: isLeft ? TextAlign.left : TextAlign.right,
+                  style: TextStyle(
+                    color: isActive ? def.glow : Colors.white,
+                    fontSize: 10.5, fontWeight: FontWeight.w900, letterSpacing: 0.6,
+                    height: 1.2,
+                    shadows: isActive ? [Shadow(color: def.glow.withValues(alpha: 0.8), blurRadius: 12)] : null,
                   ),
-                  const SizedBox(height: 5),
-                  _HubCard(illoPath: illo, glow: def.glow, isActive: isActive, isLocked: isLocked, isDone: isDone, glowVal: gv),
-                ],
+                ),
+              ),
+            );
+
+            Widget hub = _HubCard(illoPath: illo, glow: def.glow, isActive: isActive, isLocked: isLocked, isDone: isDone, glowVal: gv);
+
+            return SizedBox(
+              width: hubWidth,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: isLeft 
+                  ? [
+                      hub, 
+                      Transform.translate(
+                        offset: const Offset(-20, 0),
+                        child: title,
+                      )
+                    ]
+                  : [
+                      Transform.translate(
+                        offset: const Offset(20, 0),
+                        child: title,
+                      ), 
+                      hub
+                    ],
               ),
             );
           },
@@ -534,7 +583,7 @@ class _HubCard extends StatelessWidget {
             ),
           ),
           if (isLocked) const Icon(Icons.lock_rounded, color: Colors.white38, size: 30),
-          if (isDone) Positioned(top: 4, right: 4, child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.green), child: const Icon(Icons.check_rounded, color: Colors.white, size: 13))),
+          if (isDone) Positioned(top: 15, right: 15, child: Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.green, border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.5)), child: const Icon(Icons.check_rounded, color: Colors.white, size: 14))),
         ],
       ),
     );
@@ -552,8 +601,14 @@ class _PathPaint extends CustomPainter {
     if (pts.length < 2) return;
 
     final paint = Paint()
-      ..shader = LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [_kPath, _kPathLight, const Color(0xFF00CCFF)]).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..style = PaintingStyle.stroke..strokeWidth = 3.0..strokeCap = StrokeCap.round;
+      ..shader = LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [_kPath, _kPathLight, const Color(0xFF00CCFF)])
+          .createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0
+      ..strokeCap = StrokeCap.round;
 
     final fullPath = Path();
     for (int i = 0; i < pts.length - 1; i++) {
@@ -564,7 +619,12 @@ class _PathPaint extends CustomPainter {
       fullPath.cubicTo(p1.dx, my, p2.dx, my, p2.dx, p2.dy);
     }
     
-    canvas.drawPath(fullPath, Paint()..color = Colors.white.withValues(alpha: 0.05)..style = PaintingStyle.stroke..strokeWidth = 3.0..strokeCap = StrokeCap.round);
+    // Background path
+    canvas.drawPath(fullPath, Paint()
+      ..color = Colors.white.withValues(alpha: 0.05)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round);
 
     final activePath = Path();
     for (int i = 0; i < min(activeIdx, pts.length - 1); i++) {
@@ -575,17 +635,37 @@ class _PathPaint extends CustomPainter {
       activePath.cubicTo(p1.dx, my, p2.dx, my, p2.dx, p2.dy);
     }
     
-    canvas.drawPath(activePath, Paint()..color = _kPath.withValues(alpha: 0.15)..style = PaintingStyle.stroke..strokeWidth = 20..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10)..strokeCap = StrokeCap.round);
-    canvas.drawPath(activePath, paint);
+    // Path glow - very subtle and tight
+    canvas.drawPath(activePath, Paint()
+      ..color = _kPath.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 12
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
+      ..strokeCap = StrokeCap.round);
+    
+    // Core path line - elegant 3.5 width
+    canvas.drawPath(activePath, paint..strokeWidth = 3.5);
 
-    final ms = activePath.computeMetrics().toList();
-    if (ms.isNotEmpty) {
-      final pm = ms.first;
+    // Flowing shimmer effect across all segments - more subtle
+    final metrics = activePath.computeMetrics();
+    for (final pm in metrics) {
       final len = pm.length;
-      final s0 = (shimmer * len) % len;
-      final s1 = (s0 + 80).clamp(0.0, len);
+      if (len < 5) continue;
+
+      // Subtle flowing light segment
+      final s0 = (shimmer * 1.5 * len) % len;
+      final s1 = (s0 + 100).clamp(0.0, len);
+      
       if (s1 > s0) {
-        canvas.drawPath(pm.extractPath(s0, s1), Paint()..color = Colors.white.withValues(alpha: 0.7)..style = PaintingStyle.stroke..strokeWidth = 5.0..strokeCap = StrokeCap.round..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+        canvas.drawPath(
+          pm.extractPath(s0, s1),
+          Paint()
+            ..color = Colors.white.withValues(alpha: 0.6)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 5.0
+            ..strokeCap = StrokeCap.round
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+        );
       }
     }
   }
@@ -732,8 +812,8 @@ class _MilestoneCard extends StatelessWidget {
               value: xpPct,
               minHeight: 6,
               backgroundColor: Colors.white.withValues(alpha: 0.06),
-              valueColor: AlwaysStoppedAnimation(
-                unlocked ? _kPath : Colors.grey.shade600,
+              valueColor: const AlwaysStoppedAnimation(
+                Color(0xFF5B52F0),
               ),
             ),
           ),
@@ -781,33 +861,39 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: _kBg.withValues(alpha: 0.92),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      color: const Color(0xFF0E1628).withValues(alpha: 0.95), // Home page surface bluish-violet
+      padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 8, 16, 12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          GestureDetector(onTap: () => Navigator.maybePop(context), child: Container(width: 36, height: 36, decoration: BoxDecoration(shape: BoxShape.circle, color: _kSurface, border: Border.all(color: _kBorder)), child: const Icon(Icons.chevron_left_rounded, color: Colors.white70, size: 22))),
-          const SizedBox(width: 12),
           const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Sky Campus Path', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)), Text('20 Scenario Journey', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12))])),
           Container(
               key: coinKey,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                  color: const Color(0xFFFFD700).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.2))),
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFFFFC107).withValues(alpha: 0.5), width: 1.2)),
               child: Row(children: [
-                const Text('🪙', style: TextStyle(fontSize: 14)),
-                const SizedBox(width: 4),
-                Text(_formatCoins(totalCoins), style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold, fontSize: 13))
+                // Simplified Matte Solid Coin
+                Container(
+                  width: 16, height: 16,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFFFC107),
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 10, height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black.withValues(alpha: 0.3), width: 1),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(_formatCoins(totalCoins), style: const TextStyle(color: Color(0xFFFFC107), fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.4))
               ])),
-          const SizedBox(width: 12),
-          Container(
-            key: profileKey,
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: _kSurface, border: Border.all(color: _kBorder)),
-            child: const Icon(Icons.person_rounded, color: Colors.white54, size: 20),
-          ),
         ]),
         const SizedBox(height: 10),
         Stack(children: [
