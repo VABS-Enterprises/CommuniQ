@@ -10,6 +10,7 @@ const _kCategoryItems = [
     'subtitle': 'Answer tough HR questions',
     'icon': Icons.work_outline_rounded,
     'colors': [Color(0xFF4FACFE), Color(0xFF00D4FF)],
+    'image': 'assets/images/scenarios/job_interview_v2.png',
   },
   {
     'key': 'negotiation',
@@ -17,6 +18,7 @@ const _kCategoryItems = [
     'subtitle': 'Negotiate a raise or budget',
     'icon': Icons.handshake_rounded,
     'colors': [Color(0xFF43E97B), Color(0xFF38F9D7)],
+    'image': 'assets/images/scenarios/negotiation_v2.png',
   },
   {
     'key': 'assertiveness',
@@ -24,6 +26,7 @@ const _kCategoryItems = [
     'subtitle': 'Master logic problems',
     'icon': Icons.code_rounded,
     'colors': [Color(0xFFFF6B35), Color(0xFFFF9A62)],
+    'image': 'assets/images/scenarios/technical_solving.png',
   },
   {
     'key': 'sales_pitch',
@@ -31,6 +34,7 @@ const _kCategoryItems = [
     'subtitle': 'Persuade and close deals',
     'icon': Icons.record_voice_over_rounded,
     'colors': [Color(0xFF7B61FF), Color(0xFF9D7BFF)],
+    'image': 'assets/images/scenarios/sales_pitch.png',
   },
 ];
 
@@ -104,7 +108,7 @@ class CategoriesSection extends StatelessWidget {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.15,
+            childAspectRatio: 1.0,
           ),
           itemCount: items.length,
           itemBuilder: (_, index) {
@@ -114,7 +118,6 @@ class CategoriesSection extends StatelessWidget {
               title: item['title'] as String,
               subtitle: item['subtitle'] as String,
               icon: item['icon'] as IconData,
-              colors: item['colors'] as List<Color>,
               image: item['image'] as String?,
               isSelected: selectedPresetKey == key,
               onTap: () => onSelect(key),
@@ -130,7 +133,6 @@ class _ScenarioCategoryCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
-  final List<Color> colors;
   final String? image;
   final bool isSelected;
   final VoidCallback onTap;
@@ -139,7 +141,6 @@ class _ScenarioCategoryCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.colors,
     this.image,
     required this.isSelected,
     required this.onTap,
@@ -154,33 +155,12 @@ class _ScenarioCategoryCard extends StatelessWidget {
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: isSelected
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    colors[0].withValues(alpha: 0.22),
-                    colors[1].withValues(alpha: 0.08),
-                  ],
-                )
-              : null,
-          color: isSelected ? null : const Color(0xFF0F1520),
+          color: const Color(0xFF0F1520),
           border: Border.all(
-            color: isSelected
-                ? colors[0].withValues(alpha: 0.5)
-                : AppColors.border,
+            color: isSelected ? AppColors.primary : AppColors.glassBorder,
             width: isSelected ? 1.5 : 1.0,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: colors[0].withValues(alpha: 0.2),
-                    blurRadius: 18,
-                    spreadRadius: 1,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
+          boxShadow: null,
         ),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -188,22 +168,30 @@ class _ScenarioCategoryCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      colors[0].withValues(alpha: 0.25),
-                      colors[1].withValues(alpha: 0.1),
-                    ],
-                  ),
                   border: Border.all(
-                    color: colors[0].withValues(alpha: 0.4),
+                    color: AppColors.primary.withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                 ),
-                child: Icon(icon, color: colors[0], size: 24),
+                child: ClipOval(
+                  child: image != null
+                      ? Image.asset(image!, fit: BoxFit.cover)
+                      : Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.primary.withValues(alpha: 0.25),
+                                AppColors.primaryLight.withValues(alpha: 0.1),
+                              ],
+                            ),
+                          ),
+                          child: Icon(icon, color: AppColors.primaryLight, size: 28),
+                        ),
+                ),
               ),
               const SizedBox(height: 10),
               Text(

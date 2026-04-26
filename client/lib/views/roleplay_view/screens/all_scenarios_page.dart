@@ -145,7 +145,6 @@ class _ScenarioCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = item['colors'] as List<Color>;
     final hasImage = item.containsKey('image');
 
     return GestureDetector(
@@ -161,10 +160,10 @@ class _ScenarioCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
           color: const Color(0xFF0F1520),
-          border: Border.all(color: AppColors.border, width: 1.5),
+          border: Border.all(color: AppColors.glassBorder, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: colors[0].withValues(alpha: 0.08),
+              color: AppColors.primary.withValues(alpha: 0.08),
               blurRadius: 30,
               offset: const Offset(0, 8),
             ),
@@ -181,12 +180,12 @@ class _ScenarioCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: colors[0].withValues(alpha: 0.3),
+                    color: AppColors.primary.withValues(alpha: 0.3),
                     width: 2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: colors[0].withValues(alpha: 0.15),
+                      color: AppColors.primary.withValues(alpha: 0.15),
                       blurRadius: 20,
                       spreadRadius: 2,
                     ),
@@ -199,9 +198,9 @@ class _ScenarioCard extends StatelessWidget {
                           fit: BoxFit.cover,
                         )
                       : Container(
-                          color: colors[0].withValues(alpha: 0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           child: Icon(item['icon'] as IconData,
-                              color: colors[0], size: 40),
+                              color: AppColors.primaryLight, size: 40),
                         ),
                 ),
               ),

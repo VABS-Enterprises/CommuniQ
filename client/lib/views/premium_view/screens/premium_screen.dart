@@ -231,10 +231,10 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             colors: [
-              AppColors.primary.withValues(alpha: 0.4),
-              _kPremiumPurple.withValues(alpha: 0.05),
+              AppColors.primaryDark,
+              AppColors.primary,
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -317,61 +317,51 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
   }
 
   Widget _buildUpgradeButton() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+    return ElevatedButton(
+      onPressed: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Redirecting to secure checkout...', style: TextStyle(color: Colors.white)),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        padding: EdgeInsets.zero,
+        backgroundColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
       ),
-      child: ElevatedButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Redirecting to secure checkout...', style: TextStyle(color: Colors.white)),
-              backgroundColor: AppColors.primary,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
-          // Handle payment integration here
-        },
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.2), width: 1),
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primaryDark, AppColors.primary],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
-        ).copyWith(
-          elevation: WidgetStateProperty.all(0),
+          borderRadius: BorderRadius.circular(16),
         ),
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.primaryDark, AppColors.primary], // Richer, darker indigo
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            alignment: Alignment.center,
-            constraints: const BoxConstraints(minHeight: 56),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Upgrade to Premium',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
+        child: Container(
+          alignment: Alignment.center,
+          constraints: const BoxConstraints(minHeight: 56),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Upgrade to Premium',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
                 ),
-                SizedBox(width: 8),
-                Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
-              ],
-            ),
+              ),
+              SizedBox(width: 8),
+              Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+            ],
           ),
         ),
       ),

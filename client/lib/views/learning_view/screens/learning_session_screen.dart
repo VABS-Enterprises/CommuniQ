@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/services/learning_service.dart';
+import 'package:communiq/core/services/onboarding_service.dart';
 import 'package:communiq/models/communiq_level.dart';
+import 'package:communiq/models/demo_evaluation_result.dart';
 
 class LearningSessionScreen extends StatefulWidget {
   final CommuniqLevel level;
@@ -16,27 +21,47 @@ class LearningSessionScreen extends StatefulWidget {
   State<LearningSessionScreen> createState() => _LearningSessionScreenState();
 }
 
-class _LearningSessionScreenState extends State<LearningSessionScreen> {
+class _LearningSessionScreenState extends State<LearningSessionScreen>
+    with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPageIndex = 0;
   int _coins = 0;
 
   // State for each page (N MCQs + 1 Response)
   late List<bool> _isSubmitted;
-  
-  // MCQ States (one for each MCQ)
+
+  // MCQ States
   late List<int?> _selectedOptionIndices;
   late List<List<String>> _mcqOptionsList;
   late List<int> _correctOptionIndices;
   late List<int> _mcqAttemptsList;
   late List<bool> _isMcqWrongList;
 
+  final TextEditingController _textController = TextEditingController();
+
+  // Response: audio recorder
+  final AudioRecorder _recorder = AudioRecorder();
+  bool _isRecording = false;
+  String? _recordingPath;
+  DateTime? _recordStartTime;
+  bool _isTranscribing = false;
+  String? _voiceError;
+
+  // Mic pulse animation
+  late AnimationController _micRecordCtrl;
+  late Animation<double> _micRecordPulse;
+
+  // AI evaluation result for the response page
+  DemoEvaluationResult? _evalResult;
+  bool _isEvaluating = false;
+  String? _evalError;
+
   @override
   void initState() {
     super.initState();
     final mcqCount = widget.level.mcqs.length;
-    final totalPages = mcqCount + 1; // +1 for Response page
-    
+    final totalPages = mcqCount + 1;
+
     _isSubmitted = List.filled(totalPages, false);
     _selectedOptionIndices = List.filled(mcqCount, null);
     _mcqAttemptsList = List.filled(mcqCount, 0);
@@ -45,56 +70,189 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
     _correctOptionIndices = [];
 
     for (var mcq in widget.level.mcqs) {
-      final options = [
-        mcq.correctOption,
-        ...mcq.incorrectOptions,
-      ];
+      final options = [mcq.correctOption, ...mcq.incorrectOptions];
       options.shuffle();
       _correctOptionIndices.add(options.indexOf(mcq.correctOption));
       _mcqOptionsList.add(options);
     }
+
+    _micRecordCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _micRecordPulse = Tween<double>(begin: 1.0, end: 1.18).animate(
+      CurvedAnimation(parent: _micRecordCtrl, curve: Curves.easeInOut),
+    );
   }
 
-  // Response State
-  bool _isTextResponse = true;
-  final TextEditingController _textController = TextEditingController();
-  bool _isRecording = false;
-  bool _hasRecorded = false;
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _textController.dispose();
+    _micRecordCtrl.dispose();
+    _recorder.dispose();
+    super.dispose();
+  }
 
-  void _submitCurrentPage() {
+  // ── Voice recording ────────────────────────────────────────────────────────
+
+  Future<void> _toggleRecording() async {
+    if (_isTranscribing) return;
+
+    if (_isRecording) {
+      final elapsed = _recordStartTime == null
+          ? 99999
+          : DateTime.now().difference(_recordStartTime!).inMilliseconds;
+      if (elapsed < 1500) {
+        setState(() => _voiceError = 'Keep speaking, then tap stop.');
+        return;
+      }
+
+      final path = await _recorder.stop();
+      _micRecordCtrl.stop();
+      _micRecordCtrl.reset();
+      setState(() {
+        _isRecording = false;
+        _isTranscribing = true;
+        _voiceError = null;
+      });
+
+      if (path == null) {
+        setState(() => _isTranscribing = false);
+        return;
+      }
+
+      try {
+        final transcript = await OnboardingService.transcribeDemoAudio(path);
+        if (!mounted) return;
+        final base = _textController.text.trimRight();
+        final newText = base.isEmpty ? transcript : '$base $transcript';
+        setState(() {
+          _isTranscribing = false;
+          _voiceError = null;
+          _textController.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: newText.length),
+          );
+        });
+      } catch (e) {
+        if (!mounted) return;
+        final msg = e.toString().replaceFirst('Exception: ', '');
+        setState(() {
+          _isTranscribing = false;
+          _voiceError = msg;
+        });
+      }
+      return;
+    }
+
+    // Start recording
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission) {
+      if (mounted) setState(() => _voiceError = 'Microphone permission required.');
+      return;
+    }
+
+    final dir = await getTemporaryDirectory();
+    _recordingPath =
+        '${dir.path}/learning_response_${DateTime.now().millisecondsSinceEpoch}.wav';
+
+    await _recorder.start(
+      const RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 16000,
+        numChannels: 1,
+      ),
+      path: _recordingPath!,
+    );
+
+    _recordStartTime = DateTime.now();
     setState(() {
-      final mcqCount = widget.level.mcqs.length;
-      
-      // Handle MCQ pages
-      if (_currentPageIndex < mcqCount) {
-        if (_isMcqWrongList[_currentPageIndex]) {
-          _isMcqWrongList[_currentPageIndex] = false;
-          _selectedOptionIndices[_currentPageIndex] = null;
-          return;
-        }
+      _isRecording = true;
+      _voiceError = null;
+    });
+    _micRecordCtrl.repeat(reverse: true);
+  }
 
-        if (_selectedOptionIndices[_currentPageIndex] != _correctOptionIndices[_currentPageIndex]) {
-          _mcqAttemptsList[_currentPageIndex]++;
-          _isMcqWrongList[_currentPageIndex] = true;
-          return;
-        } else {
-          _isSubmitted[_currentPageIndex] = true;
-          if (!widget.isAlreadyCompleted) {
-            int earned = 10 - (_mcqAttemptsList[_currentPageIndex] * 3);
-            if (earned < 1) earned = 1;
-            _coins += earned;
-          }
-        }
-      } 
-      // Handle Response page
-      else {
-        _isSubmitted[_currentPageIndex] = true;
+  // ── MCQ submission ─────────────────────────────────────────────────────────
+
+  void _submitMcqPage() {
+    setState(() {
+      final idx = _currentPageIndex;
+      if (_isMcqWrongList[idx]) {
+        _isMcqWrongList[idx] = false;
+        _selectedOptionIndices[idx] = null;
+        return;
+      }
+      if (_selectedOptionIndices[idx] != _correctOptionIndices[idx]) {
+        _mcqAttemptsList[idx]++;
+        _isMcqWrongList[idx] = true;
+      } else {
+        _isSubmitted[idx] = true;
         if (!widget.isAlreadyCompleted) {
-          _coins += 10; // 10 coins for the response page
+          int earned = 10 - (_mcqAttemptsList[idx] * 3);
+          if (earned < 1) earned = 1;
+          _coins += earned;
         }
       }
     });
   }
+
+  // ── Response submission with AI evaluation ─────────────────────────────────
+
+  Future<void> _submitResponsePage() async {
+    final responseText = _textController.text.trim();
+    if (responseText.isEmpty) return;
+
+    setState(() {
+      _isEvaluating = true;
+      _evalError = null;
+    });
+
+    // Already-completed levels skip AI evaluation
+    if (widget.isAlreadyCompleted) {
+      setState(() {
+        _isEvaluating = false;
+        _isSubmitted[_currentPageIndex] = true;
+      });
+      return;
+    }
+
+    try {
+      final result = await LearningService.evaluateLearningResponse(
+        question: widget.level.responsePrompt.isNotEmpty
+            ? widget.level.responsePrompt
+            : widget.level.scenario,
+        userResponse: responseText,
+        topic: widget.level.journeyTitle.isNotEmpty
+            ? widget.level.journeyTitle
+            : widget.level.title,
+        difficulty: _difficultyForJourney(widget.level.journeyId),
+      );
+      if (!mounted) return;
+      setState(() {
+        _evalResult = result;
+        _isEvaluating = false;
+        _isSubmitted[_currentPageIndex] = true;
+        _coins += 10;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      setState(() {
+        _isEvaluating = false;
+        _evalError = msg;
+      });
+    }
+  }
+
+  String _difficultyForJourney(int journeyId) {
+    if (journeyId <= 2) return 'beginner';
+    if (journeyId <= 4) return 'intermediate';
+    return 'advanced';
+  }
+
+  // ── Navigation helpers ─────────────────────────────────────────────────────
 
   void _nextPage() {
     final totalPages = widget.level.mcqs.length + 1;
@@ -104,7 +262,6 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      // Finish the level
       Navigator.pop(context, _coins);
     }
   }
@@ -120,27 +277,23 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
 
   bool _canSubmit() {
     final mcqCount = widget.level.mcqs.length;
-    
     if (_currentPageIndex < mcqCount) {
-      if (_isMcqWrongList[_currentPageIndex]) return true; // Allow try again
+      if (_isMcqWrongList[_currentPageIndex]) return true;
       if (_isSubmitted[_currentPageIndex]) return false;
       return _selectedOptionIndices[_currentPageIndex] != null;
     } else {
       if (_isSubmitted[_currentPageIndex]) return false;
-      return _isTextResponse ? _textController.text.trim().isNotEmpty : _hasRecorded;
+      if (_isEvaluating || _isRecording || _isTranscribing) return false;
+      return _textController.text.trim().isNotEmpty;
     }
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _textController.dispose();
-    super.dispose();
-  }
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final totalPages = widget.level.mcqs.length + 1;
+    final isResponsePage = _currentPageIndex == widget.level.mcqs.length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -189,7 +342,6 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
       ),
       body: Column(
         children: [
-          // Progress indicator
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
             child: Row(
@@ -208,16 +360,11 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
               }),
             ),
           ),
-          
           Expanded(
             child: PageView(
               controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(), // Disable swipe to force button usage
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPageIndex = index;
-                });
-              },
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (index) => setState(() => _currentPageIndex = index),
               children: [
                 ...List.generate(widget.level.mcqs.length, (i) => _buildMcqPage(i)),
                 _buildResponsePage(),
@@ -225,7 +372,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
             ),
           ),
 
-          // Bottom Navigation Buttons
+          // Bottom navigation
           Container(
             padding: const EdgeInsets.all(24.0),
             decoration: const BoxDecoration(
@@ -238,34 +385,38 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Back Button (Arrow)
                 Container(
                   decoration: BoxDecoration(
-                    color: ((_currentPageIndex > 0 && _isSubmitted[_currentPageIndex]) || (_currentPageIndex > 0 && _isSubmitted[_currentPageIndex - 1])) 
-                        ? Colors.white.withOpacity(0.05) 
+                    color: ((_currentPageIndex > 0 && _isSubmitted[_currentPageIndex]) ||
+                            (_currentPageIndex > 0 && _isSubmitted[_currentPageIndex - 1]))
+                        ? Colors.white.withOpacity(0.05)
                         : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                    onPressed: (_currentPageIndex > 0 && _isSubmitted[_currentPageIndex]) || (_currentPageIndex > 0 && _isSubmitted[_currentPageIndex - 1])
+                    onPressed: ((_currentPageIndex > 0 && _isSubmitted[_currentPageIndex]) ||
+                            (_currentPageIndex > 0 && _isSubmitted[_currentPageIndex - 1]))
                         ? _prevPage
                         : null,
                     color: Colors.white,
                     disabledColor: Colors.white24,
                   ),
                 ),
-                
-                // Submit Button
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: AnimatedBuilder(
                       animation: _textController,
                       builder: (context, _) {
-                        bool isWrong = _currentPageIndex < widget.level.mcqs.length && _isMcqWrongList[_currentPageIndex];
+                        final isMcq = _currentPageIndex < widget.level.mcqs.length;
+                        final isWrong = isMcq && _isMcqWrongList[_currentPageIndex];
+                        final canTap = _canSubmit();
+
                         return ElevatedButton(
-                          onPressed: _canSubmit() ? _submitCurrentPage : null,
+                          onPressed: canTap
+                              ? (isMcq ? _submitMcqPage : _submitResponsePage)
+                              : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             disabledBackgroundColor: AppColors.primary.withOpacity(0.3),
@@ -275,17 +426,28 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: Text(
-                            isWrong ? 'Try Again' : 'Submit',
-                            style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
+                          child: _isEvaluating && isResponsePage
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  isWrong ? 'Try Again' : 'Submit',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         );
                       },
                     ),
                   ),
                 ),
-                
-                // Next Button (Arrow)
                 Container(
                   decoration: BoxDecoration(
                     color: _isSubmitted[_currentPageIndex]
@@ -294,11 +456,13 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
-                    icon: _currentPageIndex == totalPages - 1 
+                    icon: _currentPageIndex == totalPages - 1
                         ? const Icon(Icons.check_rounded)
                         : const Icon(Icons.arrow_forward_ios_rounded),
                     onPressed: _isSubmitted[_currentPageIndex] ? _nextPage : null,
-                    color: _isSubmitted[_currentPageIndex] ? AppColors.primaryLight : Colors.white24,
+                    color: _isSubmitted[_currentPageIndex]
+                        ? AppColors.primaryLight
+                        : Colors.white24,
                     disabledColor: Colors.white24,
                   ),
                 ),
@@ -311,6 +475,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
   }
 
   // ─── MCQ Page ──────────────────────────────────────────────────────────────
+
   Widget _buildMcqPage(int index) {
     final mcq = widget.level.mcqs[index];
     if (_isSubmitted[index]) return _buildEvaluationScreen(mcq.correctFeedback, true);
@@ -324,17 +489,15 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
         children: List.generate(_mcqOptionsList[index].length, (optionIdx) {
           final isSelected = _selectedOptionIndices[index] == optionIdx;
           return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedOptionIndices[index] = optionIdx;
-              });
-            },
+            onTap: () => setState(() => _selectedOptionIndices[index] = optionIdx),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary.withOpacity(0.2) : AppColors.surface,
+                color: isSelected
+                    ? AppColors.primary.withOpacity(0.2)
+                    : AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSelected ? AppColors.primary : AppColors.border,
@@ -375,140 +538,188 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
   }
 
   // ─── Response Page ─────────────────────────────────────────────────────────
+
   Widget _buildResponsePage() {
     final responseIdx = widget.level.mcqs.length;
     if (_isSubmitted[responseIdx]) {
-      return _buildEvaluationScreen(
-        widget.level.responseSuccessFeedback.isNotEmpty 
-          ? widget.level.responseSuccessFeedback 
-          : 'Great job! Your response was excellent.',
-        true
-      );
+      return _evalResult != null
+          ? _buildResponseEvaluationScreen(_evalResult!)
+          : _buildEvaluationScreen(
+              widget.level.responseSuccessFeedback.isNotEmpty
+                  ? widget.level.responseSuccessFeedback
+                  : 'Great job! Your response was excellent.',
+              true,
+            );
     }
 
     return _buildPageContainer(
       title: 'Final Step: Craft Your Response',
-      description: widget.level.responsePrompt.isNotEmpty 
-          ? widget.level.responsePrompt 
-          : 'Choose how you want to answer this scenario:\n\n${widget.level.scenario}',
+      description: widget.level.responsePrompt.isNotEmpty
+          ? widget.level.responsePrompt
+          : widget.level.scenario,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Toggle buttons
+          // Text field
           Container(
-            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _isTextResponse = true),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: _isTextResponse ? AppColors.primary : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text('Type', style: TextStyle(color: _isTextResponse ? Colors.white : Colors.white54, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _isTextResponse = false),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: !_isTextResponse ? AppColors.primary : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text('Speak', style: TextStyle(color: !_isTextResponse ? Colors.white : Colors.white54, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ),
-              ],
+            child: TextField(
+              controller: _textController,
+              maxLines: 5,
+              minLines: 4,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                height: 1.6,
+              ),
+              decoration: const InputDecoration(
+                hintText: 'Type your response here...',
+                hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                contentPadding: EdgeInsets.all(16),
+                border: InputBorder.none,
+              ),
             ),
           ),
-          const SizedBox(height: 32),
-          
-          if (_isTextResponse)
+
+          const SizedBox(height: 20),
+
+          // Mic row (same as demo screen)
+          _buildMicInputRow(),
+
+          // Evaluation error
+          if (_evalError != null) ...[
+            const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                color: AppColors.error.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.error.withOpacity(0.3)),
               ),
-              child: TextField(
-                controller: _textController,
-                maxLines: 5,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-                decoration: const InputDecoration(
-                  hintText: 'Type your response here...',
-                  hintStyle: TextStyle(color: Colors.white38),
-                  border: InputBorder.none,
-                ),
-              ),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Column(
+              child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () async {
-                      setState(() {
-                        _isRecording = !_isRecording;
-                        if (!_isRecording) {
-                          _hasRecorded = true;
-                        }
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      width: _isRecording ? 100 : 80,
-                      height: _isRecording ? 100 : 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _isRecording ? Colors.redAccent.withOpacity(0.2) : AppColors.primary.withOpacity(0.2),
-                        border: Border.all(
-                          color: _isRecording ? Colors.redAccent : AppColors.primary,
-                          width: 3,
-                        ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
-                          size: 40,
-                          color: _isRecording ? Colors.redAccent : AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    _isRecording ? 'Recording... Tap to stop' : (_hasRecorded ? 'Recorded! Ready to submit.' : 'Tap to start speaking'),
-                    style: TextStyle(
-                      color: _isRecording ? Colors.redAccent : Colors.white70,
-                      fontSize: 16,
-                      fontWeight: _isRecording ? FontWeight.bold : FontWeight.normal,
+                  const Icon(Icons.error_outline, color: AppColors.error, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _evalError!,
+                      style: const TextStyle(color: AppColors.error, fontSize: 13),
                     ),
                   ),
                 ],
               ),
             ),
+          ],
         ],
       ),
     );
   }
 
-  // ─── Shared Layout ─────────────────────────────────────────────────────────
-  Widget _buildPageContainer({required String title, required String description, required Widget content}) {
+  // ─── Mic input row (identical to demo screen) ──────────────────────────────
+
+  Widget _buildMicInputRow() {
+    if (_isTranscribing) {
+      return const Center(
+        child: Column(
+          children: [
+            SizedBox(
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(
+                color: AppColors.primary,
+                strokeWidth: 2.5,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Transcribing…',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return AnimatedBuilder(
+      animation: _micRecordCtrl,
+      builder: (_, __) {
+        final scale = _isRecording ? _micRecordPulse.value : 1.0;
+        final bgColor = _isRecording ? AppColors.error : AppColors.primary;
+        final glowColor = _isRecording
+            ? AppColors.error.withValues(alpha: 0.35)
+            : AppColors.primary.withValues(alpha: 0.25);
+
+        return Center(
+          child: Column(
+            children: [
+              GestureDetector(
+                onTap: _toggleRecording,
+                child: Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: bgColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: glowColor,
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _isRecording ? 'Recording… tap to stop' : 'Or tap to speak',
+                style: TextStyle(
+                  color: _isRecording ? AppColors.error : AppColors.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              if (_voiceError != null) ...[
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    _voiceError!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.error, fontSize: 12),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ─── Shared layout ─────────────────────────────────────────────────────────
+
+  Widget _buildPageContainer({
+    required String title,
+    required String description,
+    required Widget content,
+  }) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -540,6 +751,8 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
     );
   }
 
+  // ─── MCQ evaluation screen ─────────────────────────────────────────────────
+
   Widget _buildEvaluationScreen(String feedback, bool isCorrect) {
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -550,13 +763,15 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: isCorrect ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2),
+              color: isCorrect
+                  ? Colors.green.withOpacity(0.2)
+                  : Colors.red.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded, 
-              color: isCorrect ? Colors.green : Colors.red, 
-              size: 48
+              isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded,
+              color: isCorrect ? Colors.green : Colors.red,
+              size: 48,
             ),
           ),
           const SizedBox(height: 24),
@@ -584,7 +799,11 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isCorrect ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3)),
+              border: Border.all(
+                color: isCorrect
+                    ? Colors.green.withOpacity(0.3)
+                    : Colors.red.withOpacity(0.3),
+              ),
             ),
             child: Text(
               feedback,
@@ -593,6 +812,260 @@ class _LearningSessionScreenState extends State<LearningSessionScreen> {
                 color: Colors.white70,
                 fontSize: 16,
                 height: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── AI response evaluation screen ─────────────────────────────────────────
+
+  Widget _buildResponseEvaluationScreen(DemoEvaluationResult result) {
+    final score = result.overallScore;
+    final scoreColor = score >= 75
+        ? Colors.green
+        : score >= 50
+            ? const Color(0xFFFFD700)
+            : AppColors.error;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Score card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: scoreColor.withOpacity(0.3)),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  '$score',
+                  style: TextStyle(
+                    color: scoreColor,
+                    fontSize: 56,
+                    fontWeight: FontWeight.bold,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'out of 100',
+                  style: TextStyle(
+                    color: scoreColor.withOpacity(0.7),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '+10 Coins',
+                  style: TextStyle(
+                    color: Color(0xFFFFD700),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Sub-scores
+          if (result.scores.isNotEmpty) ...[
+            _buildScoresRow(result.scores),
+            const SizedBox(height: 20),
+          ],
+
+          // Feedback
+          _buildFeedbackCard(
+            label: 'Feedback',
+            icon: Icons.chat_bubble_outline_rounded,
+            color: AppColors.primaryLight,
+            text: result.feedback,
+          ),
+          const SizedBox(height: 16),
+
+          // Strengths
+          if (result.strengths.isNotEmpty)
+            _buildBulletCard(
+              label: 'Strengths',
+              icon: Icons.thumb_up_alt_outlined,
+              color: Colors.green,
+              items: result.strengths,
+            ),
+          const SizedBox(height: 16),
+
+          // Improvements
+          if (result.improvements.isNotEmpty)
+            _buildBulletCard(
+              label: 'Areas to Improve',
+              icon: Icons.trending_up_rounded,
+              color: const Color(0xFFFFD700),
+              items: result.improvements,
+            ),
+
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScoresRow(Map<String, int> scores) {
+    return Row(
+      children: scores.entries.map((e) {
+        final label = e.key[0].toUpperCase() + e.key.substring(1);
+        final val = e.value;
+        final color = val >= 75
+            ? Colors.green
+            : val >= 50
+                ? const Color(0xFFFFD700)
+                : AppColors.error;
+        return Expanded(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withOpacity(0.25)),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  '$val',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildFeedbackCard({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required String text,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 15,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBulletCard({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required List<String> items,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 6),
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

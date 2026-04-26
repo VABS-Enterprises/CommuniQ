@@ -4,7 +4,6 @@ import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/common_widgets/glass_card.dart';
-import 'package:communiq/common_widgets/glowing_icon.dart';
 
 class FloatingNavBar extends StatelessWidget {
   final int currentIndex;
@@ -25,9 +24,9 @@ class FloatingNavBar extends StatelessWidget {
         height: 60,
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.surfaceVariant,
             borderRadius: AppRadius.navigationRadius,
-            border: Border.all(color: AppColors.border, width: 1.0),
+            border: Border.all(color: AppColors.glassBorder, width: 1.0),
           ),
           child: ClipRRect(
             borderRadius: AppRadius.navigationRadius,
@@ -95,14 +94,7 @@ class _NavBarItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         transformAlignment: Alignment.center,
         transform: Matrix4.identity()..scale(isSelected ? 1.0 : 0.95),
-        child: isSelected
-            ? GlowingIcon(
-                icon: icon,
-                color: iconColor,
-                glowColor: GlowColor.cyan,
-                size: iconSize,
-              )
-            : Icon(icon, color: iconColor, size: iconSize),
+        child: Icon(icon, color: iconColor, size: iconSize),
       ),
     );
   }

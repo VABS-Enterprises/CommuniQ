@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/common_widgets/sky_campus_background.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/user_profile.dart';
@@ -11,7 +12,6 @@ import 'package:communiq/views/contest_view/screens/leaderboard_page.dart';
 import 'package:communiq/views/home_view/widgets/ai_insight_card.dart';
 import 'package:communiq/views/home_view/widgets/contest_card.dart';
 import 'package:communiq/views/home_view/widgets/quick_actions_row.dart';
-
 // ─────────────────────────────────────────────────────────────────────────────
 // HOME VIEW
 // ─────────────────────────────────────────────────────────────────────────────
@@ -133,8 +133,9 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return SkyCampusBackground(
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
@@ -200,7 +201,12 @@ class _HomeViewState extends State<HomeView> {
 
                   const SizedBox(height: 16),
 
-                  // ── 6. Contest CTA ──────────────────────────────────────
+                  // ── 6. Leaderboard card ─────────────────────────────────
+                  _LeaderboardCard(profile: _profile),
+
+                  const SizedBox(height: 16),
+
+                  // ── 7. Contest CTA ──────────────────────────────────────
                   const ContestCard(),
 
                   const SizedBox(height: 16),
@@ -224,6 +230,7 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -356,12 +363,20 @@ class _DailyInspirationCardState extends State<_DailyInspirationCard>
       child: SlideTransition(
         position: _slide,
         child: Container(
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppColors.glassBorder.withValues(alpha: 0.5),
+              color: AppColors.secondary.withValues(alpha: 0.45),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.secondary.withValues(alpha: 0.12),
+                blurRadius: 12,
+                spreadRadius: 1,
+              ),
+            ],
           ),
           child: IntrinsicHeight(
             child: Row(
@@ -370,9 +385,9 @@ class _DailyInspirationCardState extends State<_DailyInspirationCard>
                 // ── Left accent bar ────────────────────────────────────────
                 Container(
                   width: 4,
-                  decoration: BoxDecoration(
-                    color: _quote.accent,
-                    borderRadius: const BorderRadius.only(
+                  decoration: const BoxDecoration(
+                    color: AppColors.secondary,
+                    borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(20),
                       bottomLeft: Radius.circular(20),
                     ),
@@ -408,10 +423,10 @@ class _DailyInspirationCardState extends State<_DailyInspirationCard>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Label
-                              Text(
+                              const Text(
                                 'DAILY INSPIRATION',
                                 style: TextStyle(
-                                  color: _quote.accent,
+                                  color: AppColors.secondary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 1.1,
@@ -468,17 +483,10 @@ extension on DateTime {
 // 1. HEADER
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _HomeHeader extends StatefulWidget {
+class _HomeHeader extends StatelessWidget {
   final String greeting;
   final UserProfile? profile;
   const _HomeHeader({required this.greeting, this.profile});
-
-  @override
-  State<_HomeHeader> createState() => _HomeHeaderState();
-}
-
-class _HomeHeaderState extends State<_HomeHeader> {
-  bool _lbActive = false;
 
   @override
   Widget build(BuildContext context) {
@@ -490,7 +498,7 @@ class _HomeHeaderState extends State<_HomeHeader> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.greeting,
+                greeting,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 22,
@@ -511,42 +519,6 @@ class _HomeHeaderState extends State<_HomeHeader> {
         ),
         const SizedBox(width: 12),
 
-        // Leaderboard
-        GestureDetector(
-          onTap: () {
-            setState(() => _lbActive = !_lbActive);
-            HapticFeedback.lightImpact();
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const LeaderboardPage(userRank: 24),
-              ),
-            );
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.surface,
-              border: Border.all(
-                color: _lbActive
-                    ? AppColors.primary.withValues(alpha: 0.6)
-                    : AppColors.glassBorder,
-              ),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.leaderboard_rounded,
-                size: 20,
-                color: _lbActive ? AppColors.primary : AppColors.primaryLight,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-
         // Profile avatar
         GestureDetector(
           onTap: () => SwitchToProfileTabNotification().dispatch(context),
@@ -558,9 +530,9 @@ class _HomeHeaderState extends State<_HomeHeader> {
               color: AppColors.primary,
             ),
             child: ClipOval(
-              child: widget.profile?.photoURL != null
+              child: profile?.photoURL != null
                   ? Image.network(
-                      widget.profile!.photoURL!,
+                      profile!.photoURL!,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => _initials(),
                     )
@@ -573,7 +545,7 @@ class _HomeHeaderState extends State<_HomeHeader> {
   }
 
   Widget _initials() {
-    final name = widget.profile?.name ?? '';
+    final name = profile?.name ?? '';
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     return Center(
       child: Text(
@@ -1221,6 +1193,105 @@ class _SkillCell extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 6. LEADERBOARD CARD
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LeaderboardCard extends StatelessWidget {
+  final UserProfile? profile;
+  const _LeaderboardCard({this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    const rankColor = Color(0xFFF59E0B);
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const LeaderboardPage(userRank: 24),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: rankColor.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            // Trophy icon
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: rankColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.emoji_events_rounded,
+                color: rankColor,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+
+            // Text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Leaderboard',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    profile != null
+                        ? 'See how you rank among all speakers'
+                        : 'Compete with speakers worldwide',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            // Arrow
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: rankColor.withValues(alpha: 0.10),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: rankColor,
+                size: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 8. RECENT ACTIVITY
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1236,6 +1307,7 @@ class _RecentActivity extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Header ──────────────────────────────────────────────────────────
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -1248,60 +1320,98 @@ class _RecentActivity extends StatelessWidget {
               ),
             ),
             if (sessions.isNotEmpty)
-              const Text(
-                'View All',
-                style: TextStyle(
-                  color: AppColors.primaryLight,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.20)),
+                ),
+                child: const Text(
+                  'View All',
+                  style: TextStyle(
+                    color: AppColors.primaryLight,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
           ],
         ),
         const SizedBox(height: 14),
+
+        // ── Body ─────────────────────────────────────────────────────────────
         if (loading)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                  color: AppColors.glassBorder.withValues(alpha: 0.4)),
+            ),
+            child: const Center(
               child: CircularProgressIndicator(
                   color: AppColors.primary, strokeWidth: 2),
             ),
           )
         else if (recent.isEmpty)
-          _emptyState(context)
+          _emptyState()
         else
-          Column(
-            children: [
-              for (int i = 0; i < recent.length; i++) ...[
-                _SessionRow(session: recent[i]),
-                if (i < recent.length - 1)
-                  Divider(
-                    height: 1,
-                    color: AppColors.glassBorder.withValues(alpha: 0.3),
-                    indent: 56,
-                  ),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                  color: AppColors.glassBorder.withValues(alpha: 0.45)),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: Column(
+              children: [
+                for (int i = 0; i < recent.length; i++) ...[
+                  _SessionRow(session: recent[i]),
+                  if (i < recent.length - 1)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: AppColors.glassBorder.withValues(alpha: 0.25),
+                      indent: 68,
+                      endIndent: 16,
+                    ),
+                ],
               ],
-            ],
+            ),
           ),
       ],
     );
   }
 
-  Widget _emptyState(BuildContext context) => Container(
+  Widget _emptyState() => Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 32),
+        padding: const EdgeInsets.symmetric(vertical: 36),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
               color: AppColors.glassBorder.withValues(alpha: 0.4)),
         ),
-        child: const Column(
+        child: Column(
           children: [
-            Icon(Icons.mic_none_rounded,
-                color: AppColors.textMuted, size: 36),
-            SizedBox(height: 10),
-            Text(
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.mic_none_rounded,
+                  color: AppColors.primary, size: 26),
+            ),
+            const SizedBox(height: 12),
+            const Text(
               'No sessions yet',
               style: TextStyle(
                 color: AppColors.textPrimary,
@@ -1309,8 +1419,8 @@ class _RecentActivity extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 4),
-            Text(
+            const SizedBox(height: 4),
+            const Text(
               'Start your first AI roleplay',
               style: TextStyle(color: AppColors.textMuted, fontSize: 12),
             ),
@@ -1334,7 +1444,8 @@ class _SessionRow extends StatelessWidget {
     if (value is Map) {
       final seconds = value['_seconds'] ?? value['seconds'];
       if (seconds is num) {
-        return DateTime.fromMillisecondsSinceEpoch(seconds.toInt() * 1000, isUtc: true)
+        return DateTime.fromMillisecondsSinceEpoch(seconds.toInt() * 1000,
+                isUtc: true)
             .toIso8601String();
       }
     }
@@ -1348,18 +1459,32 @@ class _SessionRow extends StatelessWidget {
     final status = session['status']?.toString() ?? 'completed';
     final endedAt = _parseTimestamp(session['endedAt']);
 
+    final isAbandoned = status == 'abandoned';
+
+    // Score tier
     Color scoreColor = AppColors.textMuted;
+    Color scoreBg = AppColors.surfaceVariant;
     String scoreStr = '—';
     if (score != null) {
       scoreStr = '${score.round()}';
       if (score >= 80) {
         scoreColor = AppColors.emerald;
+        scoreBg = AppColors.emerald.withValues(alpha: 0.12);
       } else if (score >= 60) {
         scoreColor = AppColors.warning;
+        scoreBg = AppColors.warning.withValues(alpha: 0.12);
       } else {
         scoreColor = AppColors.error;
+        scoreBg = AppColors.error.withValues(alpha: 0.12);
       }
     }
+
+    // Accent colour for the left bar
+    final accentColor = isAbandoned
+        ? AppColors.textMuted.withValues(alpha: 0.4)
+        : score == null
+            ? AppColors.primary.withValues(alpha: 0.5)
+            : scoreColor;
 
     String? timeAgo;
     if (endedAt != null) {
@@ -1376,117 +1501,142 @@ class _SessionRow extends StatelessWidget {
       } catch (_) {}
     }
 
-    final isAbandoned = status == 'abandoned';
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Left accent bar ──────────────────────────────────────────────
+          Container(width: 3, color: accentColor),
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 0),
-        child: Row(
-          children: [
-            // Icon
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: isAbandoned
-                    ? AppColors.textMuted.withValues(alpha: 0.1)
-                    : AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                isAbandoned
-                    ? Icons.cancel_outlined
-                    : Icons.record_voice_over_rounded,
-                color: isAbandoned
-                    ? AppColors.textMuted
-                    : AppColors.primary,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          // ── Row content ──────────────────────────────────────────────────
+          Expanded(
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              child: Row(
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
+                  // Icon
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: isAbandoned
+                          ? AppColors.textMuted.withValues(alpha: 0.08)
+                          : AppColors.primary.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Icon(
+                      isAbandoned
+                          ? Icons.cancel_outlined
+                          : Icons.record_voice_over_rounded,
                       color: isAbandoned
                           ? AppColors.textMuted
-                          : AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                          : AppColors.primary,
+                      size: 19,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: isAbandoned
-                              ? AppColors.textMuted.withValues(alpha: 0.08)
-                              : AppColors.emerald.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          isAbandoned ? 'Abandoned' : 'Completed',
+                  const SizedBox(width: 12),
+
+                  // Title + status
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          title,
                           style: TextStyle(
                             color: isAbandoned
-                                ? AppColors.textMuted
-                                : AppColors.emerald,
-                            fontSize: 10,
+                                ? AppColors.textSecondary
+                                : AppColors.textPrimary,
                             fontWeight: FontWeight.w600,
+                            fontSize: 13.5,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      if (timeAgo != null) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          timeAgo,
-                          style: const TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 11,
-                          ),
+                        const SizedBox(height: 5),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: isAbandoned
+                                    ? AppColors.textMuted
+                                        .withValues(alpha: 0.08)
+                                    : AppColors.emerald
+                                        .withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isAbandoned ? 'Abandoned' : 'Completed',
+                                style: TextStyle(
+                                  color: isAbandoned
+                                      ? AppColors.textMuted
+                                      : AppColors.emerald,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (timeAgo != null) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                timeAgo,
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
-                    ],
+                    ),
                   ),
+
+                  // Score badge
+                  if (!isAbandoned && score != null) ...[
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 52,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: scoreBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: scoreColor.withValues(alpha: 0.25)),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            scoreStr,
+                            style: TextStyle(
+                              color: scoreColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                            ),
+                          ),
+                          Text(
+                            'Score',
+                            style: TextStyle(
+                              color: scoreColor.withValues(alpha: 0.7),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-            if (!isAbandoned && score != null) ...[
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    scoreStr,
-                    style: TextStyle(
-                      color: scoreColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  Text(
-                    'Score',
-                    style: const TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

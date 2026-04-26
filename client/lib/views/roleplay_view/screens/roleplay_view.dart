@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/common_widgets/sky_campus_background.dart';
 import 'package:communiq/views/roleplay_view/screens/setup_scenario_page.dart';
 import '../widgets/categories_section.dart';
 import '../widgets/roleplay_recent_practice.dart';
@@ -12,25 +13,8 @@ class RoleplayView extends StatefulWidget {
   State<RoleplayView> createState() => _RoleplayViewState();
 }
 
-class _RoleplayViewState extends State<RoleplayView>
-    with SingleTickerProviderStateMixin {
+class _RoleplayViewState extends State<RoleplayView> {
   String? _selectedPresetKey;
-  late AnimationController _ambientController;
-
-  @override
-  void initState() {
-    super.initState();
-    _ambientController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _ambientController.dispose();
-    super.dispose();
-  }
 
   void _onScenarioSelect(String? key) => setState(
       () => _selectedPresetKey = _selectedPresetKey == key ? null : key);
@@ -45,87 +29,42 @@ class _RoleplayViewState extends State<RoleplayView>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF080B14),
-      body: Stack(
-        children: [
-          _buildAmbientBackground(),
-          SafeArea(
-            bottom: false,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 28),
-                  _buildHeader(),
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _buildHeroCard(),
-                  ),
-                  const SizedBox(height: 32),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: CategoriesSection(
-                      selectedPresetKey: _selectedPresetKey,
-                      onSelect: _onScenarioSelect,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: RoleplayRecentPractice(),
-                  ),
-                  const SizedBox(height: 120),
-                ],
+    return SkyCampusBackground(
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 28),
+              _buildHeader(),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _buildHeroCard(),
               ),
-            ),
+              const SizedBox(height: 32),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: CategoriesSection(
+                  selectedPresetKey: _selectedPresetKey,
+                  onSelect: _onScenarioSelect,
+                ),
+              ),
+              const SizedBox(height: 32),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: RoleplayRecentPractice(),
+              ),
+              const SizedBox(height: 120),
+            ],
           ),
-        ],
+        ),
       ),
-    );
-  }
-
-  Widget _buildAmbientBackground() {
-    return AnimatedBuilder(
-      animation: _ambientController,
-      builder: (_, __) => Stack(
-        children: [
-          Positioned(
-            top: -100,
-            left: -80,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  AppColors.primary.withValues(
-                      alpha: 0.07 + 0.04 * _ambientController.value),
-                  Colors.transparent,
-                ]),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 280,
-            right: -100,
-            child: Container(
-              width: 240,
-              height: 240,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  const Color(0xFF06D6C7).withValues(
-                      alpha: 0.05 + 0.03 * _ambientController.value),
-                  Colors.transparent,
-                ]),
-              ),
-            ),
-          ),
-        ],
-      ),
+    ),
     );
   }
 
@@ -172,21 +111,14 @@ class _RoleplayViewState extends State<RoleplayView>
             ),
           ),
           const SizedBox(height: 14),
-          ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              colors: [AppColors.textPrimary, AppColors.primaryExtraLight],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ).createShader(bounds),
-            child: const Text(
-              'Roleplay',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 34,
-                fontWeight: FontWeight.bold,
-                height: 1.1,
-                letterSpacing: -0.5,
-              ),
+          const Text(
+            'Roleplay',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 34,
+              fontWeight: FontWeight.bold,
+              height: 1.1,
+              letterSpacing: -0.5,
             ),
           ),
           const SizedBox(height: 6),
@@ -205,9 +137,7 @@ class _RoleplayViewState extends State<RoleplayView>
 
   Widget _buildHeroCard() {
     final isSelected = _selectedPresetKey != null;
-    return AnimatedBuilder(
-      animation: _ambientController,
-      builder: (_, __) => GestureDetector(
+    return GestureDetector(
         onTap: _onStart,
         child: Container(
           width: double.infinity,
@@ -227,23 +157,11 @@ class _RoleplayViewState extends State<RoleplayView>
                       const Color(0xFF1A2438),
                     ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(
-                  alpha: isSelected
-                      ? 0.15 + 0.05 * _ambientController.value
-                      : 0.08 + 0.02 * _ambientController.value,
-                ),
-                blurRadius: 36,
-                spreadRadius: isSelected ? 2 : 0,
-                offset: const Offset(0, 8),
-              ),
-            ],
             border: Border.all(
               color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.8)
-                  : AppColors.border,
-              width: isSelected ? 2 : 1.5,
+                  ? AppColors.primary.withValues(alpha: 0.6)
+                  : AppColors.glassBorder,
+              width: isSelected ? 1.5 : 1,
             ),
           ),
           child: Row(
@@ -326,7 +244,6 @@ class _RoleplayViewState extends State<RoleplayView>
             ],
           ),
         ),
-      ),
     );
   }
 }
