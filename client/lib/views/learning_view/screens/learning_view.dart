@@ -1,1420 +1,295 @@
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/services/level_service.dart';
 import 'package:communiq/models/communiq_level.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
 
-// ─── Node state ───────────────────────────────────────────────────────────────
-enum _NodeState { completed, current, locked }
+// ═══════════════════════════════════════════════════════════════════════════════
+// DESIGN TOKENS
+// ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── Journey metadata ─────────────────────────────────────────────────────────
-const _kJourneySubtitles = [
-  'Social Foundations',
-  'Daily Conversations',
-  'Building Connections',
-  'Workplace Basics',
-  'Express Yourself',
-  'Professional Edge',
-  'Advanced Dialogue',
-  'Office Dynamics',
-  'Social Mastery',
-  'Work & Life',
-  'Crisis & Conflict',
-  'High-Stakes Talks',
-  'Leadership Voice',
-  'Power Dynamics',
-  'Legacy Communication',
+const _kBg        = Color(0xFF050816);
+const _kSurface   = Color(0xFF0F172A);
+const _kBorder    = Color(0x1AFFFFFF);
+const _kPath      = Color(0xFF7835FF);
+const _kPathLight = Color(0xFFAA88FF);
+
+// ── Hub illustration mapping ──────────────────────────────────────────────────
+// 12 available illustrations cycled across all 15 hubs + all 150 levels
+const _kIllos = [
+  'assets/images/scenarios/introduce_yourself.png',
+  'assets/images/scenarios/job_interview_v2.png',
+  'assets/images/scenarios/negotiation_v2.png',
+  'assets/images/scenarios/technical_solving.png',
+  'assets/images/scenarios/sales_pitch.png',
+  'assets/images/scenarios/complex_concept.png',
+  'assets/images/scenarios/difficult_client.png',
+  'assets/images/scenarios/gd_ai.png',
+  'assets/images/scenarios/salary_negotiation.png',
+  'assets/images/scenarios/strengths_weaknesses.png',
+  'assets/images/scenarios/why_hire_you.png',
+  'assets/images/scenarios/cold_call.png',
 ];
 
-// Wave-curve offsets (index 0 = level 1 at bottom, index 9 = level 10 at top).
-const _kWave = [
-  0.48, // 0 → far right
-  0.05, // 1 → slight right
-  -0.38, // 2 → left
-  -0.50, // 3 → far left
-  -0.18, // 4 → center-left
-  0.22, // 5 → center-right
-  0.50, // 6 → far right
-  0.30, // 7 → right
-  -0.15, // 8 → slight left
-  -0.48, // 9 → far left
+// Deterministic illustration for a hub index
+String _hubIllo(int hubIdx) => _kIllos[hubIdx % _kIllos.length];
+
+// ── Per-hub theme ─────────────────────────────────────────────────────────────
+class _Hub {
+  final String name;
+  final Color  glow; // neon edge + label color
+  final Color  dark; // dark tint for side faces
+  const _Hub(this.name, this.glow, this.dark);
+}
+
+const _kHubs = [
+  _Hub('Introduction Hub', Color(0xFF7835FF), Color(0xFF0C0A20)),
+  _Hub('Conversation Hub', Color(0xFF00CCFF), Color(0xFF060D1A)),
+  _Hub('Professional Hub', Color(0xFF7C5CFF), Color(0xFF0C0A20)),
+  _Hub('Influence Hub',    Color(0xFF00CCFF), Color(0xFF060B1A)),
+  _Hub('Expression Hub',   Color(0xFFA78BFA), Color(0xFF0C0820)),
+  _Hub('Pro Skills Hub',   Color(0xFF7835FF), Color(0xFF0C0A20)),
+  _Hub('Dialogue Hub',     Color(0xFF00CCFF), Color(0xFF060D1A)),
+  _Hub('Office Hub',       Color(0xFF7C5CFF), Color(0xFF0C0A20)),
+  _Hub('Social Hub',       Color(0xFFA78BFA), Color(0xFF0C0820)),
+  _Hub('Work–Life Hub',    Color(0xFF00CCFF), Color(0xFF060B1A)),
+  _Hub('Crisis Hub',       Color(0xFF7835FF), Color(0xFF0C0A20)),
+  _Hub('High-Stakes Hub',  Color(0xFF7C5CFF), Color(0xFF0C0A20)),
+  _Hub('Leadership Hub',   Color(0xFFA78BFA), Color(0xFF0C0820)),
+  _Hub('Power Hub',        Color(0xFF00CCFF), Color(0xFF060D1A)),
+  _Hub('Legacy Hub',       Color(0xFF7835FF), Color(0xFF0C0A20)),
+  _Hub('Mastery Hub',      Color(0xFFA78BFA), Color(0xFF0C0820)),
+  _Hub('Elite Hub',        Color(0xFF00CCFF), Color(0xFF060D1A)),
+  _Hub('Pinnacle Hub',     Color(0xFF7C5CFF), Color(0xFF0C0A20)),
+  _Hub('Visionary Hub',    Color(0xFF7835FF), Color(0xFF0C0A20)),
+  _Hub('Apex Hub',         Color(0xFF00CCFF), Color(0xFF060D1A)),
 ];
 
-const _kCyan = Color(0xFF00D2FF);
-const _kOrange = Color(0xFFFF6B35);
-const _kNodeSize = 82.0;
-const _kPerJourney = 10;
-const _kTotalLevels = 150;
+// ═══════════════════════════════════════════════════════════════════════════════
+// LAYOUT CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── Main widget ──────────────────────────────────────────────────────────────
+const _kPerHub  = 10;
+const _kTLevels = 200;
+
+// Floating illustration card dimensions
+const _kCW = 165.0; // card width
+const _kCH = 115.0; // card height
+
+// Canvas layout
+const _kZone   = 240.0; // vertical space per hub
+const _kTopPad = 60.0;
+const _kBotPad = 220.0;
+
+enum _HS { active, locked, completed }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN WIDGET
+// ═══════════════════════════════════════════════════════════════════════════════
+
 class LearningView extends StatefulWidget {
   const LearningView({super.key});
-
   @override
   State<LearningView> createState() => _LearningViewState();
 }
 
 class _LearningViewState extends State<LearningView>
     with TickerProviderStateMixin {
-  List<CommuniqLevel> _levels = [];
-  Set<int> _completedIds = {};
-  bool _isLoading = true;
-  late final AnimationController _glowCtrl;
-  late final Animation<double> _glowAnim;
-  late final AnimationController _pulseCtrl;
-  late final Animation<double> _pulseAnim;
-  late final AnimationController _particleCtrl;
 
-  // ── GlobalKeys for flying-animation targets ──────────────────────────────────
-  final _profileBadgeKey = GlobalKey<_CircularXPBadgeState>();
-  final _journeyXPKeys =
-      List.generate(15, (_) => GlobalKey<_JourneyXPBarState>());
+  List<CommuniqLevel> _levels  = [];
+  Set<int>            _done    = {};
+  bool                _loading = true;
+
+  late final AnimationController _glowCtrl;
+  late final Animation<double>   _glowAnim;
+  late final AnimationController _shimCtrl;
+
+  double           _sw = 0, _ch = 0;
+  int              _n  = 0;
+  final Map<int,Offset> _hubPos  = {};
+  final List<Offset>    _pathPts = [];
+  final _scroll = ScrollController();
+
+  // ── Init / Dispose ───────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-
-    _glowCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat(reverse: true);
-    _glowAnim = Tween<double>(begin: 0.4, end: 1.0)
+    _glowCtrl = AnimationController(vsync: this,
+        duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
+    _glowAnim = Tween<double>(begin: 0.45, end: 1.0)
         .animate(CurvedAnimation(parent: _glowCtrl, curve: Curves.easeInOut));
-
-    _pulseCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1800))
-      ..repeat();
-    _pulseAnim = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeOut));
-
-    _particleCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 2500))
-      ..repeat();
-
+    _shimCtrl = AnimationController(vsync: this,
+        duration: const Duration(seconds: 3))..repeat();
     _load();
   }
 
   @override
   void dispose() {
     _glowCtrl.dispose();
-    _pulseCtrl.dispose();
-    _particleCtrl.dispose();
+    _shimCtrl.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
-  // ─── Data loading ──────────────────────────────────────────────────────────
+  // ── Data ─────────────────────────────────────────────────────────────────
 
   Future<void> _load() async {
     try {
-      final levels = await LevelService.instance.fetchLevels();
-      final prefs = await SharedPreferences.getInstance();
-      final done = (prefs.getStringList('completed_level_ids') ?? [])
-          .map(int.parse)
-          .toSet();
+      final lvls = await LevelService.instance.fetchLevels();
+      final p    = await SharedPreferences.getInstance();
+      final done = (p.getStringList('completed_level_ids') ?? []).map(int.parse).toSet();
       if (mounted) {
-        setState(() {
-          _levels = levels;
-          _completedIds = done;
-          _isLoading = false;
-        });
+        setState(() { _levels = lvls; _done = done; _loading = false; });
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCur());
       }
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  // ─── Helpers ───────────────────────────────────────────────────────────────
+  // ── Layout ───────────────────────────────────────────────────────────────
 
-  int get _currentId {
+  void _layout(double w) {
+    if (_sw == w && _hubPos.isNotEmpty) return;
+    _sw = w;
+    _n  = 20; // Hardcoded to 20 to show all 200 levels on the path
+    _ch = _n * _kZone + _kTopPad + _kBotPad;
+    _hubPos.clear();
+    _pathPts.clear();
+    for (int j = 0; j < _n; j++) {
+      final y = _ch - _kBotPad - j * _kZone - _kZone * 0.5;
+      // Even hubs left, odd hubs right — matching reference S-curve
+      final x = j.isEven ? w * 0.33 : w * 0.67;
+      _hubPos[j] = Offset(x, y);
+      _pathPts.add(Offset(x, y));
+    }
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  int get _curIdx {
+    if (_levels.isEmpty || _n == 0) return 0;
+    final id = _curId;
+    final mx = _n - 1;
+    return ((id - 1) ~/ _kPerHub).clamp(0, mx < 0 ? 0 : mx);
+  }
+
+  int get _curId {
     for (final l in _levels) {
-      if (!_completedIds.contains(l.id)) return l.id;
+      if (!_done.contains(l.id)) return l.id;
     }
     return _levels.isEmpty ? 1 : _levels.last.id;
   }
 
-  _NodeState _stateOf(int id) {
-    final ji = (id - 1) ~/ _kPerJourney;
-    if (_isJourneyLocked(ji)) return _NodeState.locked;
+  bool _isLocked(int j) => j != 0 && _comp(j - 1) < _kPerHub;
 
-    if (_completedIds.contains(id)) return _NodeState.completed;
-    if (id == _currentId) return _NodeState.current;
-    return _NodeState.locked;
+  int _comp(int j) {
+    final s = j * _kPerHub, e = (s + _kPerHub).clamp(0, _levels.length);
+    if (s >= _levels.length) return 0;
+    return _levels.sublist(s, e).where((l) => _done.contains(l.id)).length;
   }
 
-  int _scoreFor(int id) {
-    if (!_completedIds.contains(id)) return 0;
-    // mock deterministic score for gamified UI testing
-    return 30 + ((id * 47) % 71); // generates score between 30 and 100
+  _HS _state(int j) {
+    if (_n == 0 || _isLocked(j)) return _HS.locked;
+    if (_comp(j) >= _kPerHub) return _HS.completed;
+    if (j == _curIdx) return _HS.active;
+    return _HS.locked;
   }
 
-  int _starsForScore(int score) {
-    if (score > 80) return 3;
-    if (score > 50) return 2;
-    if (score > 35) return 1;
-    return 0;
+  void _scrollToCur() {
+    if (!_scroll.hasClients) return;
+    final pos = _hubPos[_curIdx];
+    if (pos == null) return;
+    final vh = _scroll.position.viewportDimension;
+    final mx = _scroll.position.maxScrollExtent;
+    _scroll.animateTo((pos.dy - vh * 0.55).clamp(0.0, mx),
+        duration: const Duration(milliseconds: 900), curve: Curves.easeOutCubic);
   }
 
-  int _starsInJourney(int ji) {
-    final start = ji * _kPerJourney;
-    final end = (start + _kPerJourney).clamp(0, _levels.length);
-    if (start >= _levels.length) return 0;
+  // ── Interaction ──────────────────────────────────────────────────────────
 
-    int stars = 0;
-    for (int i = start; i < end; i++) {
-      stars += _starsForScore(_scoreFor(_levels[i].id));
-    }
-    return stars;
-  }
-
-  bool _isJourneyLocked(int ji) {
-    if (ji == 0) return false;
-    return _starsInJourney(ji - 1) < 20;
-  }
-
-  int _completedInJourney(int ji) {
-    final start = ji * _kPerJourney;
-    final end = (start + _kPerJourney).clamp(0, _levels.length);
-    if (start >= _levels.length) return 0;
-    return _levels
-        .sublist(start, end)
-        .where((l) => _completedIds.contains(l.id))
-        .length;
-  }
-
-  String _personaFor(String category) {
-    switch (category.toLowerCase()) {
-      case 'professional':
-      case 'leadership':
-        return 'Strict Boss';
-      default:
-        return 'Friendly Mentor';
-    }
-  }
-
-  // ─── Tap handling ──────────────────────────────────────────────────────────
-
-  void _onTap(CommuniqLevel level) {
-    final ji = (level.id - 1) ~/ _kPerJourney;
-    if (_isJourneyLocked(ji)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(children: [
-            const Icon(Icons.star_rounded, color: Colors.amber, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text('Get 20 stars in Journey $ji to unlock this section!',
-                  style: const TextStyle(color: AppColors.textPrimary)),
-            ),
-          ]),
-          backgroundColor: AppColors.surface,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+  void _tap(int j) {
+    if (_isLocked(j)) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Complete the previous hub first',
+            style: TextStyle(color: Colors.white)),
+        backgroundColor: _kSurface,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: _kBorder)),
+        duration: const Duration(seconds: 2),
+      ));
       return;
     }
-
-    if (_stateOf(level.id) == _NodeState.locked) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(children: [
-            const Icon(Icons.lock_rounded,
-                color: AppColors.primaryLight, size: 16),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text('Complete earlier scenarios to unlock this.',
-                  style: TextStyle(color: AppColors.textPrimary)),
-            ),
-          ]),
-          backgroundColor: AppColors.surface,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-    _showSheet(level);
+    final s = j * _kPerHub, e = (s + _kPerHub).clamp(0, _levels.length);
+    if (s >= _levels.length) return;
+    final subs = _levels.sublist(s, e);
+    final lvl  = subs.firstWhere((l) => !_done.contains(l.id), orElse: () => subs.last);
+    _openSheet(lvl);
   }
 
-  // ─── Flying XP animation ───────────────────────────────────────────────────
-
-  /// Step 1 — fire one chip from centre-screen to the journey XP bar.
-  void _launchChipToJourneyBar({required Offset src, required int ji}) {
-    final key = _journeyXPKeys[ji.clamp(0, 14)];
-    final box = key.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null || !box.attached) return;
-    final dest = box.localToGlobal(box.size.center(Offset.zero));
-    OverlayEntry? e;
-    e = OverlayEntry(
-      builder: (_) => _FlyingXPChip(
-        from: src,
-        to: dest,
-        label: '+20 XP',
-        onLanded: () => key.currentState?.onXPArrived(),
-        onComplete: () => e?.remove(),
-      ),
-    );
-    Overlay.of(context).insert(e);
-  }
-
-  /// Step 2 — when journey completes: turn bar green, then fire chips to profile ring.
-  void _animateJourneyComplete({required int ji}) {
-    _journeyXPKeys[ji.clamp(0, 14)].currentState?.onJourneyCompleted(
-        onReadyToFly: () => _launchJourneyXPToProfile(ji: ji));
-  }
-
-  /// Step 3 — fire 5 staggered chips from the now-green journey bar to the profile circle.
-  void _launchJourneyXPToProfile({required int ji}) {
-    final jBox = _journeyXPKeys[ji.clamp(0, 14)]
-        .currentContext
-        ?.findRenderObject() as RenderBox?;
-    final pBox =
-        _profileBadgeKey.currentContext?.findRenderObject() as RenderBox?;
-    if (jBox == null || !jBox.attached || pBox == null || !pBox.attached)
-      return;
-
-    final src = jBox.localToGlobal(jBox.size.center(Offset.zero));
-    final dest = pBox.localToGlobal(pBox.size.center(Offset.zero));
-    final overlay = Overlay.of(context);
-
-    for (int i = 0; i < 5; i++) {
-      Future.delayed(Duration(milliseconds: i * 110), () {
-        if (!mounted) return;
-        OverlayEntry? e;
-        e = OverlayEntry(
-          builder: (_) => _FlyingXPChip(
-            from: src,
-            to: dest,
-            label: '+20 XP',
-            arcDir: i.isEven ? 1 : -1,
-            onLanded: i == 0
-                ? () => _profileBadgeKey.currentState?.onXPArrived()
-                : null,
-            onComplete: () => e?.remove(),
-          ),
-        );
-        overlay.insert(e);
-      });
-    }
-  }
-
-  /// Reloads completed IDs after returning from RoleplaySetupScreen, then fires
-  /// the correct animations depending on what changed.
-  Future<void> _reloadAndAnimate(
-      {required int ji, required Set<int> prevCompleted}) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final newDone = (prefs.getStringList('completed_level_ids') ?? [])
-          .map(int.parse)
-          .toSet();
-      if (!mounted) return;
-
-      final newlyCompleted = newDone.difference(prevCompleted);
-      setState(() => _completedIds = newDone);
-
-      if (newlyCompleted.isEmpty) return; // user quit without completing
-
-      // Brief pause so the screen settles before the chip appears
-      await Future.delayed(const Duration(milliseconds: 350));
-      if (!mounted) return;
-
-      // Source: centre of screen — feels like XP materialises from the session
-      final sz = MediaQuery.of(context).size;
-      final src = Offset(sz.width / 2, sz.height * 0.5);
-
-      // Step 1: chip to journey bar
-      _launchChipToJourneyBar(src: src, ji: ji);
-
-      // Step 2: after chip lands, check if this journey just reached 10/10
-      await Future.delayed(const Duration(milliseconds: 1050));
-      if (!mounted) return;
-
-      final prevJiCount =
-          prevCompleted.where((id) => ((id - 1) ~/ _kPerJourney) == ji).length;
-      final newJiCount =
-          newDone.where((id) => ((id - 1) ~/ _kPerJourney) == ji).length;
-
-      if (prevJiCount < _kPerJourney && newJiCount >= _kPerJourney) {
-        _animateJourneyComplete(ji: ji);
-      }
-    } catch (_) {}
-  }
-
-  // ─── Bottom sheet ──────────────────────────────────────────────────────────
-
-  void _showSheet(CommuniqLevel level) {
-    final ji = ((level.id - 1) ~/ _kPerJourney).clamp(0, 14);
+  void _openSheet(CommuniqLevel level) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _ScenarioSheet(
+      builder: (_) => _Sheet(
         level: level,
         onStart: () {
-          final prevCompleted = Set<int>.from(_completedIds);
           Navigator.pop(context);
-          // Navigate immediately — no forced delay
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => RoleplaySetupScreen(
-                mode: 'prefilled',
-                scenario: level.scenario,
-                persona: _personaFor(level.category),
-                difficulty: 'Medium',
-                category: level.category,
-                levelId: level.id, // ← enables completion on end-call
-              ),
+          Navigator.push(context, MaterialPageRoute(
+            builder: (_) => RoleplaySetupScreen(
+              mode: 'prefilled', scenario: level.scenario,
+              persona: 'Friendly Mentor', difficulty: 'Medium',
+              category: level.category, levelId: level.id,
             ),
-            // On return, detect completion and fire the right animation
-          ).then(
-              (_) => _reloadAndAnimate(ji: ji, prevCompleted: prevCompleted));
+          )).then((_) async {
+            final p  = await SharedPreferences.getInstance();
+            final nd = (p.getStringList('completed_level_ids') ?? []).map(int.parse).toSet();
+            if (mounted) setState(() => _done = nd);
+          });
         },
       ),
     );
   }
 
-  // ─── Build ─────────────────────────────────────────────────────────────────
+  // ─── BUILD ───────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    final hasData = !_loading && _levels.isNotEmpty;
+    final cj   = hasData ? _curIdx : 0;
+    final comp = hasData ? _comp(cj) : 0;
+    final prog = hasData ? (comp / _kPerHub).clamp(0.0, 1.0) : 0.0;
+    final pct  = (_kTLevels > 0 ? _done.length / _kTLevels : 0.0).clamp(0.0, 1.0);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: _kBg,
       body: Stack(
         children: [
-          // Subtle top gradient overlay
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 260,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.10),
-                    AppColors.background
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-          ),
+          const Positioned.fill(child: _StarsBg()),
           SafeArea(
             bottom: false,
-            child: Column(
-              children: [
-                _TopBar(
-                  completedCount: _completedIds.length,
-                  profileBadgeKey: _profileBadgeKey,
-                ),
-                Expanded(
-                  child: _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.primary))
-                      : _buildPath(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPath() {
-    final totalJourneys = (_levels.length / _kPerJourney).ceil();
-    return CustomScrollView(
-      reverse: true,
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        const SliverToBoxAdapter(child: SizedBox(height: 120)),
-        for (int j = 0; j < totalJourneys; j++) ...[
-          SliverToBoxAdapter(child: _buildJourneyNodes(j)),
-          SliverToBoxAdapter(
-            child: _JourneyHeader(
-              index: j,
-              subtitle: _kJourneySubtitles[j],
-              completedInJourney: _completedInJourney(j),
-              starsInJourney: _starsInJourney(j),
-              isLocked: _isJourneyLocked(j),
-              prevJourneyStars: j > 0 ? _starsInJourney(j - 1) : null,
-              xpBarKey: _journeyXPKeys[j],
-            ),
-          ),
-        ],
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-      ],
-    );
-  }
-
-  Widget _buildJourneyNodes(int journeyIndex) {
-    final start = journeyIndex * _kPerJourney;
-    final end = (start + _kPerJourney).clamp(0, _levels.length);
-    if (start >= _levels.length) return const SizedBox.shrink();
-    final slice = _levels.sublist(start, end);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        children: [
-          for (int i = slice.length - 1; i >= 0; i--) ...[
-            const SizedBox(height: 38),
-            Align(
-              alignment: Alignment(_kWave[i], 0),
-              child: _NodeItem(
-                level: slice[i],
-                state: _stateOf(slice[i].id),
-                score: _scoreFor(slice[i].id),
-                glowAnim: _glowAnim,
-                pulseAnim: _pulseAnim,
-                particleCtrl: _particleCtrl,
-                circleOnLeft: _kWave[i] < 0,
-                staggerIndex: i,
-                onTap: () => _onTap(slice[i]),
+            child: Column(children: [
+              _Header(pct: pct),
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator(color: _kPath))
+                    : _buildMap(cj),
               ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Top bar ──────────────────────────────────────────────────────────────────
-class _TopBar extends StatelessWidget {
-  final int completedCount;
-  final GlobalKey<_CircularXPBadgeState> profileBadgeKey;
-
-  const _TopBar({required this.completedCount, required this.profileBadgeKey});
-
-  @override
-  Widget build(BuildContext context) {
-    final streak = completedCount == 0 ? 1 : (completedCount ~/ 3) + 1;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
-      child: Row(
-        children: [
-          // Streak pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: _kOrange.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: _kOrange.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('🔥', style: TextStyle(fontSize: 15)),
-                const SizedBox(width: 4),
-                Text('$streak',
-                    style: const TextStyle(
-                        color: _kOrange,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15)),
-              ],
-            ),
+            ]),
           ),
-          const Spacer(),
-          // Gradient title
-          ShaderMask(
-            shaderCallback: (b) => const LinearGradient(
-              colors: [AppColors.primaryLight, _kCyan],
-            ).createShader(b),
-            child: const Text('CommuniQ',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5)),
-          ),
-          const Spacer(),
-          // Circular XP ring around profile icon
-          _CircularXPBadge(
-            key: profileBadgeKey,
-            completed: completedCount ~/ _kPerJourney,
-            total: _kTotalLevels ~/ _kPerJourney,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Circular XP badge (ring around profile icon) ─────────────────────────────
-class _CircularXPBadge extends StatefulWidget {
-  final int completed;
-  final int total;
-  const _CircularXPBadge(
-      {super.key, required this.completed, required this.total});
-
-  @override
-  State<_CircularXPBadge> createState() => _CircularXPBadgeState();
-}
-
-class _CircularXPBadgeState extends State<_CircularXPBadge>
-    with TickerProviderStateMixin {
-  late final AnimationController _fillCtrl;
-  late Animation<double>
-      _fillAnim; // not final – can be replaced in didUpdateWidget
-
-  late final AnimationController _hitCtrl;
-  late final Animation<double> _hitScale;
-  late final Animation<double> _hitGlow;
-
-  @override
-  void initState() {
-    super.initState();
-    final target = widget.total > 0 ? widget.completed / widget.total : 0.0;
-
-    _fillCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200));
-    _fillAnim = Tween<double>(begin: 0.0, end: target).animate(
-        CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) _fillCtrl.forward();
-    });
-
-    _hitCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
-    _hitScale = Tween<double>(begin: 1.0, end: 1.28)
-        .animate(CurvedAnimation(parent: _hitCtrl, curve: Curves.elasticOut));
-    _hitGlow = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _hitCtrl, curve: Curves.easeOut));
-  }
-
-  @override
-  void didUpdateWidget(_CircularXPBadge old) {
-    super.didUpdateWidget(old);
-    if (old.completed != widget.completed) {
-      final target = widget.total > 0 ? widget.completed / widget.total : 0.0;
-      final from = _fillAnim.value;
-      _fillCtrl.reset();
-      _fillAnim = Tween<double>(begin: from, end: target).animate(
-          CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
-      _fillCtrl.forward();
-    }
-  }
-
-  /// Called from _FlyingXPChip when the chip lands on this badge.
-  void onXPArrived() {
-    if (!mounted) return;
-    _hitCtrl.forward(from: 0).then((_) {
-      if (mounted) _hitCtrl.reverse();
-    });
-  }
-
-  @override
-  void dispose() {
-    _fillCtrl.dispose();
-    _hitCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([_fillAnim, _hitCtrl]),
-      builder: (_, __) => Transform.scale(
-        scale: _hitScale.value,
-        child: SizedBox(
-          width: 52,
-          height: 52,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Glow backdrop when XP lands
-              if (_hitGlow.value > 0.01)
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                          color: AppColors.primary
-                              .withValues(alpha: _hitGlow.value * 0.55),
-                          blurRadius: 18,
-                          spreadRadius: 5),
-                      BoxShadow(
-                          color:
-                              _kCyan.withValues(alpha: _hitGlow.value * 0.35),
-                          blurRadius: 10,
-                          spreadRadius: 2),
-                    ],
-                  ),
-                ),
-              // Circular progress ring
-              SizedBox(
-                width: 52,
-                height: 52,
-                child: CircularProgressIndicator(
-                  value: _fillAnim.value,
-                  strokeWidth: 3.5,
-                  backgroundColor: AppColors.border.withValues(alpha: 0.35),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Color.lerp(AppColors.primary, _kCyan,
-                        (_fillAnim.value + 0.1).clamp(0, 1))!,
-                  ),
-                  strokeCap: StrokeCap.round,
-                ),
-              ),
-              // Profile icon inside ring
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.surface,
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: const Icon(Icons.person_rounded,
-                    color: AppColors.textSecondary, size: 20),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Journey section header + per-journey XP bar ─────────────────────────────
-class _JourneyHeader extends StatefulWidget {
-  final int index;
-  final String subtitle;
-  final int completedInJourney;
-  final int starsInJourney;
-  final bool isLocked;
-  final int? prevJourneyStars;
-  final GlobalKey<_JourneyXPBarState> xpBarKey;
-
-  const _JourneyHeader({
-    required this.index,
-    required this.subtitle,
-    required this.completedInJourney,
-    required this.starsInJourney,
-    required this.isLocked,
-    this.prevJourneyStars,
-    required this.xpBarKey,
-  });
-
-  @override
-  State<_JourneyHeader> createState() => _JourneyHeaderState();
-}
-
-class _JourneyHeaderState extends State<_JourneyHeader>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _slideCtrl;
-  late final Animation<Offset> _slideAnim;
-  late final Animation<double> _fadeAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _slideCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
-    _slideAnim = Tween<Offset>(begin: const Offset(-0.25, 0), end: Offset.zero)
-        .animate(
-            CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOutCubic));
-    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
-
-    final delay = Duration(milliseconds: min(widget.index * 40, 300));
-    Future.delayed(delay, () {
-      if (mounted) _slideCtrl.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _slideCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 28, 0, 0),
-      child: FadeTransition(
-        opacity: _fadeAnim,
-        child: SlideTransition(
-          position: _slideAnim,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Unified Header & XP Card ─────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 600),
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppColors.primary.withValues(alpha: 0.18),
-                        AppColors.primary.withValues(alpha: 0.04),
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.22)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    if (widget.isLocked) ...[
-                                      const Icon(Icons.lock_rounded,
-                                          size: 12, color: AppColors.textMuted),
-                                      const SizedBox(width: 4),
-                                    ],
-                                    Text(
-                                      'JOURNEY ${widget.index + 1}',
-                                      style: TextStyle(
-                                          color: widget.isLocked
-                                              ? AppColors.textMuted
-                                              : AppColors.primaryLight,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 2.0),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(widget.subtitle,
-                                    style: TextStyle(
-                                        color: widget.isLocked
-                                            ? AppColors.textMuted
-                                            : AppColors.textPrimary,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 600),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: widget.isLocked
-                                  ? AppColors.surface
-                                  : AppColors.primary.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.star_rounded,
-                                    size: 14, color: Colors.amber),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${widget.starsInJourney} / 30',
-                                  style: TextStyle(
-                                      color: widget.isLocked
-                                          ? AppColors.textMuted
-                                          : AppColors.primaryLight,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      if (widget.isLocked)
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                                color: AppColors.border.withValues(alpha: 0.5)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(left: 4, right: 12),
-                                child: Icon(Icons.lock_rounded,
-                                    size: 24, color: AppColors.textMuted),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  'Get 20 stars in Journey ${widget.index} to unlock this path (Current: ${widget.prevJourneyStars}/20)',
-                                  style: const TextStyle(
-                                      color: AppColors.textMuted,
-                                      fontSize: 13,
-                                      height: 1.3),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        // ── Per-journey XP progress bar ──
-                        _JourneyXPBar(
-                          key: widget.xpBarKey,
-                          completed: widget.completedInJourney,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Per-journey XP progress bar ─────────────────────────────────────────────
-class _JourneyXPBar extends StatefulWidget {
-  final int completed;
-  static const int total = _kPerJourney;
-
-  const _JourneyXPBar({super.key, required this.completed});
-
-  @override
-  State<_JourneyXPBar> createState() => _JourneyXPBarState();
-}
-
-class _JourneyXPBarState extends State<_JourneyXPBar>
-    with TickerProviderStateMixin {
-  late final AnimationController _fillCtrl;
-  late Animation<double> _fillAnim;
-
-  // Glow pulse when a chip lands
-  late final AnimationController _hitCtrl;
-  late final Animation<double> _hitBorder;
-  late final Animation<double> _hitGlow;
-
-  // 0 → 1 transition to the green "Journey complete!" state
-  late final AnimationController _completeCtrl;
-  late final Animation<double> _completeAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    final target = widget.completed / _JourneyXPBar.total;
-
-    _fillCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1000));
-    _fillAnim = Tween<double>(begin: 0.0, end: target).animate(
-        CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
-    Future.delayed(const Duration(milliseconds: 450), () {
-      if (mounted) _fillCtrl.forward();
-    });
-
-    _hitCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 450));
-    _hitBorder = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _hitCtrl, curve: Curves.easeOut));
-    _hitGlow = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _hitCtrl, curve: Curves.easeInOut));
-
-    _completeCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
-    _completeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: _completeCtrl, curve: Curves.easeInOut));
-  }
-
-  @override
-  void didUpdateWidget(_JourneyXPBar old) {
-    super.didUpdateWidget(old);
-    if (old.completed != widget.completed) {
-      final target = widget.completed / _JourneyXPBar.total;
-      final from = _fillAnim.value;
-      _fillCtrl.reset();
-      _fillAnim = Tween<double>(begin: from, end: target).animate(
-          CurvedAnimation(parent: _fillCtrl, curve: Curves.easeOutCubic));
-      _fillCtrl.forward();
-    }
-  }
-
-  /// Glow pulse when XP chip lands here.
-  void onXPArrived() {
-    if (!mounted) return;
-    _hitCtrl.forward(from: 0).then((_) {
-      if (mounted) _hitCtrl.reverse();
-    });
-  }
-
-  /// Transition bar to green "Journey complete!" state.
-  /// [onReadyToFly] is called after the animation settles, signalling that
-  /// the caller should now fire chips from this bar to the profile circle.
-  void onJourneyCompleted({required VoidCallback onReadyToFly}) {
-    if (!mounted) return;
-    _completeCtrl.forward().then((_) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) onReadyToFly();
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _fillCtrl.dispose();
-    _hitCtrl.dispose();
-    _completeCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final xpEarned = widget.completed * 20;
-    const totalXP = _JourneyXPBar.total * 20;
-    final cv = _completeAnim.value; // 0 → 1
-
-    // Lerped colours: normal → green
-    final bgColor = Color.lerp(AppColors.surface, const Color(0xFF0B2218), cv)!;
-    final borderColor = Color.lerp(
-        Color.lerp(
-            AppColors.border, AppColors.primary, _hitBorder.value * 0.75)!,
-        AppColors.success,
-        cv)!;
-    final shadowColor = Color.lerp(
-        AppColors.primary.withValues(alpha: _hitGlow.value * 0.22),
-        AppColors.success.withValues(alpha: 0.30),
-        cv)!;
-
-    return AnimatedBuilder(
-      animation: Listenable.merge([_fillAnim, _hitCtrl, _completeCtrl]),
-      builder: (_, __) => AnimatedContainer(
-        duration: const Duration(milliseconds: 500),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          color: _completeAnim.value > 0.1
-              ? AppColors.success.withValues(alpha: _completeAnim.value * 0.15)
-              : Colors.transparent,
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-        // Cross-fade between normal content and completed content
-        child: Stack(
-          children: [
-            // ── Normal state (fades out during first half of completion anim) ──
-            Opacity(
-              opacity: (1.0 - cv * 2).clamp(0.0, 1.0),
-              child: Row(
-                children: [
-                  const Text('⚡', style: TextStyle(fontSize: 13)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('$xpEarned / $totalXP XP',
-                                style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700)),
-                            Text(
-                                '${widget.completed} / ${_JourneyXPBar.total} done',
-                                style: const TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 10)),
-                          ],
-                        ),
-                        const SizedBox(height: 5),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(3),
-                          child: LinearProgressIndicator(
-                            value: _fillAnim.value,
-                            minHeight: 5,
-                            backgroundColor: AppColors.background,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Color.lerp(AppColors.primary, _kCyan,
-                                  (_fillAnim.value + 0.15).clamp(0.0, 1.0))!,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // ── Completed state (fades in during second half) ─────────────────
-            Opacity(
-              opacity: (cv * 2 - 1.0).clamp(0.0, 1.0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.18),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check_rounded,
-                        color: AppColors.success, size: 17),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Journey Complete! 🎉',
-                                style: TextStyle(
-                                    color: AppColors.success,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800)),
-                            Text('$totalXP XP',
-                                style: const TextStyle(
-                                    color: AppColors.success,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        const SizedBox(height: 5),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(3),
-                          child: const LinearProgressIndicator(
-                            value: 1.0,
-                            minHeight: 5,
-                            backgroundColor: Colors.transparent,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.success),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Single node item ─────────────────────────────────────────────────────────
-class _NodeItem extends StatefulWidget {
-  final CommuniqLevel level;
-  final _NodeState state;
-  final int score;
-  final Animation<double> glowAnim;
-  final Animation<double> pulseAnim;
-  final AnimationController particleCtrl;
-  final bool circleOnLeft;
-  final int staggerIndex;
-  final VoidCallback onTap;
-
-  const _NodeItem({
-    required this.level,
-    required this.state,
-    required this.score,
-    required this.glowAnim,
-    required this.pulseAnim,
-    required this.particleCtrl,
-    required this.circleOnLeft,
-    required this.staggerIndex,
-    required this.onTap,
-  });
-
-  @override
-  State<_NodeItem> createState() => _NodeItemState();
-}
-
-class _NodeItemState extends State<_NodeItem>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _entranceCtrl;
-  late final Animation<double> _entranceFade;
-  late final Animation<Offset> _entranceSlide;
-  bool _isPressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _entranceCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
-    _entranceFade = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOut));
-    _entranceSlide =
-        Tween<Offset>(begin: const Offset(0, 0.30), end: Offset.zero).animate(
-            CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOutCubic));
-
-    Future.delayed(Duration(milliseconds: widget.staggerIndex * 60), () {
-      if (mounted) _entranceCtrl.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _entranceCtrl.dispose();
-    super.dispose();
-  }
-
-  void _onTapDown(TapDownDetails _) => setState(() => _isPressed = true);
-  void _onTapUp(TapUpDetails _) {
-    setState(() => _isPressed = false);
-    widget.onTap();
-  }
-
-  void _onTapCancel() => setState(() => _isPressed = false);
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _entranceFade,
-      child: SlideTransition(
-        position: _entranceSlide,
-        child: GestureDetector(
-          onTapDown: _onTapDown,
-          onTapUp: _onTapUp,
-          onTapCancel: _onTapCancel,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: widget.circleOnLeft
-                  ? [
-                      _buildCircleContent(),
-                      const SizedBox(width: 12),
-                      Flexible(child: _buildLabel())
-                    ]
-                  : [
-                      Flexible(child: _buildLabel()),
-                      const SizedBox(width: 12),
-                      _buildCircleContent()
-                    ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ─── Stars ─────────────────────────────────────────────────────────────────
-
-  Widget _buildStars(int score) {
-    // Determine active stars
-    int activeStars = 0;
-    if (score > 80)
-      activeStars = 3;
-    else if (score > 50)
-      activeStars = 2;
-    else if (score > 35) activeStars = 1;
-
-    Widget starIcon(bool active, double size) {
-      return Icon(
-        Icons.star_rounded,
-        size: size,
-        color: active ? const Color(0xFFFFD700) : AppColors.surface,
-        shadows: active
-            ? [
-                Shadow(
-                    color: Colors.orange.withValues(alpha: 0.8),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1)),
-                Shadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 2,
-                    offset: const Offset(0, 2)),
-              ]
-            : [
-                const Shadow(
-                    color: Colors.black45, blurRadius: 2, offset: Offset(0, 1)),
-              ],
-      );
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Transform.translate(
-          offset: const Offset(8, -2),
-          child: Transform.rotate(
-            angle: -0.25,
-            child: starIcon(activeStars >= 1, 18),
-          ),
-        ),
-        Transform.translate(
-          offset: const Offset(0, 2),
-          child: starIcon(activeStars >= 2, 24),
-        ),
-        Transform.translate(
-          offset: const Offset(-8, -2),
-          child: Transform.rotate(
-            angle: 0.25,
-            child: starIcon(activeStars >= 3, 18),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ─── 3D Button ─────────────────────────────────────────────────────────────
-
-  Widget _build3DButton({
-    required Widget child,
-    required Color primaryColor,
-    required Color shadowColor,
-    required Color borderColor,
-    bool showSparkles = false,
-    double reflectionAlpha = 0.5,
-    Widget? topBadge,
-    Widget? baseBadge,
-  }) {
-    final double depth = _isPressed ? 2.0 : 9.0;
-    final double nodeHeight = _kNodeSize + 12;
-
-    return SizedBox(
-      width: _kNodeSize,
-      height: nodeHeight,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        clipBehavior: Clip.none,
-        children: [
-          // 3D Cylinder Body (Shadow)
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 80),
-            curve: Curves.easeOut,
-            bottom: 0,
-            child: Container(
-              width: _kNodeSize,
-              height: _kNodeSize +
-                  depth -
-                  1, // Stretches to connect bottom and top seamlessly
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(_kNodeSize / 2),
-                  color: shadowColor,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      blurRadius: 8,
-                      offset: const Offset(0, 5),
-                    )
-                  ]),
-            ),
-          ),
-
-          if (baseBadge != null)
+          if (hasData)
             Positioned(
-              bottom: -6,
-              child: baseBadge,
-            ),
-
-          // Top face
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 80),
-            curve: Curves.easeOut,
-            bottom: depth,
-            child: Container(
-              width: _kNodeSize,
-              height: _kNodeSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  center: const Alignment(0, -0.2),
-                  radius: 0.75, // slightly tighter highlight
-                  colors: [
-                    primaryColor.withValues(alpha: 0.85), // Lighter center
-                    primaryColor,
-                  ],
-                ),
-                border: Border.all(color: borderColor, width: 2.0),
-              ),
-              child: Stack(
-                  alignment: Alignment.center,
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Glossy candy inner top reflection (elliptical for a more organic shine)
-                    Positioned(
-                      top: 3,
-                      child: Container(
-                        width: _kNodeSize * 0.6,
-                        height: _kNodeSize * 0.3,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.all(Radius.elliptical(
-                                _kNodeSize * 0.3, _kNodeSize * 0.15)),
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white.withValues(alpha: reflectionAlpha),
-                                Colors.white.withValues(alpha: 0.0)
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            )),
-                      ),
-                    ),
-                    // Bottom inner shadow for stronger 3D depth
-                    Positioned(
-                      bottom: 2,
-                      child: Container(
-                        width: _kNodeSize * 0.7,
-                        height: _kNodeSize * 0.22,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.all(Radius.elliptical(
-                                _kNodeSize * 0.35, _kNodeSize * 0.11)),
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.black.withValues(alpha: 0.0),
-                                Colors.black.withValues(alpha: 0.3)
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            )),
-                      ),
-                    ),
-                    child,
-
-                    // Top badge securely bound to the moving face
-                    if (topBadge != null)
-                      Positioned(
-                        right: -4,
-                        bottom: 4,
-                        child: topBadge,
-                      ),
-                  ]),
-            ),
-          ),
-          if (showSparkles)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 80),
-              curve: Curves.easeOut,
-              bottom: depth,
-              child: SizedBox(
-                width: _kNodeSize,
-                height: _kNodeSize,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned(
-                      left: (_kNodeSize - 110) / 2,
-                      top: (_kNodeSize - 110) / 2,
-                      child: _SparkleOverlay(controller: widget.particleCtrl),
-                    ),
-                  ],
-                ),
+              bottom: 0, left: 0, right: 0,
+              child: _BottomCard(
+                hub: _kHubs[cj.clamp(0, _kHubs.length - 1)],
+                illoPath: _hubIllo(cj),
+                completed: comp,
+                progress: prog,
               ),
             ),
         ],
@@ -1422,580 +297,629 @@ class _NodeItemState extends State<_NodeItem>
     );
   }
 
-  // ─── Circle Content ────────────────────────────────────────────────────────
+  Widget _buildMap(int activeIdx) {
+    return LayoutBuilder(builder: (_, box) {
+      _layout(box.maxWidth);
+      return SingleChildScrollView(
+        controller: _scroll,
+        physics: const BouncingScrollPhysics(),
+        child: SizedBox(
+          width: _sw, height: _ch,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Glowing S-curve path
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _shimCtrl,
+                  builder: (_, __) => RepaintBoundary(
+                    child: CustomPaint(
+                      painter: _PathPaint(_pathPts, _shimCtrl.value, activeIdx),
+                    ),
+                  ),
+                ),
+              ),
+              // Hub platforms
+              for (int j = 0; j < _n; j++)
+                if (_hubPos.containsKey(j)) _buildHub(j),
+            ],
+          ),
+        ),
+      );
+    });
+  }
 
-  Widget _buildCircleContent() {
-    switch (widget.state) {
-      // ── Current node ──────────────────────────────────────────────────────
-      case _NodeState.current:
-        return Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            // Outer pulse rings for current node
-            AnimatedBuilder(
-              animation: widget.pulseAnim,
-              builder: (_, __) {
-                final scale = 1.0 + widget.pulseAnim.value * 0.6;
-                final opacity = (1.0 - widget.pulseAnim.value) * 0.4;
-                return Transform.translate(
-                  offset: const Offset(0, -6),
-                  child: Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      width: _kNodeSize,
-                      height: _kNodeSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: AppColors.primary.withValues(alpha: opacity),
-                            width: 3),
+  Widget _buildHub(int j) {
+    final center   = _hubPos[j]!;
+    final st       = _state(j);
+    final def      = _kHubs[j.clamp(0, _kHubs.length - 1)];
+    final illo     = _hubIllo(j);
+    final isLeft   = j.isEven;
+    final isActive = st == _HS.active;
+    final isLocked = st == _HS.locked;
+    final isDone   = st == _HS.completed;
+
+    return Positioned(
+      left: center.dx - _kCW / 2,
+      top:  center.dy - _kCH / 2 - 22, // room for label above
+      child: GestureDetector(
+        onTap: () => _tap(j),
+        child: AnimatedBuilder(
+          animation: _glowAnim,
+          builder: (_, __) {
+            final gv = isActive ? _glowAnim.value : (isLocked ? 0.0 : 0.45);
+            return SizedBox(
+              width: _kCW,
+              child: Column(
+                crossAxisAlignment:
+                    isLeft ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Hub name label
+                  Padding(
+                    padding: EdgeInsets.only(
+                        left: isLeft ? 4 : 0, right: isLeft ? 0 : 4),
+                    child: Opacity(
+                      opacity: isLocked ? 0.35 : 1.0,
+                      child: Text(def.name,
+                        style: TextStyle(
+                          color: isActive ? def.glow : Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          shadows: isActive
+                              ? [Shadow(
+                                  color: def.glow.withValues(alpha: 0.8),
+                                  blurRadius: 12)]
+                              : null,
+                        ),
                       ),
                     ),
                   ),
-                );
-              },
-            ),
-            _build3DButton(
-              primaryColor: AppColors.primary,
-              shadowColor: const Color(0xFF1336B5), // Deep blue shadow
-              borderColor: _kCyan.withValues(alpha: 0.5),
-              showSparkles: true,
-              reflectionAlpha: 0.6,
-              child: const Center(
-                child: Text('START',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 13,
-                        letterSpacing: 0.5,
-                        shadows: [
-                          Shadow(
-                              color: Colors.black26,
-                              offset: Offset(0, 1),
-                              blurRadius: 2)
-                        ])),
-              ),
-            ),
-          ],
-        );
-
-      // ── Completed node ────────────────────────────────────────────────────
-      case _NodeState.completed:
-        return _build3DButton(
-          primaryColor: const Color(0xFF2A2346), // A gorgeous deep amethyst
-          shadowColor: const Color(0xFF120E21),
-          borderColor: const Color(0xFF63569D)
-              .withValues(alpha: 0.8), // A vivid violet/indigo border
-          reflectionAlpha: 0.25, // Subtler softer gloss reflection
-          child: Center(
-            child: Text(widget.level.categoryEmoji,
-                style: const TextStyle(fontSize: 28, shadows: [
-                  Shadow(
-                      color: Colors.black45,
-                      blurRadius: 4,
-                      offset: Offset(0, 2))
-                ])),
-          ),
-          topBadge: Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: AppColors.success,
-              shape: BoxShape.circle,
-              border: Border.all(
-                  color: const Color(0xFF2A2346), width: 2), // matching border
-              boxShadow: const [
-                BoxShadow(
-                    color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))
-              ],
-            ),
-            child:
-                const Icon(Icons.check_rounded, color: Colors.white, size: 14),
-          ),
-          baseBadge: _buildStars(widget.score),
-        );
-
-      // ── Locked node ───────────────────────────────────────────────────────
-      case _NodeState.locked:
-        return _build3DButton(
-          primaryColor: const Color(0xFF1B1925), // Ultra dark deep slate
-          shadowColor: const Color(0xFF09080C),
-          borderColor: const Color(0xFF332F42),
-          reflectionAlpha: 0.08, // Barely there matte finish
-          child: Center(
-            child: Opacity(
-              opacity: 0.35,
-              child: Text(widget.level.categoryEmoji,
-                  style: const TextStyle(fontSize: 24)),
-            ),
-          ),
-        );
-    }
-  }
-
-  // ─── Label ─────────────────────────────────────────────────────────────────
-
-  Widget _buildLabel() {
-    final isLocked = widget.state == _NodeState.locked;
-    final isCurrent = widget.state == _NodeState.current;
-
-    return SizedBox(
-      width: 120, // constrain width to force wrapping and maintain clean gap
-      child: Column(
-        crossAxisAlignment: widget.circleOnLeft
-            ? CrossAxisAlignment.start
-            : CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (isCurrent)
-            Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: _kCyan.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: _kCyan.withValues(alpha: 0.35)),
-              ),
-              child: const Text('+20 XP',
-                  style: TextStyle(
-                      color: _kCyan,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5)),
-            ),
-          Text(
-            widget.level.title,
-            textAlign: widget.circleOnLeft ? TextAlign.left : TextAlign.right,
-            style: TextStyle(
-              color: isLocked ? AppColors.textMuted : AppColors.textPrimary,
-              fontSize: 13,
-              height: 1.2,
-              fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Sparkle particles ────────────────────────────────────────────────────────
-class _SparkleOverlay extends StatelessWidget {
-  final AnimationController controller;
-  const _SparkleOverlay({required this.controller});
-
-  static final _sparks = <List<double>>[
-    [0.30, 56.0, 0.00, 4.0],
-    [1.70, 58.0, 0.18, 3.0],
-    [2.90, 54.0, 0.36, 4.5],
-    [4.30, 60.0, 0.54, 3.5],
-    [5.50, 55.0, 0.72, 3.0],
-    [0.95, 52.0, 0.09, 3.0],
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    const boxSize = 110.0;
-    const center = boxSize / 2;
-
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, __) => SizedBox(
-        width: boxSize,
-        height: boxSize,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: _sparks.map((spark) {
-            final angle = spark[0];
-            final maxR = spark[1];
-            final delay = spark[2];
-            final dotSize = spark[3];
-
-            final t = (controller.value + delay) % 1.0;
-            final r = maxR * (0.30 + 0.70 * t);
-            final opacity = t < 0.65 ? (1.0 - t / 0.65) * 0.85 : 0.0;
-
-            final x = center + cos(angle) * r - dotSize / 2;
-            final y = center + sin(angle) * r - dotSize / 2;
-
-            return Positioned(
-              left: x,
-              top: y,
-              child: Opacity(
-                opacity: opacity.clamp(0.0, 1.0),
-                child: Container(
-                  width: dotSize,
-                  height: dotSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: t < 0.5 ? _kCyan : AppColors.primary,
+                  const SizedBox(height: 5),
+                  // Floating illustration card (NO box)
+                  _HubCard(
+                    illoPath: illo,
+                    glow: def.glow,
+                    isActive: isActive,
+                    isLocked: isLocked,
+                    isDone: isDone,
+                    glowVal: gv,
                   ),
-                ),
+                ],
               ),
             );
-          }).toList(),
+          },
         ),
       ),
     );
   }
 }
 
-// ─── Flying "+20 XP" chip overlay animation ───────────────────────────────────
-///
-/// Rendered inside the global [Overlay] (which is a [Stack]).
-/// Returns an [IgnorePointer] → [SizedBox.expand] → [Stack] → [Positioned] so
-/// screen-coordinate placement works correctly without interferring with touches.
-class _FlyingXPChip extends StatefulWidget {
-  final Offset from;
-  final Offset to;
-  final String label; // text shown on the chip
-  final int arcDir; // +1 or -1 — which side the arc bulges
-  final VoidCallback? onLanded;
-  final VoidCallback onComplete;
+// ═══════════════════════════════════════════════════════════════════════════════
+// HUB CARD — floating illustration card, no box geometry
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  const _FlyingXPChip({
-    required this.from,
-    required this.to,
-    this.label = '+20 XP',
-    this.arcDir = 1,
-    this.onLanded,
-    required this.onComplete,
+class _HubCard extends StatelessWidget {
+  final String illoPath;
+  final Color  glow;
+  final bool   isActive, isLocked, isDone;
+  final double glowVal;
+
+  const _HubCard({
+    required this.illoPath,
+    required this.glow,
+    required this.isActive, required this.isLocked, required this.isDone,
+    required this.glowVal,
   });
 
   @override
-  State<_FlyingXPChip> createState() => _FlyingXPChipState();
-}
-
-class _FlyingXPChipState extends State<_FlyingXPChip>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _progress;
-  late final Animation<double> _fade;
-  late final Animation<double> _scale;
-  bool _landed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500));
-
-    _progress = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-
-    _fade = Tween<double>(begin: 1.0, end: 0.0).animate(
-        CurvedAnimation(parent: _ctrl, curve: const Interval(0.72, 1.0)));
-
-    _scale = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.5, end: 1.25), weight: 15),
-      TweenSequenceItem(tween: Tween(begin: 1.25, end: 1.0), weight: 10),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.65), weight: 75),
-    ]).animate(_ctrl);
-
-    // Fire onLanded at 78% travel
-    _ctrl.addListener(() {
-      if (!_landed && _ctrl.value >= 0.78) {
-        _landed = true;
-        widget.onLanded?.call();
-      }
-    });
-
-    // Fire onComplete when done
-    _ctrl.addStatusListener((status) {
-      if (status == AnimationStatus.completed) widget.onComplete();
-    });
-
-    _ctrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  /// Quadratic Bézier arc between [widget.from] and [widget.to].
-  Offset _arcAt(double t) {
-    final p0 = widget.from;
-    final p2 = widget.to;
-    final dx = p2.dx - p0.dx;
-    final dy = p2.dy - p0.dy;
-    final len = sqrt(dx * dx + dy * dy);
-
-    const arcH = 140.0; // steeper/wider perpendicular bulge
-    final nx = len > 0 ? (-dy / len) * widget.arcDir : 0.0;
-    final ny = len > 0 ? (dx / len) * widget.arcDir : 0.0;
-
-    final cpX = (p0.dx + p2.dx) / 2 + nx * arcH;
-    final cpY = (p0.dy + p2.dy) / 2 + ny * arcH;
-
-    final mt = 1 - t;
-    return Offset(
-      mt * mt * p0.dx + 2 * mt * t * cpX + t * t * p2.dx,
-      mt * mt * p0.dy + 2 * mt * t * cpY + t * t * p2.dy,
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, __) {
-        final pos = _arcAt(_progress.value);
-        // Chip is ~62 × 26 px; offset so the arc point is its centre.
-        const halfW = 31.0;
-        const halfH = 13.0;
+    return SizedBox(
+      width: _kCW, height: _kCH,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
 
-        return IgnorePointer(
-          child: SizedBox.expand(
-            child: Stack(
-              children: [
-                Positioned(
-                  left: pos.dx - halfW,
-                  top: pos.dy - halfH,
-                  child: Opacity(
-                    opacity: _fade.value.clamp(0.0, 1.0),
-                    child: Transform.scale(
-                      scale: _scale.value,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 11, vertical: 5),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppColors.primary, _kCyan],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                                color:
-                                    AppColors.primary.withValues(alpha: 0.55),
-                                blurRadius: 10,
-                                spreadRadius: 1),
-                            BoxShadow(
-                                color: _kCyan.withValues(alpha: 0.30),
-                                blurRadius: 6),
-                          ],
-                        ),
-                        child: Text(widget.label,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 11,
-                                letterSpacing: 0.4)),
-                      ),
+          // ── Soft radial glow beneath illustration (active/completed only) ──
+          if (!isLocked && (isActive || glowVal > 0.2))
+            Positioned(
+              top: _kCH * 0.2, left: _kCW * 0.1,
+              child: Container(
+                width: _kCW * 0.8, height: _kCH * 0.6,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: glow.withValues(
+                          alpha: glowVal * (isActive ? 0.45 : 0.15)),
+                      blurRadius: isActive ? 40 : 18,
+                      spreadRadius: isActive ? 12 : 4,
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
+            ),
+
+          // ── Raw illustration — no box, no border, no clip ──────────────────
+          // The illustration PNGs have dark backgrounds that normally look like squares.
+          // By applying a radial gradient mask, we softly fade the harsh edges
+          // into 100% transparency, making the characters seamlessly float on the starfield!
+          Opacity(
+            opacity: isLocked ? 0.35 : 1.0,
+            child: ShaderMask(
+              shaderCallback: (Rect bounds) => RadialGradient(
+                colors: [Colors.white, Colors.white.withValues(alpha: 0.15), Colors.transparent],
+                stops: const [0.45, 0.85, 1.0],
+              ).createShader(bounds),
+              blendMode: BlendMode.dstIn,
+              child: Image.asset(
+                illoPath,
+                width: _kCW, height: _kCH,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.image_rounded,
+                  color: glow.withValues(alpha: 0.4), size: 48,
+                ),
+              ),
             ),
           ),
-        );
-      },
+
+          // ── Lock icon overlay ──────────────────────────────────────────────
+          if (isLocked)
+            const Icon(Icons.lock_rounded, color: Colors.white38, size: 30),
+
+          // ── Completed badge ────────────────────────────────────────────────
+          if (isDone)
+            Positioned(
+              top: 4, right: 4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle, color: Colors.green),
+                child: const Icon(Icons.check_rounded,
+                    color: Colors.white, size: 13),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
 
-// ─── Scenario bottom sheet ────────────────────────────────────────────────────
-class _ScenarioSheet extends StatefulWidget {
-  final CommuniqLevel level;
-  final VoidCallback onStart;
 
-  const _ScenarioSheet({required this.level, required this.onStart});
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GLOWING S-CURVE PATH
+
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _PathPaint extends CustomPainter {
+  final List<Offset> pts;
+  final double shimmer;
+  final int activeIdx;
+  const _PathPaint(this.pts, this.shimmer, this.activeIdx);
 
   @override
-  State<_ScenarioSheet> createState() => _ScenarioSheetState();
+  void paint(Canvas canvas, Size size) {
+    if (pts.length < 2) return;
+    final activePath = _buildPath(0, activeIdx);
+    final futurePath = _buildPath(activeIdx, pts.length - 1);
+
+    // Dim future path
+    if (futurePath != null) {
+      canvas.drawPath(futurePath, Paint()
+        ..color = Colors.white.withValues(alpha: 0.05)
+        ..style = PaintingStyle.stroke..strokeWidth = 3.0
+        ..strokeCap = StrokeCap.round);
+    }
+
+    // Glowing active path
+    if (activePath != null) {
+      // Wide outer halo
+      canvas.drawPath(activePath, Paint()
+        ..color = _kPath.withValues(alpha: 0.13)
+        ..style = PaintingStyle.stroke..strokeWidth = 32
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16)
+        ..strokeCap = StrokeCap.round);
+
+      // Mid glow
+      canvas.drawPath(activePath, Paint()
+        ..color = _kPath.withValues(alpha: 0.35)
+        ..style = PaintingStyle.stroke..strokeWidth = 12
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
+        ..strokeCap = StrokeCap.round);
+
+      // Bright core
+      canvas.drawPath(activePath, Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.bottomCenter, end: Alignment.topCenter,
+          colors: [_kPath, _kPathLight, const Color(0xFF00CCFF)],
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+        ..style = PaintingStyle.stroke..strokeWidth = 3.0
+        ..strokeCap = StrokeCap.round);
+
+      // Moving shimmer bead over the active portion
+      final ms = activePath.computeMetrics().toList();
+      if (ms.isNotEmpty) {
+        final pm = ms.first;
+        final len = pm.length;
+        const blen = 90.0;
+        final s0 = (shimmer * len) % len;
+        final s1 = (s0 + blen).clamp(0.0, len);
+        if (s1 > s0) {
+          canvas.drawPath(pm.extractPath(s0, s1), Paint()
+            ..color = Colors.white.withValues(alpha: 0.70)
+            ..style = PaintingStyle.stroke..strokeWidth = 5.5
+            ..strokeCap = StrokeCap.round
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
+        }
+      }
+    }
+  }
+
+  Path? _buildPath(int startIdx, int endIdx) {
+    if (startIdx >= endIdx || startIdx >= pts.length - 1) return null;
+    final p = Path();
+    p.moveTo(pts[startIdx].dx, pts[startIdx].dy);
+    for (int i = startIdx; i < endIdx && i < pts.length - 1; i++) {
+      final a = pts[i], b = pts[i + 1];
+      final my = (a.dy + b.dy) / 2;
+      p.cubicTo(a.dx, my, b.dx, my, b.dx, b.dy);
+    }
+    return p;
+  }
+
+  @override
+  bool shouldRepaint(_PathPaint old) => old.shimmer != shimmer || old.activeIdx != activeIdx;
 }
 
-class _ScenarioSheetState extends State<_ScenarioSheet>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _enterCtrl;
-  late final Animation<double> _scaleAnim;
-  late final Animation<double> _fadeAnim;
+// ═══════════════════════════════════════════════════════════════════════════════
+// SPACE BACKGROUND
+// ═══════════════════════════════════════════════════════════════════════════════
 
+class _StarsBg extends StatelessWidget {
+  const _StarsBg();
   @override
-  void initState() {
-    super.initState();
-    _enterCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 700));
-    _scaleAnim = Tween<double>(begin: 0.35, end: 1.0)
-        .animate(CurvedAnimation(parent: _enterCtrl, curve: Curves.elasticOut));
-    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-        parent: _enterCtrl,
-        curve: const Interval(0.0, 0.55, curve: Curves.easeOut)));
-    _enterCtrl.forward();
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          colors: [Color(0xFF050816), Color(0xFF080C20), Color(0xFF050816)],
+        ),
+      ),
+      child: Stack(fit: StackFit.expand, children: [
+        IgnorePointer(
+          child: CustomPaint(painter: _StarPaint(), size: Size.infinite),
+        ),
+      ]),
+    );
   }
+}
 
+class _StarPaint extends CustomPainter {
   @override
-  void dispose() {
-    _enterCtrl.dispose();
-    super.dispose();
+  void paint(Canvas canvas, Size size) {
+    final rng = Random(12345);
+    final p   = Paint()..style = PaintingStyle.fill;
+    for (int i = 0; i < 200; i++) {
+      final x = rng.nextDouble() * size.width;
+      final y = rng.nextDouble() * size.height;
+      final r = rng.nextDouble() * 1.2 + 0.25;
+      final a = rng.nextDouble() * 0.14 + 0.04;
+      p.color = (i % 5 == 0
+          ? const Color(0xFF88CCFF)
+          : Colors.white).withValues(alpha: a);
+      canvas.drawCircle(Offset(x, y), r, p);
+    }
   }
+  @override
+  bool shouldRepaint(covariant CustomPainter _) => false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HEADER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _Header extends StatelessWidget {
+  final double pct;
+  const _Header({required this.pct});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(
-          24, 0, 24, MediaQuery.of(context).viewInsets.bottom + 32),
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      color: _kBg.withValues(alpha: 0.92),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2)),
-          ),
-          const SizedBox(height: 24),
-
-          // Category emoji — elastic pop
-          ScaleTransition(
-            scale: _scaleAnim,
-            child: Container(
-              width: 62,
-              height: 62,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [AppColors.primary, _kCyan],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+          Row(children: [
+            GestureDetector(
+              onTap: () => Navigator.maybePop(context),
+              child: Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(shape: BoxShape.circle,
+                    color: _kSurface, border: Border.all(color: _kBorder)),
+                child: const Icon(Icons.chevron_left_rounded,
+                    color: Colors.white70, size: 22),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Sky Campus Path', style: TextStyle(
+                    color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)),
+                Text('75% Complete', style: TextStyle(
+                    color: Color(0xFF9CA3AF), fontSize: 12)),
+              ]),
+            ),
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(shape: BoxShape.circle,
+                  color: _kSurface, border: Border.all(color: _kBorder)),
+              child: const Icon(Icons.person_rounded, color: Colors.white54, size: 20),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          Stack(children: [
+            Container(height: 5,
+                decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(3))),
+            FractionallySizedBox(
+              widthFactor: pct,
+              child: Container(
+                height: 5,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  gradient: const LinearGradient(colors: [_kPath, _kPathLight]),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x667835FF), blurRadius: 6, spreadRadius: 1)
+                  ],
                 ),
               ),
-              child: Center(
-                  child: Text(widget.level.categoryEmoji,
-                      style: const TextStyle(fontSize: 28))),
             ),
-          ),
-          const SizedBox(height: 14),
-
-          FadeTransition(
-            opacity: _fadeAnim,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // XP badge
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _kCyan.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _kCyan.withValues(alpha: 0.3)),
-                  ),
-                  child: const Text('+20 XP',
-                      style: TextStyle(
-                          color: _kCyan,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12)),
-                ),
-                const SizedBox(height: 10),
-
-                // Full title (sheet shows complete name)
-                Text(widget.level.title,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 21,
-                        fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 6),
-
-                Text(widget.level.scenario,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        height: 1.5),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 6),
-
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(widget.level.category,
-                      style: const TextStyle(
-                          color: AppColors.primaryLight,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
-                ),
-                const SizedBox(height: 20),
-
-                Divider(color: AppColors.border),
-                const SizedBox(height: 14),
-
-                // Challenge card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('YOUR CHALLENGE',
-                          style: TextStyle(
-                              color: AppColors.primaryLight,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.4)),
-                      const SizedBox(height: 8),
-                      Text(widget.level.prompt,
-                          style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 13,
-                              height: 1.6)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 22),
-
-                // Start button — passes its OWN context to onStart for position lookup
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, _kCyan],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: TextButton(
-                      onPressed: widget.onStart,
-                      style: TextButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16))),
-                      child: const Text('Start Scenario',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ),
-              ],
+            Positioned(right: 0, top: -16,
+              child: Text('${(pct * 100).round()}%', style: const TextStyle(
+                  color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
             ),
-          ),
+          ]),
         ],
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BOTTOM HUB CARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _BottomCard extends StatelessWidget {
+  final _Hub   hub;
+  final String illoPath;
+  final int    completed;
+  final double progress;
+
+  const _BottomCard({
+    required this.hub, required this.illoPath,
+    required this.completed, required this.progress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final botPad = MediaQuery.of(context).padding.bottom;
+    return Container(
+      margin: EdgeInsets.fromLTRB(16, 0, 16, botPad + 74),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _kBorder, width: 1.5),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.6),
+              blurRadius: 24, offset: const Offset(0, 4)),
+          BoxShadow(color: _kPath.withValues(alpha: 0.08),
+              blurRadius: 18, offset: const Offset(0, -2)),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(children: [
+              // Circular illustration thumbnail
+              Container(
+                width: 46, height: 46,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: hub.glow.withValues(alpha: 0.5), width: 1.5),
+                ),
+                child: ClipOval(
+                  child: Image.asset(illoPath, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: hub.dark,
+                      child: Center(child: Text('🌱',
+                          style: const TextStyle(fontSize: 20)))),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(hub.name,
+                        style: const TextStyle(color: Colors.white,
+                            fontSize: 15, fontWeight: FontWeight.bold),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
+                    Text('$completed / $_kPerHub Levels Completed',
+                        style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+                    const SizedBox(height: 8),
+                    Stack(children: [
+                      Container(height: 4,
+                          decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.07),
+                              borderRadius: BorderRadius.circular(2))),
+                      if (progress > 0)
+                        FractionallySizedBox(
+                          widthFactor: progress,
+                          child: Container(
+                            height: 4,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(2),
+                              gradient: LinearGradient(
+                                  colors: [_kPath, hub.glow]),
+                              boxShadow: [BoxShadow(
+                                  color: _kPath.withValues(alpha: 0.5),
+                                  blurRadius: 6)],
+                            ),
+                          ),
+                        ),
+                    ]),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text('${(progress * 100).round()}%',
+                  style: const TextStyle(color: Colors.white,
+                      fontSize: 14, fontWeight: FontWeight.bold)),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCENARIO BOTTOM SHEET
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _Sheet extends StatefulWidget {
+  final CommuniqLevel level;
+  final VoidCallback  onStart;
+  const _Sheet({required this.level, required this.onStart});
+  @override
+  State<_Sheet> createState() => _SheetState();
+}
+
+class _SheetState extends State<_Sheet> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale, _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl  = AnimationController(vsync: this,
+        duration: const Duration(milliseconds: 480));
+    _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
+    _fade  = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final pad = MediaQuery.of(context).viewInsets.bottom + 32;
+    return Container(
+      padding: EdgeInsets.fromLTRB(24, 0, 24, pad),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border.all(color: _kBorder, width: 1.5),
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const SizedBox(height: 12),
+        Container(width: 44, height: 4,
+            decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(2))),
+        const SizedBox(height: 22),
+        ScaleTransition(
+          scale: _scale,
+          child: Container(
+            width: 92, height: 92,
+            decoration: BoxDecoration(shape: BoxShape.circle,
+                border: Border.all(color: _kPath.withValues(alpha: 0.5), width: 2.5),
+                boxShadow: const [BoxShadow(
+                    color: Color(0x447835FF), blurRadius: 28, spreadRadius: 4)]),
+            child: ClipOval(
+              child: Image.asset(widget.level.imageAsset, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  decoration: const BoxDecoration(gradient: LinearGradient(
+                      colors: [_kPath, _kPathLight],
+                      begin: Alignment.topLeft, end: Alignment.bottomRight)),
+                  child: Center(child: Text(widget.level.categoryEmoji,
+                      style: const TextStyle(fontSize: 34))),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        FadeTransition(opacity: _fade, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+                color: _kPathLight.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: _kPathLight.withValues(alpha: 0.3))),
+            child: const Text('+20 XP', style: TextStyle(
+                color: _kPathLight, fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+          const SizedBox(height: 10),
+          Text(widget.level.title, style: const TextStyle(
+              color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 6),
+          Text(widget.level.scenario, style: const TextStyle(
+              color: Color(0xFF9CA3AF), fontSize: 13, height: 1.5),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity, padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.07))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('YOUR CHALLENGE', style: TextStyle(
+                  color: _kPathLight, fontSize: 10,
+                  fontWeight: FontWeight.w700, letterSpacing: 1.4)),
+              const SizedBox(height: 8),
+              Text(widget.level.prompt, style: const TextStyle(
+                  color: Color(0xFFCBD5E1), fontSize: 13, height: 1.6)),
+            ]),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity, height: 52,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [_kPath, _kPathLight],
+                    begin: Alignment.centerLeft, end: Alignment.centerRight),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [BoxShadow(
+                    color: Color(0x557835FF), blurRadius: 20, spreadRadius: 1)],
+              ),
+              child: TextButton(
+                onPressed: widget.onStart,
+                style: TextButton.styleFrom(shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16))),
+                child: const Text('Start Scenario', style: TextStyle(
+                    color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ),
+        ])),
+      ]),
     );
   }
 }

@@ -161,6 +161,7 @@ class _AuthGuardState extends State<AuthGuard> {
       key: ValueKey(_streamKey),
       stream: AuthService.authStateChanges,
       builder: (context, snapshot) {
+        debugPrint('[AuthGuard] snapshot: state=${snapshot.connectionState}, hasData=${snapshot.hasData}, user=${snapshot.data?.uid}');
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             backgroundColor: AppColors.background,
@@ -217,9 +218,11 @@ class _AuthGuardState extends State<AuthGuard> {
         }
 
         if (snapshot.hasData) {
+          debugPrint('[AuthGuard] User detected! Returning MainNavigationView');
           return const MainNavigationView();
         }
 
+        debugPrint('[AuthGuard] No user. Returning WelcomeScreen');
         return const WelcomeScreen();
       },
     );

@@ -187,14 +187,20 @@ class _RoleplayRecentPracticeState extends State<RoleplayRecentPractice> {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppColors.background,
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                        width: 1,
+                      ),
                     ),
-                    child: const Icon(Icons.history, color: AppColors.primary, size: 20),
+                    child: const Icon(Icons.psychology_rounded,
+                        color: AppColors.primaryLight, size: 22),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
