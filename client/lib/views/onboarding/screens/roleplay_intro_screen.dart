@@ -410,7 +410,8 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       opacity: _phaseFade,
       child: SlideTransition(
         position: _phaseSlide,
-        child: Padding(
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,7 +495,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               const SizedBox(height: 20),
               _buildMicInputRow(isLoading),
 
-              const Spacer(),
+              const SizedBox(height: 24),
 
               // CTA button
               AnimatedBuilder(
