@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Thrown when the user dismisses the Google sign-in picker without selecting
 /// an account. Callers should catch this and stay on the current screen.
@@ -15,9 +16,16 @@ class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  static Stream<User?> get authStateChanges => _auth.authStateChanges();
+  static Stream<User?> get authStateChanges {
+    debugPrint('[AuthService] authStateChanges stream requested');
+    return _auth.authStateChanges();
+  }
 
-  static User? get currentUser => _auth.currentUser;
+  static User? get currentUser {
+    final user = _auth.currentUser;
+    debugPrint('[AuthService] currentUser request → ${user?.uid ?? "null"}');
+    return user;
+  }
 
   /// Signs the user in with email and password.
   static Future<void> signInWithEmailPassword(
@@ -177,6 +185,11 @@ class AuthService {
     try {
       await _googleSignIn.signOut();
       await _auth.signOut();
+      
+      // Clear local SharedPreferences cache
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
       debugPrint('[AuthService] signOut ✓');
     } catch (e) {
       debugPrint('[AuthService] signOut ✗ $e');

@@ -7,18 +7,12 @@ class AllScenariosPage extends StatelessWidget {
 
   static const _items = [
     {
-      'key': 'assertiveness',
-      'title': 'Assertiveness',
-      'subtitle': 'Say no politely to extra work',
-      'icon': Icons.bolt_rounded,
-      'colors': [Color(0xFFFF6B35), Color(0xFFFF9A62)],
-    },
-    {
       'key': 'job_interview',
       'title': 'Job Interview',
       'subtitle': 'Answer tough HR questions',
       'icon': Icons.work_outline_rounded,
       'colors': [Color(0xFF4FACFE), Color(0xFF00D4FF)],
+      'image': 'assets/images/scenarios/job_interview_v2.png',
     },
     {
       'key': 'negotiation',
@@ -26,34 +20,23 @@ class AllScenariosPage extends StatelessWidget {
       'subtitle': 'Negotiate a raise or budget',
       'icon': Icons.handshake_rounded,
       'colors': [Color(0xFF43E97B), Color(0xFF38F9D7)],
+      'image': 'assets/images/scenarios/negotiation_v2.png',
     },
     {
-      'key': 'leadership',
-      'title': 'Leadership',
-      'subtitle': 'Coach a struggling team member',
-      'icon': Icons.groups_rounded,
-      'colors': [Color(0xFF667EEA), Color(0xFFA78BFA)],
-    },
-    {
-      'key': 'conflict',
-      'title': 'Conflict Resolution',
-      'subtitle': 'De-escalate a workplace dispute',
-      'icon': Icons.balance_rounded,
-      'colors': [Color(0xFFFC466B), Color(0xFFFF6B6B)],
+      'key': 'assertiveness',
+      'title': 'Technical Problem',
+      'subtitle': 'Solve coding challenges',
+      'icon': Icons.code_rounded,
+      'colors': [Color(0xFFFF6B35), Color(0xFFFF9A62)],
+      'image': 'assets/images/scenarios/technical_solving.png',
     },
     {
       'key': 'small_talk',
-      'title': 'Small Talk',
-      'subtitle': 'Network at a corporate event',
-      'icon': Icons.chat_bubble_outline_rounded,
+      'title': 'Sales Pitch',
+      'subtitle': 'Network and sell your idea',
+      'icon': Icons.record_voice_over_rounded,
       'colors': [Color(0xFF7B61FF), Color(0xFF9D7BFF)],
-    },
-    {
-      'key': 'feedback',
-      'title': 'Giving Feedback',
-      'subtitle': 'Give constructive feedback',
-      'icon': Icons.feedback_outlined,
-      'colors': [Color(0xFFF7971E), Color(0xFFFFD200)],
+      'image': 'assets/images/scenarios/sales_pitch.png',
     },
   ];
 
@@ -93,7 +76,7 @@ class AllScenariosPage extends StatelessWidget {
                       crossAxisCount: 2,
                       crossAxisSpacing: 14,
                       mainAxisSpacing: 14,
-                      childAspectRatio: 0.95,
+                      childAspectRatio: 0.78,
                     ),
                     itemCount: _items.length,
                     itemBuilder: (context, index) =>
@@ -163,6 +146,8 @@ class _ScenarioCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = item['colors'] as List<Color>;
+    final hasImage = item.containsKey('image');
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -174,94 +159,90 @@ class _ScenarioCard extends StatelessWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(28),
           color: const Color(0xFF0F1520),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.border, width: 1.5),
           boxShadow: [
             BoxShadow(
               color: colors[0].withValues(alpha: 0.08),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
+              blurRadius: 30,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Stack(
+        child: Column(
           children: [
-            // Top gradient band
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
+            const SizedBox(height: 20),
+            // Circular Image Frame
+            Center(
               child: Container(
-                height: 80,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20)),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colors[0].withValues(alpha: 0.18),
-                      colors[1].withValues(alpha: 0.06),
-                    ],
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: colors[0].withValues(alpha: 0.3),
+                    width: 2,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors[0].withValues(alpha: 0.15),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: hasImage
+                      ? Image.asset(
+                          item['image'] as String,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          color: colors[0].withValues(alpha: 0.1),
+                          child: Icon(item['icon'] as IconData,
+                              color: colors[0], size: 40),
+                        ),
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Icon in gradient circle
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          colors[0].withValues(alpha: 0.25),
-                          colors[1].withValues(alpha: 0.12),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+            const SizedBox(height: 16),
+            // Text Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      item['title'] as String,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        letterSpacing: -0.3,
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: colors[0].withValues(alpha: 0.3), width: 1),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    child: Icon(
-                      item['icon'] as IconData,
-                      color: colors[0],
-                      size: 22,
+                    const SizedBox(height: 6),
+                    Text(
+                      item['subtitle'] as String,
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    item['title'] as String,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      letterSpacing: -0.2,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item['subtitle'] as String,
-                    style: const TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11.5,
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
+            const SizedBox(height: 12),
           ],
         ),
       ),
