@@ -1,6 +1,5 @@
-import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/main.dart';
 
@@ -13,202 +12,116 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _entranceController;
-  late AnimationController _flapController;
+  late AnimationController _fadeController;
+  late AnimationController _glowController;
+  late AnimationController _textController;
   late AnimationController _ringController;
 
-  late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  late Animation<double> _glowAnimation;
+  late Animation<double> _textFadeAnimation;
+  late Animation<Offset> _textSlideAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
 
-    _entranceController = AnimationController(
+    _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 700),
     );
 
-    // High frequency flap for the entire image
-    _flapController = AnimationController(
+    _glowController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 2200),
     )..repeat(reverse: true);
+
+    _textController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
 
     _ringController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 15),
+      duration: const Duration(seconds: 12),
     )..repeat();
 
-    _scaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(
-          tween: Tween(begin: 0.5, end: 1.05)
-              .chain(CurveTween(curve: Curves.easeOutCubic)),
-          weight: 70),
-      TweenSequenceItem(
-          tween: Tween(begin: 1.05, end: 1.0)
-              .chain(CurveTween(curve: Curves.elasticOut)),
-          weight: 30),
-    ]).animate(_entranceController);
-
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-          parent: _entranceController,
-          curve: const Interval(0.0, 0.6, curve: Curves.easeIn)),
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
     );
 
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
-      CurvedAnimation(
-          parent: _entranceController,
-          curve: const Interval(0.0, 0.8, curve: Curves.easeOutQuart)),
+    _glowAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
     );
 
-    _startApp();
+    _textFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _textController, curve: Curves.easeOut),
+    );
+
+    _textSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.25),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutBack),
+    );
+
+    _startSequence();
   }
 
-  Future<void> _startApp() async {
-    await _entranceController.forward();
-    await Future.delayed(const Duration(seconds: 1));
+  Future<void> _startSequence() async {
+    await _fadeController.forward();
+    await Future.delayed(const Duration(milliseconds: 200));
+    _textController.forward();
+    await Future.delayed(const Duration(milliseconds: 2600));
     if (!mounted) return;
-
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const AuthGuard(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 1000),
+        pageBuilder: (_, animation, __) => const AuthGuard(),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+        transitionDuration: const Duration(milliseconds: 800),
       ),
     );
   }
 
   @override
   void dispose() {
-    _entranceController.dispose();
-    _flapController.dispose();
+    _fadeController.dispose();
+    _glowController.dispose();
+    _textController.dispose();
     _ringController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    const double logoSize = 250.0;
-
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: AppColors.background,
+      body: FadeTransition(
+        opacity: _fadeAnimation,
         child: Stack(
-          alignment: Alignment.center,
+          fit: StackFit.expand,
           children: [
-            // HUD Rings (Subtle Background)
-            FadeTransition(
-              opacity: _fadeAnimation,
-              child: AnimatedBuilder(
-                animation: _ringController,
-                builder: (context, child) {
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Transform.rotate(
-                        angle: _ringController.value * 2 * math.pi,
-                        child: _CircularHUD(
-                          radius: 130,
-                          color: const Color(0xFF22D3EE).withOpacity(0.1),
-                          dashCount: 4,
-                          strokeWidth: 1,
-                        ),
-                      ),
-                      Transform.rotate(
-                        angle: -_ringController.value * 2 * math.pi,
-                        child: _CircularHUD(
-                          radius: 150,
-                          color: const Color(0xFF22D3EE).withOpacity(0.05),
-                          dashCount: 8,
-                          strokeWidth: 0.5,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-
+            _SplashBackground(glowAnimation: _glowAnimation),
+            _OrbitRings(ringController: _ringController, glowAnimation: _glowAnimation),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // SINGLE UNIFIED LOGO
+                ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: _MicLottieSection(glowAnimation: _glowAnimation),
+                ),
+                const SizedBox(height: 52),
                 SlideTransition(
-                  position: _slideAnimation,
+                  position: _textSlideAnimation,
                   child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: AnimatedBuilder(
-                        animation: _flapController,
-                        builder: (context, child) {
-                          // 3D Perspective Flap on the entire image
-                          final flapValue = _flapController.value;
-                          final matrix = Matrix4.identity()
-                            ..setEntry(3, 2, 0.002)
-                            ..scale(1.0 + (flapValue * 0.06),
-                                1.0 - (flapValue * 0.02));
-
-                          return ClipOval(
-                            child: Transform(
-                              transform: matrix,
-                              alignment: Alignment.center,
-                              child: Hero(
-                                tag: 'app_logo',
-                                child: Image.asset(
-                                  'assets/images/hummingbird.png',
-                                  width: logoSize,
-                                  height: logoSize,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 60),
-                Text(
-                  'COMMUNIQ',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 12,
-                    shadows: [
-                      Shadow(
-                        color: Colors.cyanAccent.withOpacity(0.15),
-                        blurRadius: 15,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: 60,
-                  height: 1,
-                  color: const Color(0xFF22D3EE).withOpacity(0.3),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'ELEVATING EVERY INTERACTION',
-                  style: TextStyle(
-                    color: AppColors.textSecondary.withOpacity(0.4),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                    letterSpacing: 4,
+                    opacity: _textFadeAnimation,
+                    child: const _BrandingText(),
                   ),
                 ),
               ],
@@ -220,13 +133,157 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _CircularHUD extends StatelessWidget {
+// ── Background radial glow painter ─────────────────────────────────────────
+
+class _SplashBackground extends StatelessWidget {
+  final Animation<double> glowAnimation;
+  const _SplashBackground({required this.glowAnimation});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: glowAnimation,
+      builder: (context, _) {
+        return CustomPaint(
+          painter: _BackgroundPainter(intensity: glowAnimation.value),
+          child: const SizedBox.expand(),
+        );
+      },
+    );
+  }
+}
+
+class _BackgroundPainter extends CustomPainter {
+  final double intensity;
+  const _BackgroundPainter({required this.intensity});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = AppColors.background,
+    );
+
+    final center = Offset(size.width / 2, size.height * 0.42);
+
+    // Deep indigo centre bloom
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFF5B52F0).withOpacity(0.18 * intensity),
+            const Color(0xFF5B52F0).withOpacity(0.06 * intensity),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.35, 1.0],
+        ).createShader(
+          Rect.fromCenter(center: center, width: 420, height: 420),
+        ),
+    );
+
+    // Sky-blue accent top-right
+    final accentCenter = Offset(size.width * 0.82, size.height * 0.18);
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFF38BDF8).withOpacity(0.09 * intensity),
+            Colors.transparent,
+          ],
+        ).createShader(
+          Rect.fromCenter(center: accentCenter, width: 280, height: 280),
+        ),
+    );
+
+    // Violet hint bottom-left
+    final violetCenter = Offset(size.width * 0.15, size.height * 0.78);
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            const Color(0xFF7C3AED).withOpacity(0.07 * intensity),
+            Colors.transparent,
+          ],
+        ).createShader(
+          Rect.fromCenter(center: violetCenter, width: 240, height: 240),
+        ),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BackgroundPainter old) => old.intensity != intensity;
+}
+
+// ── Subtle orbit rings ──────────────────────────────────────────────────────
+
+class _OrbitRings extends StatelessWidget {
+  final AnimationController ringController;
+  final Animation<double> glowAnimation;
+
+  const _OrbitRings({
+    required this.ringController,
+    required this.glowAnimation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([ringController, glowAnimation]),
+      builder: (context, _) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              top: MediaQuery.of(context).size.height * 0.42 - 115,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Transform.rotate(
+                  angle: ringController.value * 2 * 3.14159,
+                  child: _DashedRing(
+                    radius: 115,
+                    color: AppColors.primary
+                        .withOpacity(0.10 * glowAnimation.value),
+                    dashCount: 6,
+                    strokeWidth: 1.0,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: MediaQuery.of(context).size.height * 0.42 - 145,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Transform.rotate(
+                  angle: -ringController.value * 2 * 3.14159,
+                  child: _DashedRing(
+                    radius: 145,
+                    color: AppColors.secondary
+                        .withOpacity(0.06 * glowAnimation.value),
+                    dashCount: 10,
+                    strokeWidth: 0.5,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DashedRing extends StatelessWidget {
   final double radius;
   final Color color;
   final int dashCount;
   final double strokeWidth;
 
-  const _CircularHUD({
+  const _DashedRing({
     required this.radius,
     required this.color,
     required this.dashCount,
@@ -239,7 +296,7 @@ class _CircularHUD extends StatelessWidget {
       width: radius * 2,
       height: radius * 2,
       child: CustomPaint(
-        painter: _HUDPainter(
+        painter: _DashPainter(
           color: color,
           dashCount: dashCount,
           strokeWidth: strokeWidth,
@@ -249,12 +306,12 @@ class _CircularHUD extends StatelessWidget {
   }
 }
 
-class _HUDPainter extends CustomPainter {
+class _DashPainter extends CustomPainter {
   final Color color;
   final int dashCount;
   final double strokeWidth;
 
-  _HUDPainter({
+  const _DashPainter({
     required this.color,
     required this.dashCount,
     required this.strokeWidth,
@@ -268,13 +325,13 @@ class _HUDPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
+    final r = size.width / 2;
+    const dashArc = 3.14159 * 2 / 24;
 
-    const dashArc = 2 * math.pi / 24;
     for (int i = 0; i < dashCount; i++) {
-      final startAngle = (i * 2 * math.pi / dashCount);
+      final startAngle = (i * 3.14159 * 2 / dashCount);
       canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
+        Rect.fromCircle(center: center, radius: r),
         startAngle,
         dashArc,
         false,
@@ -284,5 +341,153 @@ class _HUDPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter old) => false;
+}
+
+// ── Mic Lottie with glow halo ───────────────────────────────────────────────
+
+class _MicLottieSection extends StatelessWidget {
+  final Animation<double> glowAnimation;
+  const _MicLottieSection({required this.glowAnimation});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: glowAnimation,
+      builder: (context, _) {
+        return SizedBox(
+          width: 220,
+          height: 220,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer diffuse glow
+              Container(
+                width: 220,
+                height: 220,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary
+                          .withOpacity(0.22 * glowAnimation.value),
+                      blurRadius: 70,
+                      spreadRadius: 18,
+                    ),
+                    BoxShadow(
+                      color: AppColors.secondary
+                          .withOpacity(0.10 * glowAnimation.value),
+                      blurRadius: 90,
+                      spreadRadius: 30,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Frosted glass circle
+              Container(
+                width: 168,
+                height: 168,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.14),
+                      AppColors.surface.withOpacity(0.55),
+                      AppColors.background.withOpacity(0.0),
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
+                  ),
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.18),
+                    width: 1.0,
+                  ),
+                ),
+              ),
+
+              // Inner subtle ring
+              Container(
+                width: 148,
+                height: 148,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.secondary.withOpacity(0.10),
+                    width: 0.5,
+                  ),
+                ),
+              ),
+
+              // Lottie animation
+              SizedBox(
+                width: 130,
+                height: 130,
+                child: Lottie.asset(
+                  'assets/icons/Mic.json',
+                  fit: BoxFit.contain,
+                  repeat: true,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Branding text block ────────────────────────────────────────────────────
+
+class _BrandingText extends StatelessWidget {
+  const _BrandingText();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [Color(0xFFFFFFFF), Color(0xFFBECCE3)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ).createShader(bounds),
+          child: const Text(
+            'COMMUNIQ',
+            style: TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 9,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          width: 48,
+          height: 1,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.transparent,
+                AppColors.secondary.withOpacity(0.65),
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'ELEVATING EVERY INTERACTION',
+          style: TextStyle(
+            color: AppColors.textMuted.withOpacity(0.85),
+            fontSize: 10,
+            fontWeight: FontWeight.w400,
+            letterSpacing: 3.5,
+          ),
+        ),
+      ],
+    );
+  }
 }

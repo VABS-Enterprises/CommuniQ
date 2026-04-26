@@ -253,28 +253,35 @@ class _ProfileViewState extends State<ProfileView> {
                           // ── Log Out ─────────────────────────────────────
                           SliverToBoxAdapter(
                             child: Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                              child: SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.logout_rounded,
-                                      color: Colors.redAccent, size: 20),
-                                  label: const Text('Log Out',
-                                      style: TextStyle(
-                                          color: Colors.redAccent,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16)),
-                                  onPressed: _handleLogout,
-                                  style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(
-                                        color: Colors.redAccent, width: 1.5),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(14)),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                      color: AppColors.glassBorder
+                                          .withValues(alpha: 0.4)),
+                                ),
+                                child: ListTile(
+                                  leading: Container(
+                                    width: 34,
+                                    height: 34,
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent,
+                                      borderRadius: BorderRadius.circular(9),
+                                    ),
+                                    child: const Icon(Icons.logout_rounded,
+                                        color: Colors.white, size: 17),
                                   ),
+                                  title: const Text('Log Out',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600)),
+                                  onTap: _handleLogout,
+                                  dense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 4),
                                 ),
                               ),
                             ),
@@ -413,10 +420,10 @@ class _ProfileViewState extends State<ProfileView> {
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(9),
         ),
-        child: Icon(icon, color: AppColors.primary, size: 17),
+        child: Icon(icon, color: Colors.white, size: 17),
       ),
       title: Text(title,
           style:
@@ -755,10 +762,10 @@ class _OnboardingSection extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
+            color: AppColors.primary,
             borderRadius: BorderRadius.circular(9),
           ),
-          child: Icon(icon, color: AppColors.primary, size: 17),
+          child: Icon(icon, color: Colors.white, size: 17),
         ),
         title: Text(title,
             style: const TextStyle(
@@ -782,10 +789,10 @@ class _OnboardingSection extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
+                color: AppColors.primary,
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 17),
+              child: Icon(icon, color: Colors.white, size: 17),
             ),
             const SizedBox(width: 12),
             Expanded(
