@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'package:communiq/core/theme/app_theme.dart';
@@ -10,18 +9,7 @@ import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
 import 'package:communiq/views/onboarding/screens/welcome_screen.dart';
 import 'package:communiq/views/onboarding/screens/splash_screen.dart';
-
-/// The server URL used for all API calls.
-///
-/// Override at build time:  flutter run --dart-define=SERVER_URL=https://your-server.com
-///
-/// Defaults:
-///   - Debug builds  → http://10.0.2.2:3000  (Android emulator → host loopback)
-///   - Release builds → https://communiq.onrender.com
-const _kServerUrl = String.fromEnvironment(
-  'SERVER_URL',
-  defaultValue: kDebugMode ? 'http://10.0.2.2:3000' : 'https://communiq.onrender.com',
-);
+import 'package:communiq/views/dev/component_gallery.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -75,7 +63,7 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.bg,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
@@ -88,7 +76,7 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
                 const Text(
                   'App failed to start',
                   style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: AppColors.ink,
                       fontSize: 20,
                       fontWeight: FontWeight.bold),
                 ),
@@ -98,7 +86,7 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
                   'Please check your internet connection and try again.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: AppColors.textSecondary, fontSize: 14),
+                      color: AppColors.inkMuted, fontSize: 14),
                 ),
                 if (kDebugMode) ...[
                   const SizedBox(height: 16),
@@ -106,19 +94,19 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
                     widget.error,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                        color: AppColors.textMuted, fontSize: 11),
+                        color: AppColors.inkSoft, fontSize: 11),
                   ),
                 ],
                 const SizedBox(height: 28),
                 _retrying
                     ? const CircularProgressIndicator(
-                        color: AppColors.primary)
+                        color: AppColors.coral)
                     : TextButton(
                         onPressed: _retry,
                         child: const Text(
                           'Try Again',
                           style: TextStyle(
-                              color: AppColors.primaryLight,
+                              color: AppColors.coral,
                               fontWeight: FontWeight.w600,
                               fontSize: 15),
                         ),
@@ -132,6 +120,11 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
   }
 }
 
+/// Launches straight into the design-system gallery instead of the app:
+///   flutter run --dart-define=GALLERY=true
+/// Debug affordance only — no user-facing route reaches it.
+const _kGallery = bool.fromEnvironment('GALLERY');
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -140,8 +133,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'CommuniQ',
-      theme: AppTheme.darkTheme,
-      home: const SplashScreen(),
+      theme: AppTheme.light,
+      themeMode: ThemeMode.light,
+      home: _kGallery ? const ComponentGallery() : const SplashScreen(),
     );
   }
 }
@@ -169,27 +163,27 @@ class _AuthGuardState extends State<AuthGuard> {
         debugPrint('[AuthGuard] snapshot: state=${snapshot.connectionState}, hasData=${snapshot.hasData}, user=${snapshot.data?.uid}');
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            backgroundColor: AppColors.background,
+            backgroundColor: AppColors.bg,
             body: Center(
                 child: CircularProgressIndicator(
-                    color: AppColors.primary)),
+                    color: AppColors.coral)),
           );
         }
 
         if (snapshot.hasError) {
           return Scaffold(
-            backgroundColor: AppColors.background,
+            backgroundColor: AppColors.bg,
             body: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.wifi_off_rounded,
-                      color: AppColors.textMuted, size: 48),
+                      color: AppColors.inkSoft, size: 48),
                   const SizedBox(height: 16),
                   const Text(
                     'Connection error',
                     style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: AppColors.ink,
                         fontSize: 18,
                         fontWeight: FontWeight.bold),
                   ),
@@ -199,14 +193,14 @@ class _AuthGuardState extends State<AuthGuard> {
                     'Please check your connection.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13),
+                        color: AppColors.inkMuted, fontSize: 13),
                   ),
                   const SizedBox(height: 24),
                   TextButton(
                     onPressed: _retry,
                     child: const Text('Retry',
                         style: TextStyle(
-                            color: AppColors.primaryLight,
+                            color: AppColors.coral,
                             fontWeight: FontWeight.w600,
                             fontSize: 15)),
                   ),
@@ -214,7 +208,7 @@ class _AuthGuardState extends State<AuthGuard> {
                     onPressed: () => AuthService.signOut(),
                     child: const Text('Sign Out',
                         style:
-                            TextStyle(color: AppColors.textMuted)),
+                            TextStyle(color: AppColors.inkSoft)),
                   ),
                 ],
               ),

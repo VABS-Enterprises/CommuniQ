@@ -1,4 +1,0 @@
-Custom fonts will go here
-- font-family-regular.ttf
-- font-family-bold.ttf
-- font-family-medium.ttf
