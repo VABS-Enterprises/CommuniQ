@@ -137,13 +137,17 @@ class _HomeViewState extends State<HomeView> {
   }
 
   /// Whisperwing reacts to how the user is actually doing.
+  ///
+  /// Home deliberately uses only open-eyed poses. `happy` and `celebrating`
+  /// squeeze the eyes shut and lift the wings across the body, which reads as
+  /// a featureless blob at this size — those belong to reward moments, not to
+  /// a character sitting on screen the whole time.
   MascotMood get _mood {
     final p = _profile;
     if (_profileError) return MascotMood.sad;
     if (p == null) return MascotMood.idle;
-    if (p.streak >= 3) return MascotMood.celebrating;
-    if (p.sessionsCompleted > 0) return MascotMood.happy;
-    return MascotMood.encouraging;
+    if (p.streak >= 3) return MascotMood.proud;
+    return MascotMood.idle;
   }
 
   @override
@@ -414,7 +418,7 @@ class _MascotGreeting extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Mascot(mood: mood, size: 96),
+        Mascot(mood: mood, size: 108),
         const SizedBox(width: AppSpacing.s8),
         Expanded(
           child: ChunkyCard(
