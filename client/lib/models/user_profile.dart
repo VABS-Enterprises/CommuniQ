@@ -70,7 +70,12 @@ class UserProfile {
       isPremium: json['isPremium'] as bool? ?? false,
       skillProgress: skillMap,
       sessionsCompleted: (json['_sessionsCompleted'] as num?)?.toInt() ?? 0,
-      learningProgress: (json['learning_progress'] as List<dynamic>?)
+      // The server writes `learningProgress` (camelCase, see
+      // learningController.js). This previously read only `learning_progress`,
+      // so the field was always empty. The snake_case key is kept as a
+      // fallback for any profile cached under the old shape.
+      learningProgress: ((json['learningProgress'] ??
+                  json['learning_progress']) as List<dynamic>?)
               ?.cast<Map<String, dynamic>>() ??
           [],
     );
@@ -90,7 +95,7 @@ class UserProfile {
           (k, v) => MapEntry(k, {'avg': v.avg, 'sessions': v.sessions}),
         ),
         '_sessionsCompleted': sessionsCompleted,
-        'learning_progress': learningProgress,
+        'learningProgress': learningProgress,
       };
 
   /// Returns a copy with [sessionsCompleted] filled in.
