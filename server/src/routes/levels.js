@@ -8,7 +8,7 @@ const { evaluateLearningAnswer } = require('../services/fastApiService');
 
 // Path to the levels JSON file at the project root.
 // __dirname = server/src/routes → ../../.. = project root
-const LEVELS_PATH = path.join(__dirname, '..', '..', '..', 'communiq_levels.json');
+const LEVELS_PATH = path.join(__dirname, '..', '..', '..', 'communiq_levels_1_20.json');
 
 // /levels/evaluate: 15/min per uid — each call costs an LLM evaluation call.
 // Keyed on req.uid (runs after verifyToken) so IP rotation can't bypass it.

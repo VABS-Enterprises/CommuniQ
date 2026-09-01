@@ -12,7 +12,7 @@ import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/models/user_profile.dart';
 import 'package:communiq/views/premium_view/screens/premium_screen.dart';
 import 'package:communiq/common_widgets/sky_campus_background.dart';
-import 'package:communiq/common_widgets/icon_badge.dart';
+import 'package:communiq/common_widgets/icon_tile.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -318,7 +318,8 @@ class _ProfileViewState extends State<ProfileView> {
                                           .withValues(alpha: 0.4)),
                                 ),
                                 child: ListTile(
-                                  leading: const IconBadge(
+                                  leading: const IconTile(
+                                    size: 34,
                                     icon: Icons.logout_rounded,
                                     color: AppColors.error,
                                   ),
@@ -465,7 +466,7 @@ class _ProfileViewState extends State<ProfileView> {
     Color? trailingColor,
   }) {
     return ListTile(
-      leading: IconBadge(icon: icon),
+      leading: IconTile(size: 34, icon: icon),
       title: Text(title,
           style:
               const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
@@ -494,7 +495,7 @@ class _ProfileViewState extends State<ProfileView> {
     required ValueChanged<bool> onChanged,
   }) {
     return ListTile(
-      leading: IconBadge(icon: icon),
+      leading: IconTile(size: 34, icon: icon),
       title: Text(title,
           style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
       subtitle: Text(subtitle,
@@ -831,7 +832,7 @@ class _OnboardingSection extends StatelessWidget {
   }
 
   Widget _infoTile(IconData icon, String title, String value) => ListTile(
-        leading: IconBadge(icon: icon),
+        leading: IconTile(size: 34, icon: icon),
         title: Text(title,
             style: const TextStyle(
                 color: AppColors.textPrimary, fontSize: 13)),
@@ -850,7 +851,7 @@ class _OnboardingSection extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            IconBadge(icon: icon),
+            IconTile(size: 34, icon: icon),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

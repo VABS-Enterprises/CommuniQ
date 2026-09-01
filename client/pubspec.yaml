@@ -90,6 +90,15 @@ flutter:
     - assets/images/scenarios/
     - assets/icons/
 
+  # Nunito variable font (OFL). One file covers ExtraLight..Black via the
+  # `wght` axis, so every weight below resolves from the same 277 KB asset.
+  fonts:
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito.ttf
+        - asset: assets/fonts/Nunito-Italic.ttf
+          style: italic
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
