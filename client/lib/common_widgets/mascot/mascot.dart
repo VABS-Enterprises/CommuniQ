@@ -53,7 +53,7 @@ class Mascot extends StatefulWidget {
   final MascotMood mood;
   final double size;
 
-  /// Body colour. Defaults to [AppColors.grape].
+  /// Body colour. Defaults to [AppColors.brand].
   final Color? color;
 
   /// Set false for a still pose (list rows, dense layouts).
@@ -180,7 +180,7 @@ class _MascotState extends State<Mascot> with TickerProviderStateMixin {
               morph: Curves.easeOutCubic.transform(_moodShift.value),
               bob: bob,
               blink: _blink.value,
-              body: widget.color ?? AppColors.grape,
+              body: widget.color ?? AppColors.brand,
             ),
           );
         },

@@ -132,7 +132,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: AppColors.coral,
+      color: AppColors.brand,
       backgroundColor: AppColors.surface,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -184,10 +184,10 @@ class _Toggle extends StatelessWidget {
         height: 42,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? AppColors.coral : AppColors.surface,
+          color: selected ? AppColors.brand : AppColors.surface,
           borderRadius: AppRadius.pillRadius,
           border: Border.all(
-            color: selected ? AppColors.coral : AppColors.outline,
+            color: selected ? AppColors.brand : AppColors.outline,
             width: 2,
           ),
         ),
@@ -228,7 +228,7 @@ class LeaderboardRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChunkyCard(
       selected: isMe,
-      accent: AppColors.coral,
+      accent: AppColors.brand,
       padding: const EdgeInsets.all(AppSpacing.s12),
       child: Row(
         children: [
@@ -260,7 +260,7 @@ class LeaderboardRow extends StatelessWidget {
           ),
           Text(
             trailing,
-            style: AppTextStyles.numeralSmall.copyWith(color: AppColors.coral),
+            style: AppTextStyles.numeralSmall.copyWith(color: AppColors.brand),
           ),
         ],
       ),

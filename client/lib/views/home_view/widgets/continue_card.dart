@@ -137,7 +137,7 @@ class _ContinueCardState extends State<ContinueCard> {
 
     return ChunkyCard(
       onTap: () => context.go(AppRoutes.learning),
-      accent: AppColors.grape,
+      accent: AppColors.brand,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -162,7 +162,7 @@ class _ContinueCardState extends State<ContinueCard> {
                     Text(
                       level.title,
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.grape,
+                        color: AppColors.brand,
                         fontWeight: FontWeight.w800,
                       ),
                       maxLines: 2,
@@ -176,7 +176,7 @@ class _ContinueCardState extends State<ContinueCard> {
                 width: 42,
                 height: 42,
                 decoration: const BoxDecoration(
-                  color: AppColors.grape,
+                  color: AppColors.brand,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -196,7 +196,7 @@ class _ContinueCardState extends State<ContinueCard> {
               Text(
                 '${(progress * 100).round()}%',
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.grape,
+                  color: AppColors.brand,
                 ),
               ),
             ],
@@ -204,7 +204,7 @@ class _ContinueCardState extends State<ContinueCard> {
           const SizedBox(height: 6),
           ChunkyProgressBar(
             value: progress,
-            color: AppColors.grape,
+            color: AppColors.brand,
             height: 12,
           ),
         ],
@@ -237,7 +237,7 @@ class _LevelThumb extends StatelessWidget {
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => const Icon(
           Icons.school_rounded,
-          color: AppColors.grape,
+          color: AppColors.brand,
           size: 26,
         ),
       ),

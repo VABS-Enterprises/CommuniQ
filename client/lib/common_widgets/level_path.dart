@@ -85,7 +85,7 @@ class _LevelNodeState extends State<LevelNode>
 
   Color get _fill => switch (widget.state) {
         LevelNodeState.done => AppColors.success,
-        LevelNodeState.current => widget.color ?? AppColors.grape,
+        LevelNodeState.current => widget.color ?? AppColors.brand,
         LevelNodeState.locked => AppColors.bgSunk,
       };
 

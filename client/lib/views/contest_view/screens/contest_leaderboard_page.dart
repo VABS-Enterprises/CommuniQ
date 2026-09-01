@@ -93,7 +93,7 @@ class _ContestLeaderboardPageState extends State<ContestLeaderboardPage> {
                   _FilterChip(
                     label: 'All',
                     selected: _filter == null,
-                    color: AppColors.coral,
+                    color: AppColors.brand,
                     onTap: () => _setFilter(null),
                   ),
                   for (final t in ContestType.values)
@@ -132,7 +132,7 @@ class _ContestLeaderboardPageState extends State<ContestLeaderboardPage> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: AppColors.coral,
+      color: AppColors.brand,
       backgroundColor: AppColors.surface,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -222,7 +222,7 @@ class _RankRow extends StatelessWidget {
 
     return ChunkyCard(
       selected: isMe,
-      accent: AppColors.coral,
+      accent: AppColors.brand,
       padding: const EdgeInsets.all(AppSpacing.s12),
       child: Row(
         children: [

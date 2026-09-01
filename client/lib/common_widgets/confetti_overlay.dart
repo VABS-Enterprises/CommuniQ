@@ -82,12 +82,12 @@ class ConfettiOverlayState extends State<ConfettiOverlay>
   }
 
   static const _palette = [
-    AppColors.coral,
+    AppColors.brand,
     AppColors.sun,
-    AppColors.teal,
-    AppColors.grape,
+    AppColors.brand,
+    AppColors.brand,
     AppColors.success,
-    AppColors.info,
+    AppColors.brand,
   ];
 
   @override

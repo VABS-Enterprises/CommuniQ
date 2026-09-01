@@ -52,12 +52,9 @@ class _BlobPainter extends CustomPainter {
   final int seed;
   final double intensity;
 
-  static const _palette = [
-    AppColors.coral,
-    AppColors.sun,
-    AppColors.teal,
-    AppColors.grape,
-  ];
+  // Brand and the "earned" gold only — a four-hue backdrop was quietly
+  // undoing the single-colour rule on every screen at once.
+  static const _palette = [AppColors.brand, AppColors.sun];
 
   @override
   void paint(Canvas canvas, Size size) {

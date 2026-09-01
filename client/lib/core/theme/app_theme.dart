@@ -26,14 +26,14 @@ class AppTheme {
       highlightColor: AppColors.transparent,
 
       colorScheme: const ColorScheme.light(
-        primary: AppColors.coral,
+        primary: AppColors.brand,
         onPrimary: AppColors.inkOnDark,
-        primaryContainer: AppColors.coralSoft,
-        onPrimaryContainer: AppColors.coralDark,
-        secondary: AppColors.teal,
+        primaryContainer: AppColors.brandSoft,
+        onPrimaryContainer: AppColors.brandDark,
+        secondary: AppColors.brand,
         onSecondary: AppColors.inkOnDark,
-        secondaryContainer: AppColors.tealSoft,
-        tertiary: AppColors.grape,
+        secondaryContainer: AppColors.brandSoft,
+        tertiary: AppColors.brand,
         onTertiary: AppColors.inkOnDark,
         surface: AppColors.surface,
         onSurface: AppColors.ink,
@@ -81,7 +81,7 @@ class AppTheme {
       // buttons on-brand rather than falling back to Material defaults.
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.coral,
+          backgroundColor: AppColors.brand,
           foregroundColor: AppColors.inkOnDark,
           disabledBackgroundColor: AppColors.bgSunk,
           disabledForegroundColor: AppColors.inkSoft,
@@ -97,7 +97,7 @@ class AppTheme {
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.coral,
+          foregroundColor: AppColors.brand,
           textStyle: AppTextStyles.labelLarge,
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.s16,
@@ -126,7 +126,7 @@ class AppTheme {
         hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.inkSoft),
         labelStyle: AppTextStyles.titleSmall.copyWith(color: AppColors.inkMuted),
         floatingLabelStyle: AppTextStyles.titleSmall.copyWith(
-          color: AppColors.coral,
+          color: AppColors.brand,
         ),
         errorStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
         contentPadding: const EdgeInsets.symmetric(
@@ -135,7 +135,7 @@ class AppTheme {
         ),
         border: _inputBorder(AppColors.outline),
         enabledBorder: _inputBorder(AppColors.outline),
-        focusedBorder: _inputBorder(AppColors.coral, width: 2.5),
+        focusedBorder: _inputBorder(AppColors.brand, width: 2.5),
         errorBorder: _inputBorder(AppColors.error),
         focusedErrorBorder: _inputBorder(AppColors.error, width: 2.5),
         disabledBorder: _inputBorder(AppColors.bgSunk),
@@ -143,7 +143,7 @@ class AppTheme {
 
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surface,
-        selectedColor: AppColors.coralSoft,
+        selectedColor: AppColors.brandSoft,
         side: const BorderSide(color: AppColors.outline, width: 2),
         labelStyle: AppTextStyles.labelMedium,
         padding: const EdgeInsets.symmetric(
@@ -189,7 +189,7 @@ class AppTheme {
       ),
 
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.coral,
+        backgroundColor: AppColors.brand,
         foregroundColor: AppColors.inkOnDark,
         elevation: 0,
         focusElevation: 0,
@@ -199,7 +199,7 @@ class AppTheme {
       ),
 
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.coral,
+        color: AppColors.brand,
         linearTrackColor: AppColors.bgSunk,
         circularTrackColor: AppColors.bgSunk,
       ),

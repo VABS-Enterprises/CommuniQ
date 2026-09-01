@@ -97,13 +97,13 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
                 const SizedBox(height: 28),
                 _retrying
                     ? const CircularProgressIndicator(
-                        color: AppColors.coral)
+                        color: AppColors.brand)
                     : TextButton(
                         onPressed: _retry,
                         child: const Text(
                           'Try Again',
                           style: TextStyle(
-                              color: AppColors.coral,
+                              color: AppColors.brand,
                               fontWeight: FontWeight.w600,
                               fontSize: 15),
                         ),

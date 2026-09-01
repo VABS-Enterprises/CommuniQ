@@ -70,7 +70,7 @@ class _ChunkyCardState extends State<ChunkyCard> {
   @override
   Widget build(BuildContext context) {
     final radius = widget.borderRadius ?? AppRadius.cardRadius;
-    final accent = widget.accent ?? AppColors.coral;
+    final accent = widget.accent ?? AppColors.brand;
     final fill = widget.selected
         ? Color.alphaBlend(accent.withValues(alpha: 0.08), AppColors.surface)
         : (widget.fill ?? AppColors.surface);

@@ -12,16 +12,11 @@ class NavDestination {
     required this.icon,
     required this.activeIcon,
     required this.label,
-    required this.color,
   });
 
   final IconData icon;
   final IconData activeIcon;
   final String label;
-
-  /// Each tab owns a colour, so the bar reads as a set of places rather than
-  /// one accent applied four times.
-  final Color color;
 }
 
 /// The app's bottom navigation: a floating pill with a hard shadow.
@@ -43,25 +38,21 @@ class PlayfulNavBar extends StatelessWidget {
       icon: Icons.home_outlined,
       activeIcon: Icons.home_rounded,
       label: 'Home',
-      color: AppColors.coral,
     ),
     NavDestination(
       icon: Icons.menu_book_outlined,
       activeIcon: Icons.menu_book_rounded,
       label: 'Learn',
-      color: AppColors.grape,
     ),
     NavDestination(
       icon: Icons.mic_none_rounded,
       activeIcon: Icons.mic_rounded,
       label: 'Practise',
-      color: AppColors.teal,
     ),
     NavDestination(
       icon: Icons.person_outline_rounded,
       activeIcon: Icons.person_rounded,
       label: 'You',
-      color: AppColors.info,
     ),
   ];
 
@@ -115,7 +106,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = destination.color;
+    const tint = AppColors.brand;
 
     return Semantics(
       selected: selected,
