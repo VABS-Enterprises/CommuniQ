@@ -199,7 +199,7 @@ class LoadingStateView extends StatelessWidget {
               child: const LinearProgressIndicator(
                 minHeight: 6,
                 backgroundColor: AppColors.bgSunk,
-                valueColor: AlwaysStoppedAnimation(AppColors.coral),
+                valueColor: AlwaysStoppedAnimation(AppColors.brand),
               ),
             ),
           ),

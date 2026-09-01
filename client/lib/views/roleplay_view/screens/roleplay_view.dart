@@ -134,7 +134,7 @@ class _StartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = selected;
-    final tint = s?.color ?? AppColors.coral;
+    final tint = s?.color ?? AppColors.brand;
 
     return ChunkyCard(
       fill: AppColors.surface,

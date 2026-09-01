@@ -8,13 +8,13 @@ import 'package:communiq/core/constants/app_colors.dart';
 /// contestController.js) — a value outside this set is rejected with a 400.
 enum ContestType {
   debate('debate', 'Debate', 'Argue for or against a motion',
-      Icons.gavel_rounded, AppColors.coral),
+      Icons.gavel_rounded, AppColors.brand),
   gd('gd', 'Group Discussion', 'Make your point in a group',
-      Icons.groups_rounded, AppColors.teal),
+      Icons.groups_rounded, AppColors.brand),
   extempore('extempore', 'Extempore', 'Speak on the spot',
-      Icons.bolt_rounded, AppColors.sun),
+      Icons.bolt_rounded, AppColors.brand),
   quiz('quiz', 'Quiz', 'Answer under pressure',
-      Icons.quiz_rounded, AppColors.grape);
+      Icons.quiz_rounded, AppColors.brand);
 
   const ContestType(this.id, this.label, this.blurb, this.icon, this.color);
 
@@ -24,6 +24,9 @@ enum ContestType {
   final String label;
   final String blurb;
   final IconData icon;
+
+  /// Always [AppColors.brand] — formats are told apart by icon and label, not
+  /// by colour.
   final Color color;
 
   static ContestType fromId(String? id) => values.firstWhere(

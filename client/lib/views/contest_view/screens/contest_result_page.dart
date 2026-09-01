@@ -91,7 +91,7 @@ class ContestResultPage extends StatelessWidget {
                 _PointList(
                   points: result.improvements,
                   icon: Icons.trending_up_rounded,
-                  color: AppColors.info,
+                  color: AppColors.brand,
                 ),
                 const SizedBox(height: AppSpacing.section),
               ],
@@ -99,7 +99,7 @@ class ContestResultPage extends StatelessWidget {
               if (result.feedback.isNotEmpty) ...[
                 const SectionHeader(eyebrow: 'Coach', title: 'Overall'),
                 ChunkyCard(
-                  accent: AppColors.teal,
+                  accent: AppColors.brand,
                   child: Text(result.feedback, style: AppTextStyles.bodyLarge),
                 ),
                 const SizedBox(height: AppSpacing.section),

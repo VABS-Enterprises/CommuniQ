@@ -89,7 +89,7 @@ class _ContestHistoryPageState extends State<ContestHistoryPage> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: AppColors.coral,
+      color: AppColors.brand,
       backgroundColor: AppColors.surface,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),

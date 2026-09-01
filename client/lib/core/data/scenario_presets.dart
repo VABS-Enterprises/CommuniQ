@@ -31,6 +31,10 @@ class ScenarioPreset {
   final String subtitle;
   final IconData icon;
   final String image;
+
+  /// Always [AppColors.brand]. Kept as a field so a scenario can be given a
+  /// one-off treatment later, but scenarios are deliberately *not* colour-coded
+  /// against each other — icon and title carry the difference.
   final Color color;
 
   final String systemPrompt;
@@ -57,7 +61,7 @@ const List<ScenarioPreset> kScenarioPresets = [
     subtitle: 'Answer tough HR questions',
     icon: Icons.work_outline_rounded,
     image: 'assets/images/scenarios/introduce_yourself.png',
-    color: AppColors.info,
+    color: AppColors.brand,
     systemPrompt:
         'You are an experienced HR interviewer conducting a job interview for a mid-to-senior '
         'position at a reputable Indian tech company. Ask behavioral and situational questions '
@@ -76,7 +80,7 @@ const List<ScenarioPreset> kScenarioPresets = [
     subtitle: 'Negotiate a raise or budget',
     icon: Icons.handshake_rounded,
     image: 'assets/images/scenarios/salary_negotiation.png',
-    color: AppColors.success,
+    color: AppColors.brand,
     systemPrompt:
         'You are a skeptical department head being approached for a salary raise or budget '
         'increase. You are not hostile, but you need solid justification — data, outcomes, '
@@ -95,7 +99,7 @@ const List<ScenarioPreset> kScenarioPresets = [
     subtitle: 'Master technical logic problems',
     icon: Icons.code_rounded,
     image: 'assets/images/scenarios/technical_solving.png',
-    color: AppColors.coral,
+    color: AppColors.brand,
     systemPrompt:
         'You are a senior technical lead. Present a complex architectural or logical problem '
         'and ask the user to explain their approach. Be helpful but probe for edge cases. '
@@ -112,7 +116,7 @@ const List<ScenarioPreset> kScenarioPresets = [
     subtitle: 'Pitch your product to a client',
     icon: Icons.record_voice_over_rounded,
     image: 'assets/images/scenarios/sales_pitch.png',
-    color: AppColors.grape,
+    color: AppColors.brand,
     systemPrompt:
         'You are a potential enterprise client. The user is pitching a new software solution. '
         'Listen to their pitch, ask about ROI, and raise one common objection. See how the '
@@ -129,7 +133,7 @@ const List<ScenarioPreset> kScenarioPresets = [
     subtitle: 'Simplify complex technical ideas',
     icon: Icons.lightbulb_outline_rounded,
     image: 'assets/images/scenarios/complex_concept.png',
-    color: AppColors.teal,
+    color: AppColors.brand,
     systemPrompt:
         'You are a non-technical project stakeholder. Ask the user to explain a technical '
         'innovation or architecture. If they use too much jargon, ask for simplification. '
@@ -146,7 +150,7 @@ const List<ScenarioPreset> kScenarioPresets = [
     subtitle: 'Debate AI trends with a panel',
     icon: Icons.groups_rounded,
     image: 'assets/images/scenarios/gd_ai.png',
-    color: AppColors.sun,
+    color: AppColors.brand,
     systemPrompt:
         'You are a participant in a group discussion about the future of AI. '
         'Help the user practice turn-taking, building on others arguments, and '
@@ -163,7 +167,7 @@ const List<ScenarioPreset> kScenarioPresets = [
     subtitle: 'Handle a difficult client escalation',
     icon: Icons.balance_rounded,
     image: 'assets/images/scenarios/difficult_client.png',
-    color: AppColors.error,
+    color: AppColors.brand,
     systemPrompt:
         'You are an upset client whose project was delayed. You are demanding an explanation. '
         'The user needs to practice de-escalation, show empathy, and offer a professional '

@@ -26,19 +26,19 @@ class IconTile extends StatelessWidget {
 
   /// The soft companion for each brand colour, used as the tinted background.
   static Color _soft(Color c) {
-    if (c == AppColors.coral) return AppColors.coralSoft;
+    if (c == AppColors.brand) return AppColors.brandSoft;
     if (c == AppColors.sun) return AppColors.sunSoft;
-    if (c == AppColors.teal) return AppColors.tealSoft;
-    if (c == AppColors.grape) return AppColors.grapeSoft;
+    if (c == AppColors.brand) return AppColors.brandSoft;
+    if (c == AppColors.brand) return AppColors.brandSoft;
     if (c == AppColors.success) return AppColors.successSoft;
     if (c == AppColors.error) return AppColors.errorSoft;
-    if (c == AppColors.info) return AppColors.infoSoft;
+    if (c == AppColors.brand) return AppColors.brandSoft;
     return Color.alphaBlend(c.withValues(alpha: 0.14), AppColors.surface);
   }
 
   @override
   Widget build(BuildContext context) {
-    final tint = color ?? AppColors.coral;
+    final tint = color ?? AppColors.brand;
 
     return Container(
       width: size,
@@ -72,7 +72,7 @@ class CountBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = color ?? AppColors.coral;
+    final tint = color ?? AppColors.brand;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(

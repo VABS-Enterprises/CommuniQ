@@ -49,7 +49,7 @@ class _ComponentGalleryState extends State<ComponentGallery> {
                 icon: Icons.bolt_rounded,
                 value: '1,240',
                 compact: true,
-                color: AppColors.info,
+                color: AppColors.brand,
               ),
               SizedBox(width: 16),
             ],
@@ -173,7 +173,7 @@ class _ComponentGalleryState extends State<ComponentGallery> {
               ),
               const SizedBox(height: AppSpacing.s12),
               ChunkyCard(
-                accent: AppColors.grape,
+                accent: AppColors.brand,
                 onTap: () {},
                 child: const Text(
                   'Accent stripe, for colour-coding by category.',
@@ -192,12 +192,10 @@ class _ComponentGalleryState extends State<ComponentGallery> {
                   Icons.campaign_rounded,
                   Icons.chat_bubble_rounded,
                 ];
-                const accents = [AppColors.coral, AppColors.sun, AppColors.teal];
                 return OptionCard(
                   title: titles[i],
                   subtitle: subs[i],
                   icon: icons[i],
-                  accent: accents[i],
                   selected: _selectedOption == i,
                   onTap: () => setState(() => _selectedOption = i),
                 );
@@ -215,9 +213,9 @@ class _ComponentGalleryState extends State<ComponentGallery> {
                       label: 'Level 4 · ${(_progress * 100).round()}%',
                     ),
                     const SizedBox(height: AppSpacing.s16),
-                    ChunkyProgressBar(value: 0.35, color: AppColors.coral, height: 12),
+                    ChunkyProgressBar(value: 0.35, color: AppColors.brand, height: 12),
                     const SizedBox(height: AppSpacing.s12),
-                    ChunkyProgressBar(value: 0.9, color: AppColors.info, height: 12),
+                    ChunkyProgressBar(value: 0.9, color: AppColors.brand, height: 12),
                     const SizedBox(height: AppSpacing.s16),
                     Slider(
                       value: _progress,
@@ -237,13 +235,13 @@ class _ComponentGalleryState extends State<ComponentGallery> {
                       spacing: AppSpacing.s12,
                       runSpacing: AppSpacing.s12,
                       children: const [
-                        IconTile(icon: Icons.mic_rounded, color: AppColors.coral),
-                        IconTile(icon: Icons.school_rounded, color: AppColors.grape),
+                        IconTile(icon: Icons.mic_rounded, color: AppColors.brand),
+                        IconTile(icon: Icons.school_rounded, color: AppColors.brand),
                         IconTile(icon: Icons.emoji_events_rounded, color: AppColors.sun),
-                        IconTile(icon: Icons.trending_up_rounded, color: AppColors.teal),
+                        IconTile(icon: Icons.trending_up_rounded, color: AppColors.brand),
                         IconTile(
                           icon: Icons.bolt_rounded,
-                          color: AppColors.coral,
+                          color: AppColors.brand,
                           tinted: false,
                         ),
                         IconTile(
@@ -260,7 +258,7 @@ class _ComponentGalleryState extends State<ComponentGallery> {
                       children: const [
                         CountBadge(label: 'NEW'),
                         CountBadge(label: '#1', color: AppColors.sun, icon: Icons.star_rounded),
-                        CountBadge(label: '3 left', color: AppColors.teal),
+                        CountBadge(label: '3 left', color: AppColors.brand),
                         CountBadge(label: 'LOCKED', color: AppColors.inkSoft),
                       ],
                     ),
@@ -352,20 +350,51 @@ class _ComponentGalleryState extends State<ComponentGallery> {
               // ── Palette ─────────────────────────────────────────────────
               const SectionHeader(eyebrow: 'Foundation', title: 'Palette'),
               ChunkyCard(
-                child: Wrap(
-                  spacing: AppSpacing.s8,
-                  runSpacing: AppSpacing.s8,
-                  children: const [
-                    _Swatch('coral', AppColors.coral),
-                    _Swatch('sun', AppColors.sun),
-                    _Swatch('teal', AppColors.teal),
-                    _Swatch('grape', AppColors.grape),
-                    _Swatch('success', AppColors.success),
-                    _Swatch('error', AppColors.error),
-                    _Swatch('info', AppColors.info),
-                    _Swatch('ink', AppColors.ink),
-                    _Swatch('bgSunk', AppColors.bgSunk, dark: false),
-                    _Swatch('outline', AppColors.outline, dark: false),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('DOMINANT', style: AppTextStyles.eyebrow),
+                    const SizedBox(height: AppSpacing.s8),
+                    const Row(
+                      children: [
+                        _Swatch('brand', AppColors.brand),
+                        SizedBox(width: AppSpacing.s8),
+                        _Swatch('brandDark', AppColors.brandDark),
+                        SizedBox(width: AppSpacing.s8),
+                        _Swatch('brandSoft', AppColors.brandSoft, dark: false),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.s16),
+                    Text('MEANING ONLY', style: AppTextStyles.eyebrow),
+                    const SizedBox(height: AppSpacing.s8),
+                    const Row(
+                      children: [
+                        _Swatch('done', AppColors.success),
+                        SizedBox(width: AppSpacing.s8),
+                        _Swatch('wrong', AppColors.error),
+                        SizedBox(width: AppSpacing.s8),
+                        _Swatch('earned', AppColors.sun),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.s16),
+                    Text('NEUTRALS', style: AppTextStyles.eyebrow),
+                    const SizedBox(height: AppSpacing.s8),
+                    const Row(
+                      children: [
+                        _Swatch('ink', AppColors.ink),
+                        SizedBox(width: AppSpacing.s8),
+                        _Swatch('bgSunk', AppColors.bgSunk, dark: false),
+                        SizedBox(width: AppSpacing.s8),
+                        _Swatch('outline', AppColors.outline, dark: false),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.s14),
+                    Text(
+                      'Colour never distinguishes two items of the same kind — '
+                      'scenarios, contest formats, levels and tabs all wear the '
+                      'brand and differ by icon and label.',
+                      style: AppTextStyles.bodySmall,
+                    ),
                   ],
                 ),
               ),
@@ -388,20 +417,21 @@ class _Swatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 78,
-      height: 58,
-      alignment: Alignment.bottomLeft,
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.outline, width: 2),
-      ),
-      child: Text(
-        name,
-        style: AppTextStyles.labelSmall.copyWith(
-          color: dark ? AppColors.inkOnDark : AppColors.ink,
+    return Expanded(
+      child: Container(
+        height: 58,
+        alignment: Alignment.bottomLeft,
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.outline, width: 2),
+        ),
+        child: Text(
+          name,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: dark ? AppColors.inkOnDark : AppColors.ink,
+          ),
         ),
       ),
     );

@@ -73,7 +73,7 @@ class _ChunkyButtonState extends State<ChunkyButton> {
     }
     return switch (widget.variant) {
       ChunkyButtonVariant.primary => (
-          fill: AppColors.coral,
+          fill: AppColors.brand,
           content: AppColors.inkOnDark,
           border: null,
         ),

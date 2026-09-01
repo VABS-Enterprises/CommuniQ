@@ -173,7 +173,7 @@ class _HomeViewState extends State<HomeView> {
           bottom: false,
           child: RefreshIndicator(
             onRefresh: () => _loadAll(forceRefresh: true),
-            color: AppColors.coral,
+            color: AppColors.brand,
             backgroundColor: AppColors.surface,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -224,7 +224,9 @@ class _HomeViewState extends State<HomeView> {
                 // mock behind a "Coming Soon" gate.
                 ChunkyCard(
                   onTap: () => context.push(AppRoutes.contest),
-                  accent: AppColors.sun,
+                  // Brand stripe like every other navigation card; the trophy
+                  // itself stays gold because rank is an "earned" thing.
+                  accent: AppColors.brand,
                   child: Row(
                     children: [
                       const IconTile(
@@ -416,7 +418,7 @@ class _MascotGreeting extends StatelessWidget {
         const SizedBox(width: AppSpacing.s8),
         Expanded(
           child: ChunkyCard(
-            accent: AppColors.teal,
+            accent: AppColors.brand,
             padding: const EdgeInsets.all(AppSpacing.s14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -449,7 +451,7 @@ class _StatsRow extends StatelessWidget {
         Expanded(
           child: _StatCard(
             icon: Icons.local_fire_department_rounded,
-            color: AppColors.coral,
+            color: AppColors.sun,
             label: 'Day streak',
             value: p == null ? '—' : '${p.streak}',
             caption: p == null
@@ -597,12 +599,12 @@ class _JourneyCard extends StatelessWidget {
               ),
               CountBadge(
                 label: '${(pct * 100).round()}%',
-                color: pct > 0 ? AppColors.teal : AppColors.inkSoft,
+                color: pct > 0 ? AppColors.brand : AppColors.inkSoft,
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.s14),
-          ChunkyProgressBar(value: pct, color: AppColors.teal),
+          ChunkyProgressBar(value: pct, color: AppColors.brand),
           const SizedBox(height: AppSpacing.s8),
           Text(
             done == 0
@@ -631,8 +633,8 @@ class _PractiseCta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChunkyCard(
-      fill: AppColors.coralSoft,
-      borderColor: AppColors.coral,
+      fill: AppColors.brandSoft,
+      borderColor: AppColors.brand,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -641,7 +643,7 @@ class _PractiseCta extends StatelessWidget {
             children: [
               const IconTile(
                 icon: Icons.mic_rounded,
-                color: AppColors.coral,
+                color: AppColors.brand,
                 tinted: false,
               ),
               const SizedBox(width: AppSpacing.s12),
@@ -688,10 +690,10 @@ class _SkillGrid extends StatelessWidget {
   /// colour so a skill looks the same wherever it appears.
   static const _skills = <String, (String, IconData, Color)>{
     'clarity': ('Clarity', Icons.lightbulb_rounded, AppColors.sun),
-    'fluency': ('Fluency', Icons.waves_rounded, AppColors.teal),
-    'confidence': ('Confidence', Icons.bolt_rounded, AppColors.coral),
-    'vocabulary': ('Vocabulary', Icons.menu_book_rounded, AppColors.grape),
-    'grammar': ('Grammar', Icons.spellcheck_rounded, AppColors.info),
+    'fluency': ('Fluency', Icons.waves_rounded, AppColors.brand),
+    'confidence': ('Confidence', Icons.bolt_rounded, AppColors.brand),
+    'vocabulary': ('Vocabulary', Icons.menu_book_rounded, AppColors.brand),
+    'grammar': ('Grammar', Icons.spellcheck_rounded, AppColors.brand),
     'pronunciation': ('Pronunciation', Icons.record_voice_over_rounded,
         AppColors.success),
   };

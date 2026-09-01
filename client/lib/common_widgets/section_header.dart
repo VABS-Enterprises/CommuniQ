@@ -61,13 +61,13 @@ class SectionHeader extends StatelessWidget {
                     Text(
                       actionLabel!,
                       style: AppTextStyles.labelMedium.copyWith(
-                        color: AppColors.coral,
+                        color: AppColors.brand,
                       ),
                     ),
                     const Icon(
                       Icons.chevron_right_rounded,
                       size: 18,
-                      color: AppColors.coral,
+                      color: AppColors.brand,
                     ),
                   ],
                 ),

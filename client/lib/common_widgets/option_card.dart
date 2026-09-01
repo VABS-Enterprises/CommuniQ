@@ -47,7 +47,7 @@ class OptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = accent ?? AppColors.coral;
+    final tint = accent ?? AppColors.brand;
 
     return Opacity(
       opacity: enabled ? 1 : 0.5,

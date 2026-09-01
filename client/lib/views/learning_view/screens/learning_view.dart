@@ -37,14 +37,10 @@ const _kHubNames = [
   'Elite Hub', 'Pinnacle Hub', 'Visionary Hub', 'Apex Hub',
 ];
 
-/// Accent colour per level, cycled so adjacent nodes differ.
-const _kNodeColors = [
-  AppColors.grape,
-  AppColors.teal,
-  AppColors.coral,
-  AppColors.info,
-  AppColors.sun,
-];
+/// The path is one colour end to end: [AppColors.brand] for the level you can
+/// play, success green for the ones you've finished, muted for locked. Cycling
+/// hues per node would make the journey read as unrelated stops.
+const _kNodeColor = AppColors.brand;
 
 /// The learning journey: a winding path of levels, gated so each unlocks the
 /// next, with a coin wall between the two journeys.
@@ -213,7 +209,7 @@ class _LearningViewState extends State<LearningView> {
       builder: (sheetContext) => _LevelSheet(
         level: level,
         hub: _kHubNames[index.clamp(0, _kHubNames.length - 1)],
-        color: _kNodeColors[index % _kNodeColors.length],
+        color: _kNodeColor,
         isDone: isDone,
         onStart: () async {
           Navigator.pop(sheetContext);
@@ -338,7 +334,7 @@ class _LearningViewState extends State<LearningView> {
                   i > 0 && _done.contains(_levels[i - 1].id),
               level: _levels[i],
               hub: _kHubNames[i.clamp(0, _kHubNames.length - 1)],
-              color: _kNodeColors[i % _kNodeColors.length],
+              color: _kNodeColor,
               state: _stateFor(i),
               coins: _levelCoins[_levels[i].id],
               rowHeight: _rowHeight,

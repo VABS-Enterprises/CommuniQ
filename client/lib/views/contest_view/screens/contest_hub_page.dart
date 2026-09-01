@@ -87,7 +87,7 @@ class _ContestHubPageState extends State<ContestHubPage> {
         ),
         body: RefreshIndicator(
           onRefresh: _load,
-          color: AppColors.coral,
+          color: AppColors.brand,
           backgroundColor: AppColors.surface,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -152,7 +152,7 @@ class _Intro extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChunkyCard(
-      accent: AppColors.sun,
+      accent: AppColors.brand,
       child: Row(
         children: [
           Mascot(
@@ -160,7 +160,7 @@ class _Intro extends StatelessWidget {
                 ? MascotMood.celebrating
                 : MascotMood.encouraging,
             size: 82,
-            color: AppColors.sun,
+            color: AppColors.brand,
           ),
           const SizedBox(width: AppSpacing.s10),
           Expanded(
