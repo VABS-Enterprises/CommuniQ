@@ -1,26 +1,30 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:lottie/lottie.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:communiq/common_widgets/chunky_button.dart';
+import 'package:communiq/common_widgets/chunky_card.dart';
+import 'package:communiq/common_widgets/chunky_progress_bar.dart';
+import 'package:communiq/common_widgets/icon_tile.dart';
+import 'package:communiq/common_widgets/mascot/mascot.dart';
+import 'package:communiq/common_widgets/playful_background.dart';
+import 'package:communiq/common_widgets/section_header.dart';
+import 'package:communiq/common_widgets/stat_pill.dart';
+import 'package:communiq/common_widgets/state_views.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/constants/app_text_styles.dart';
+import 'package:communiq/core/constants/motion.dart';
 import 'package:communiq/core/constants/radius.dart';
-import 'package:communiq/common_widgets/sky_campus_background.dart';
+import 'package:communiq/core/constants/spacing.dart';
+import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/user_profile.dart';
-import 'package:communiq/views/home_view/widgets/ai_insight_card.dart';
-import 'package:communiq/views/home_view/widgets/contest_card.dart';
 import 'package:communiq/views/home_view/widgets/continue_card.dart';
-import 'package:go_router/go_router.dart';
-import 'package:communiq/core/routes/app_routes.dart';
-import 'package:communiq/views/contest_view/screens/leaderboard_page.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HOME VIEW
-// ─────────────────────────────────────────────────────────────────────────────
-
+/// The app's landing screen: who you are, what your streak and XP look like,
+/// what to do next, and how you've been performing.
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
 
@@ -41,14 +45,13 @@ class _HomeViewState extends State<HomeView> {
   @override
   void initState() {
     super.initState();
-    // Listen for background profile refreshes so UI updates silently.
+    // Background profile refreshes update the UI silently.
     _profileSub = SessionService.instance.profileUpdates.listen((fresh) {
-      if (mounted) {
-        setState(() {
-          _profile = fresh;
-          _profileError = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _profile = fresh;
+        _profileError = false;
+      });
     });
     _loadAll();
   }
@@ -59,7 +62,7 @@ class _HomeViewState extends State<HomeView> {
     super.dispose();
   }
 
-  /// Called on first load (uses cache) and by pull-to-refresh (forces network).
+  /// First load reads cache; pull-to-refresh forces the network.
   Future<void> _loadAll({bool forceRefresh = false}) async {
     setState(() {
       _profileError = false;
@@ -75,57 +78,56 @@ class _HomeViewState extends State<HomeView> {
   Future<void> _forceRefreshProfile() async {
     try {
       final profile = await SessionService.instance.refreshProfile();
-      if (mounted) setState(() { _profile = profile; _profileError = false; });
+      if (!mounted) return;
+      setState(() {
+        _profile = profile;
+        _profileError = false;
+      });
     } catch (e) {
       debugPrint('[HomeView] forceRefresh failed: $e');
+      // Keep showing cached data if we have it; only fail loudly when empty.
       if (mounted && _profile == null) setState(() => _profileError = true);
     }
   }
 
   Future<void> _loadProfile() async {
     try {
-      // fetchProfile() returns cache instantly on subsequent calls.
       final profile = await SessionService.instance.fetchProfile();
-      if (mounted) {
-        setState(() {
-          _profile = profile;
-          _isLoading = false;
-          _profileError = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _profile = profile;
+        _isLoading = false;
+        _profileError = false;
+      });
     } catch (e) {
       debugPrint('[HomeView] fetchProfile failed: $e');
-      if (mounted) {
-        setState(() {
-          // Only show the error banner if we have no cached data at all.
-          if (_profile == null) _profileError = true;
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        if (_profile == null) _profileError = true;
+        _isLoading = false;
+      });
     }
   }
 
   Future<void> _loadSessions() async {
     try {
       final s = await SessionService.instance.fetchSessionHistory();
-      if (mounted) {
-        setState(() {
-          _sessions = s;
-          _sessionsLoading = false;
-        });
-      }
-    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _sessions = s;
+        _sessionsLoading = false;
+      });
+    } catch (e) {
+      debugPrint('[HomeView] fetchSessionHistory failed: $e');
       if (mounted) setState(() => _sessionsLoading = false);
     }
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
-
-  String _greeting() {
+  String get _greeting {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good Morning';
-    if (h < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 
   String get _displayName {
@@ -134,342 +136,122 @@ class _HomeViewState extends State<HomeView> {
     return first.isNotEmpty ? first : 'there';
   }
 
-  // ── Build ────────────────────────────────────────────────────────────────
+  /// Whisperwing reacts to how the user is actually doing.
+  MascotMood get _mood {
+    final p = _profile;
+    if (_profileError) return MascotMood.sad;
+    if (p == null) return MascotMood.idle;
+    if (p.streak >= 3) return MascotMood.celebrating;
+    if (p.sessionsCompleted > 0) return MascotMood.happy;
+    return MascotMood.encouraging;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SkyCampusBackground(
-      child: Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: () => _loadAll(forceRefresh: true),
-          color: AppColors.primary,
-          backgroundColor: AppColors.surface,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-
-                  // ── 1. Header ───────────────────────────────────────────
-                  _HomeHeader(
-                    greeting: '${_greeting()}, $_displayName',
-                    profile: _profile,
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // ── 2. Daily Inspiration ────────────────────────────────
-                  Center(
-                    child: Lottie.asset(
-                      'assets/icons/Thumbs Up.json',
-                      width: 216,
-                      height: 216,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _DailyInspirationCard(profile: _profile),
-
-                  const SizedBox(height: 16),
-
-                  // ── 3. Continue Learning ────────────────────────────────
-                  const ContinueCard(),
-
-                  const SizedBox(height: 16),
-
-                  // ── 4. Streak + Daily Focus ─────────────────────────────
-                  if (_isLoading)
-                    _skeleton(90)
-                  else
-                    _StreakFocusRow(profile: _profile),
-
-                  const SizedBox(height: 16),
-
-                  // ── 4. Journey Progress (sessions / 150) ────────────────
-                  if (_isLoading)
-                    _skeleton(100)
-                  else
-                    _JourneyCard(profile: _profile),
-
-                  const SizedBox(height: 16),
-
-                  // ── 5. Skill Performance Grid ───────────────────────────
-                  if (_isLoading)
-                    _skeleton(220)
-                  else
-                    _SkillGrid(profile: _profile),
-
-                  if (_profileError) ...[
-                    const SizedBox(height: 10),
-                    _ProfileErrorBanner(onRetry: _loadProfile),
-                  ],
-
-                  const SizedBox(height: 16),
-
-                  // ── 6. Leaderboard card ─────────────────────────────────
-                  _LeaderboardCard(profile: _profile),
-
-                  const SizedBox(height: 16),
-
-                  // ── 7. Contest CTA ──────────────────────────────────────
-                  const ContestCard(),
-
-                  const SizedBox(height: 16),
-
-                  // ── 7. AI Coach Insight ─────────────────────────────────
-                  const AIInsightCard(),
-
-                  const SizedBox(height: 24),
-
-                  // ── 8. Recent Activity ──────────────────────────────────
-                  _RecentActivity(
-                    sessions: _sessions,
-                    loading: _sessionsLoading,
-                  ),
-
-                  // nav bar clearance
-                  const SizedBox(height: 100),
-                ],
-              ),
+    // A total failure with nothing cached gets the full error screen; a failure
+    // with cached data shows the data plus an inline banner.
+    if (_profileError && _profile == null && !_isLoading) {
+      return PlayfulBackground(
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          body: SafeArea(
+            child: ErrorStateView(
+              title: "Can't reach CommuniQ",
+              message: 'Check your connection and try again.',
+              onRetry: () => _loadAll(forceRefresh: true),
             ),
           ),
-        ),
-      ),
-    ),
-    );
-  }
-
-  Widget _skeleton(double h) => Container(
-        height: h,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.glassBorder.withValues(alpha: 0.4)),
-        ),
-        child: const Center(
-          child: CircularProgressIndicator(
-              color: AppColors.primary, strokeWidth: 2),
         ),
       );
-}
+    }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DAILY INSPIRATION CARD
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _DailyInspirationCard extends StatefulWidget {
-  final UserProfile? profile;
-  const _DailyInspirationCard({this.profile});
-
-  @override
-  State<_DailyInspirationCard> createState() => _DailyInspirationCardState();
-}
-
-class _DailyInspirationCardState extends State<_DailyInspirationCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _fade;
-  late Animation<Offset> _slide;
-
-  // One quote per slot; rotates by day-of-year so it feels fresh every morning.
-  static const _quotes = [
-    (
-      text: 'Every session you complete is a feather in your wing. Keep flapping — you\'re closer to soaring than you think.',
-      icon: Icons.chat_bubble_outline_rounded,
-      accent: Color(0xFF38BDF8),
-    ),
-    (
-      text: 'I\'ve watched many learners give up right before their breakthrough. Don\'t be one of them. Practice today.',
-      icon: Icons.chat_bubble_outline_rounded,
-      accent: Color(0xFF38BDF8),
-    ),
-    (
-      text: 'Even in the darkest night, I find my way. Your voice is your light — trust it, use it, let it guide you.',
-      icon: Icons.chat_bubble_outline_rounded,
-      accent: Color(0xFF38BDF8),
-    ),
-    (
-      text: 'Words are your wings. The more you practice, the higher and farther you\'ll soar. Start today.',
-      icon: Icons.chat_bubble_outline_rounded,
-      accent: Color(0xFF38BDF8),
-    ),
-    (
-      text: 'Patience, young one. Fluency isn\'t built in a day — but every conversation you have builds it brick by brick.',
-      icon: Icons.chat_bubble_outline_rounded,
-      accent: Color(0xFF38BDF8),
-    ),
-    (
-      text: 'Wise owls don\'t fear silence. We listen deeply, then speak with purpose. Try that in your next session.',
-      icon: Icons.chat_bubble_outline_rounded,
-      accent: Color(0xFF38BDF8),
-    ),
-    (
-      text: 'I\'ve seen the greatest communicators start with a single shaky sentence. Yours counts too. Keep going.',
-      icon: Icons.chat_bubble_outline_rounded,
-      accent: Color(0xFF38BDF8),
-    ),
-    (
-      text: 'Consistency is the spell that transforms beginners into masters. Show up today — tomorrow will thank you.',
-      icon: Icons.chat_bubble_outline_rounded,
-      accent: Color(0xFF38BDF8),
-    ),
-    (
-      text: 'The world is full of conversations waiting for your voice. Don\'t let fear keep them waiting any longer.',
-      icon: Icons.chat_bubble_outline_rounded,
-      accent: Color(0xFF38BDF8),
-    ),
-    (
-      text: 'Your accent? That\'s courage made audible. You\'re speaking in someone else\'s language. That\'s remarkable.',
-      icon: Icons.chat_bubble_outline_rounded,
-      accent: Color(0xFF38BDF8),
-    ),
-  ];
-
-  late final _QuoteDef _quote;
-
-  @override
-  void initState() {
-    super.initState();
-    final dayIndex = DateTime.now().dayOfYear % _quotes.length;
-    _quote = _quotes[dayIndex];
-
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
-
-    _ctrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final name = widget.profile?.name.split(' ').first ?? '';
-    final streak = widget.profile?.streak ?? 0;
-
-    final sub = streak > 0
-        ? '$streak-day streak 🔥 — keep it going${name.isNotEmpty ? ", $name" : ""}!'
-        : name.isNotEmpty
-            ? 'Ready to grow today, $name?'
-            : 'Ready to grow today?';
-
-    return FadeTransition(
-      opacity: _fade,
-      child: SlideTransition(
-        position: _slide,
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppColors.secondary.withValues(alpha: 0.45),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.secondary.withValues(alpha: 0.12),
-                blurRadius: 12,
-                spreadRadius: 1,
+    return PlayfulBackground(
+      seed: 1,
+      child: Scaffold(
+        backgroundColor: AppColors.transparent,
+        body: SafeArea(
+          bottom: false,
+          child: RefreshIndicator(
+            onRefresh: () => _loadAll(forceRefresh: true),
+            color: AppColors.coral,
+            backgroundColor: AppColors.surface,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.page,
+                AppSpacing.s12,
+                AppSpacing.page,
+                AppSpacing.navClearance,
               ),
-            ],
-          ),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Left accent bar ────────────────────────────────────────
-                Container(
-                  width: 4,
-                  decoration: const BoxDecoration(
-                    color: AppColors.secondary,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      bottomLeft: Radius.circular(20),
-                    ),
-                  ),
+                _Header(
+                  greeting: _greeting,
+                  name: _displayName,
+                  profile: _profile,
+                  onAvatarTap: () => context.go(AppRoutes.profile),
                 ),
+                const SizedBox(height: AppSpacing.s20),
 
-                // ── Content ────────────────────────────────────────────────
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 14, 16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Icon container
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: AppColors.secondary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            color: AppColors.secondary,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
+                _MascotGreeting(mood: _mood, profile: _profile),
+                const SizedBox(height: AppSpacing.s20),
 
-                        // Text column
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Label
-                              const Text(
-                                'WHISPERWING SAYS',
-                                style: TextStyle(
-                                  color: AppColors.secondary,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.1,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
+                const ContinueCard(),
+                const SizedBox(height: AppSpacing.s16),
 
-                              // Quote
-                              Text(
-                                '"${_quote.text}"',
-                                style: const TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  height: 1.55,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
+                if (_isLoading)
+                  const _StatsSkeleton()
+                else
+                  _StatsRow(profile: _profile),
+                const SizedBox(height: AppSpacing.s16),
 
-                              // Sub-line
-                              Text(
-                                sub,
-                                style: const TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                if (_profileError) ...[
+                  _InlineErrorBanner(onRetry: _loadProfile),
+                  const SizedBox(height: AppSpacing.s16),
+                ],
+
+                if (!_isLoading) ...[
+                  _JourneyCard(profile: _profile),
+                  const SizedBox(height: AppSpacing.section),
+                ],
+
+                _PractiseCta(
+                  onTap: () => context.push(AppRoutes.roleplaySetup),
+                ),
+                const SizedBox(height: AppSpacing.section),
+
+                if (!_isLoading && _profile != null) ...[
+                  const SectionHeader(
+                    eyebrow: 'Your skills',
+                    title: 'How you\'re doing',
                   ),
+                  _SkillGrid(profile: _profile!),
+                  const SizedBox(height: AppSpacing.section),
+                ],
+
+                SectionHeader(
+                  eyebrow: 'Standings',
+                  title: 'Leaderboard',
+                  actionLabel: 'View all',
+                  onAction: () => context.push(AppRoutes.leaderboard),
+                ),
+                _LeaderboardTeaser(
+                  profile: _profile,
+                  onTap: () => context.push(AppRoutes.leaderboard),
+                ),
+                const SizedBox(height: AppSpacing.section),
+
+                SectionHeader(
+                  eyebrow: 'History',
+                  title: 'Recent practice',
+                  actionLabel: _sessions.length > 3 ? 'See all' : null,
+                  onAction: _sessions.length > 3
+                      ? () => context.go(AppRoutes.roleplay)
+                      : null,
+                ),
+                _RecentActivity(
+                  sessions: _sessions,
+                  loading: _sessionsLoading,
+                  onStart: () => context.push(AppRoutes.roleplaySetup),
                 ),
               ],
             ),
@@ -480,321 +262,176 @@ class _DailyInspirationCardState extends State<_DailyInspirationCard>
   }
 }
 
-typedef _QuoteDef = ({String text, IconData icon, Color accent});
+// ── Header ─────────────────────────────────────────────────────────────────
 
-extension on DateTime {
-  int get dayOfYear {
-    final start = DateTime(year, 1, 1);
-    return difference(start).inDays;
-  }
-}
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.greeting,
+    required this.name,
+    required this.profile,
+    required this.onAvatarTap,
+  });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. HEADER
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _HomeHeader extends StatelessWidget {
   final String greeting;
+  final String name;
   final UserProfile? profile;
-  const _HomeHeader({required this.greeting, this.profile});
+  final VoidCallback onAvatarTap;
 
   @override
   Widget build(BuildContext context) {
+    final p = profile;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
+              Text(greeting, style: AppTextStyles.bodyMedium),
+              const SizedBox(height: 2),
               Text(
-                greeting,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.2,
-                ),
-              ),
-              const SizedBox(height: 3),
-              const Text(
-                'Keep growing every day',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                ),
+                name,
+                style: AppTextStyles.displaySmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
-
-        // Profile avatar
+        const SizedBox(width: AppSpacing.s12),
+        if (p != null) ...[
+          StatPill(
+            icon: Icons.local_fire_department_rounded,
+            value: '${p.streak}',
+            compact: true,
+          ),
+          const SizedBox(width: AppSpacing.s8),
+        ],
         GestureDetector(
-          onTap: () => context.go(AppRoutes.profile),
+          onTap: onAvatarTap,
+          behavior: HitTestBehavior.opaque,
           child: Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary,
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.outline, width: 2),
             ),
-            child: ClipOval(
-              child: profile?.photoURL != null
-                  ? Image.network(
-                      profile!.photoURL!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _initials(),
-                    )
-                  : _initials(),
+            clipBehavior: Clip.antiAlias,
+            child: p?.photoURL != null
+                ? Image.network(
+                    p!.photoURL!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const _AvatarFallback(),
+                  )
+                : const _AvatarFallback(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AvatarFallback extends StatelessWidget {
+  const _AvatarFallback();
+
+  @override
+  Widget build(BuildContext context) => const Icon(
+        Icons.person_rounded,
+        color: AppColors.inkSoft,
+        size: 26,
+      );
+}
+
+// ── Mascot greeting ────────────────────────────────────────────────────────
+
+class _MascotGreeting extends StatelessWidget {
+  const _MascotGreeting({required this.mood, required this.profile});
+
+  final MascotMood mood;
+  final UserProfile? profile;
+
+  /// A line about the user's real state. Deliberately not phrased as coaching
+  /// insight — the previous card presented one hardcoded "AI" critique to
+  /// every user, which this replaces.
+  String get _line {
+    final p = profile;
+    if (p == null) return 'Getting things ready…';
+    if (p.streak >= 3) {
+      return '${p.streak} days in a row. That consistency is exactly how fluency builds.';
+    }
+    if (p.streak == 1) return 'You practised today. Come back tomorrow to start a streak.';
+    if (p.sessionsCompleted > 0) {
+      return "You've finished ${p.sessionsCompleted} "
+          "${p.sessionsCompleted == 1 ? 'session' : 'sessions'}. Ready for another?";
+    }
+    return "Let's get your first conversation done — it only takes a few minutes.";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Mascot(mood: mood, size: 96),
+        const SizedBox(width: AppSpacing.s8),
+        Expanded(
+          child: ChunkyCard(
+            accent: AppColors.teal,
+            padding: const EdgeInsets.all(AppSpacing.s14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('WHISPERWING', style: AppTextStyles.eyebrow),
+                const SizedBox(height: 4),
+                Text(_line, style: AppTextStyles.bodyMedium),
+              ],
             ),
           ),
         ),
       ],
     );
   }
-
-  Widget _initials() {
-    final name = profile?.name ?? '';
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    return Center(
-      child: Text(
-        initial,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
-        ),
-      ),
-    );
-  }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. LEVEL / XP BAR
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Stats ──────────────────────────────────────────────────────────────────
 
-class _LevelXpBar extends StatelessWidget {
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({required this.profile});
+
   final UserProfile? profile;
-  const _LevelXpBar({this.profile});
 
   @override
   Widget build(BuildContext context) {
-    final level = profile?.level ?? 1;
-    final xp = profile?.xp ?? 0;
-    final progress = profile?.xpProgress ?? 0.0;
-    final toNext = profile?.xpToNextLevel ?? 300;
-    final label = profile?.levelLabel ?? 'Starter';
-    final nextLabel = profile != null && toNext > 0
-        ? UserProfile.levelLabels[(level).clamp(0, UserProfile.levelLabels.length - 1)]
-        : null;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder.withValues(alpha: 0.4)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              // Rank badge
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.violet],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                      blurRadius: 12,
-                      spreadRadius: 0,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    '$level',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Label + rank name
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      toNext > 0 && nextLabel != null
-                          ? 'Next rank: $nextLabel'
-                          : 'Max rank reached!',
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // XP pill
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.25),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('⚡', style: TextStyle(fontSize: 12)),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$xp XP',
-                      style: const TextStyle(
-                        color: AppColors.primaryLight,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          // Progress bar
-          Stack(
-            children: [
-              // Track
-              Container(
-                height: 8,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              // Fill with glow
-              FractionallySizedBox(
-                widthFactor: progress.clamp(0.0, 1.0),
-                child: Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.primaryLight],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.5),
-                        blurRadius: 6,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // Bottom stat row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                toNext > 0 ? '$toNext XP to level up' : 'Fully levelled up!',
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
-              ),
-              Text(
-                '${(progress * 100).round()}%',
-                style: const TextStyle(
-                  color: AppColors.primaryLight,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. STREAK + DAILY FOCUS ROW
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _StreakFocusRow extends StatelessWidget {
-  final UserProfile? profile;
-  const _StreakFocusRow({this.profile});
-
-  @override
-  Widget build(BuildContext context) {
-    final streak = profile?.streak ?? 0;
-    final xp = profile?.xp ?? 0;
-    final level = profile?.level ?? 1;
-    final label = profile?.levelLabel ?? 'Starter';
-
+    final p = profile;
     return Row(
       children: [
-        // Streak card
         Expanded(
-          child: _MiniStatCard(
-            iconWidget: const Center(
-              child: Text('🔥', style: TextStyle(fontSize: 18)),
-            ),
-            iconColor: const Color(0xFFEF4444),
-            iconBg: const Color(0xFFEF4444),
-            label: 'Day Streak',
-            value: streak == 0 ? 'Start Today' : '$streak Days',
-            subtitle: streak == 0
-                ? 'No streak yet'
-                : streak >= 7
-                    ? 'Amazing! 🔥'
+          child: _StatCard(
+            icon: Icons.local_fire_department_rounded,
+            color: AppColors.coral,
+            label: 'Day streak',
+            value: p == null ? '—' : '${p.streak}',
+            caption: p == null
+                ? ''
+                : p.streak == 0
+                    ? 'Start today'
                     : 'Keep it up!',
           ),
         ),
-        const SizedBox(width: 12),
-        // XP card
+        const SizedBox(width: AppSpacing.s12),
         Expanded(
-          child: _MiniStatCard(
-            iconWidget: const Center(
-              child: Text('⚡', style: TextStyle(fontSize: 18)),
-            ),
-            iconColor: AppColors.primary,
-            iconBg: AppColors.primary,
+          child: _StatCard(
+            icon: Icons.bolt_rounded,
+            color: AppColors.sun,
             label: 'Total XP',
-            value: '$xp XP',
-            subtitle: 'Lv $level · $label',
+            value: p == null ? '—' : '${p.xp}',
+            caption: p == null ? '' : 'Lv ${p.level} · ${p.levelLabel}',
+            progress: p?.xpProgress,
           ),
         ),
       ],
@@ -802,482 +439,198 @@ class _StreakFocusRow extends StatelessWidget {
   }
 }
 
-class _MiniStatCard extends StatelessWidget {
-  final IconData? icon;
-  final Widget? iconWidget;
-  final Color iconColor;
-  final Color iconBg;
-  final String label;
-  final String value;
-  final String subtitle;
-
-  const _MiniStatCard({
-    this.icon,
-    this.iconWidget,
-    required this.iconColor,
-    required this.iconBg,
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.icon,
+    required this.color,
     required this.label,
     required this.value,
-    required this.subtitle,
+    required this.caption,
+    this.progress,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: AppColors.glassBorder.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: iconBg.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: iconWidget ?? Icon(icon, color: iconColor, size: 18),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. JOURNEY CARD  (sessions completed / 150)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _JourneyCard extends StatelessWidget {
-  final UserProfile? profile;
-  const _JourneyCard({this.profile});
-
-  @override
-  Widget build(BuildContext context) {
-    const int total = 150;
-    final completed = profile?.sessionsCompleted ?? 0;
-    final progress = (completed / total).clamp(0.0, 1.0);
-    final pct = (progress * 100).round();
-
-    // Milestone thresholds
-    final milestones = [0, 10, 25, 50, 75, 100, 150];
-    final nextMilestone = milestones.firstWhere(
-      (m) => m > completed,
-      orElse: () => 150,
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border:
-            Border.all(color: AppColors.glassBorder.withValues(alpha: 0.4)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Learning Journey',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$completed of $total sessions',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '$pct%',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Segmented progress bar with milestone ticks
-          SizedBox(
-            height: 10,
-            child: _MilestoneProgressBar(
-              progress: progress,
-              milestones: milestones,
-              total: total,
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                completed == 0
-                    ? 'Start your first session!'
-                    : nextMilestone > completed
-                        ? '${nextMilestone - completed} sessions to next milestone'
-                        : 'Journey complete! 🎉',
-                style: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 11,
-                ),
-              ),
-              Text(
-                'Next: $nextMilestone',
-                style: const TextStyle(
-                  color: AppColors.primaryLight,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MilestoneProgressBar extends StatelessWidget {
-  final double progress;
-  final List<int> milestones;
-  final int total;
-
-  const _MilestoneProgressBar({
-    required this.progress,
-    required this.milestones,
-    required this.total,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (ctx, constraints) {
-        final w = constraints.maxWidth;
-        return Stack(
-          children: [
-            // Track
-            Container(
-              width: w,
-              height: 10,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(5),
-              ),
-            ),
-            // Fill
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeOutCubic,
-              width: w * progress,
-              height: 10,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(5),
-              ),
-            ),
-            // Milestone ticks
-            for (final m in milestones.where((m) => m > 0 && m < total))
-              Positioned(
-                left: w * (m / total) - 1,
-                top: 0,
-                child: Container(
-                  width: 2,
-                  height: 10,
-                  color: AppColors.background,
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 5. SKILL PERFORMANCE GRID
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _SkillGrid extends StatelessWidget {
-  final UserProfile? profile;
-  const _SkillGrid({this.profile});
-
-  static const _skills = [
-    _SkillMeta('Clarity', Icons.record_voice_over_rounded, Color(0xFF38BDF8)),
-    _SkillMeta('Fluency', Icons.waves_rounded, Color(0xFF818CF8)),
-    _SkillMeta('Confidence', Icons.psychology_rounded, Color(0xFF7C3AED)),
-    _SkillMeta('Vocabulary', Icons.menu_book_rounded, Color(0xFF10B981)),
-    _SkillMeta('Grammar', Icons.spellcheck_rounded, Color(0xFFF59E0B)),
-    _SkillMeta('Pronunciation', Icons.mic_rounded, Color(0xFFEF4444)),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final sp = profile?.skillProgress ?? {};
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border:
-            Border.all(color: AppColors.glassBorder.withValues(alpha: 0.4)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Skill Performance',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Across all completed sessions',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              if (profile?.overallSkillAvg != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Avg ${profile!.overallSkillAvg!.round()}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          if (sp.isEmpty) ...[
-            // No data yet
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              alignment: Alignment.center,
-              child: Column(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.bar_chart_rounded,
-                        color: AppColors.primary, size: 26),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Complete sessions to unlock\nyour skill insights',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ] else ...[
-            // Grid of 3 × 2
-            GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.88,
-              ),
-              itemCount: _skills.length,
-              itemBuilder: (_, i) {
-                final meta = _skills[i];
-                final key = meta.label.toLowerCase();
-                final stat = sp[key];
-                final avg = stat?.avg ?? 0.0;
-                final sessions = stat?.sessions ?? 0;
-                return _SkillCell(
-                  meta: meta,
-                  avg: avg,
-                  sessions: sessions,
-                );
-              },
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SkillMeta {
-  final String label;
   final IconData icon;
   final Color color;
-
-  const _SkillMeta(this.label, this.icon, this.color);
-}
-
-class _SkillCell extends StatelessWidget {
-  final _SkillMeta meta;
-  final double avg;
-  final int sessions;
-
-  const _SkillCell({
-    required this.meta,
-    required this.avg,
-    required this.sessions,
-  });
+  final String label;
+  final String value;
+  final String caption;
+  final double? progress;
 
   @override
   Widget build(BuildContext context) {
-    final frac = (avg / 100).clamp(0.0, 1.0);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.cardSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-            color: meta.color.withValues(alpha: 0.18)),
-      ),
+    return ChunkyCard(
+      padding: const EdgeInsets.all(AppSpacing.s14),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 52,
-            height: 52,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CircularProgressIndicator(
-                  value: frac,
-                  strokeWidth: 5,
-                  backgroundColor:
-                      meta.color.withValues(alpha: 0.12),
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(meta.color),
-                  strokeCap: StrokeCap.round,
-                ),
-                Center(
-                  child: sessions == 0
-                      ? Icon(meta.icon,
-                          size: 18,
-                          color: meta.color.withValues(alpha: 0.5))
-                      : Text(
-                          '${avg.round()}',
-                          style: TextStyle(
-                            color: meta.color,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                ),
-              ],
+          Row(
+            children: [
+              IconTile(icon: icon, color: color, size: 36),
+              const SizedBox(width: AppSpacing.s8),
+              Expanded(child: Text(label, style: AppTextStyles.labelSmall)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s10),
+          Text(value, style: AppTextStyles.numeral.copyWith(fontSize: 28)),
+          if (caption.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              caption,
+              style: AppTextStyles.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          if (progress != null) ...[
+            const SizedBox(height: AppSpacing.s10),
+            ChunkyProgressBar(value: progress!, color: color, height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StatsSkeleton extends StatelessWidget {
+  const _StatsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(
+        2,
+        (i) => Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: i == 0 ? AppSpacing.s12 : 0),
+            child: ChunkyCard(
+              padding: const EdgeInsets.all(AppSpacing.s14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  SkeletonBox(width: 100, height: 14),
+                  SizedBox(height: AppSpacing.s12),
+                  SkeletonBox(width: 60, height: 28),
+                  SizedBox(height: AppSpacing.s8),
+                  SkeletonBox(height: 12),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            meta.label,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
-              fontSize: 11,
-            ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Journey ────────────────────────────────────────────────────────────────
+
+class _JourneyCard extends StatelessWidget {
+  const _JourneyCard({required this.profile});
+
+  final UserProfile? profile;
+
+  /// The full curriculum length the journey is measured against.
+  static const _totalSessions = 150;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = profile?.sessionsCompleted ?? 0;
+    final pct = (done / _totalSessions).clamp(0.0, 1.0);
+
+    return ChunkyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Learning journey',
+                        style: AppTextStyles.titleLarge),
+                    const SizedBox(height: 2),
+                    Text('$done of $_totalSessions sessions',
+                        style: AppTextStyles.bodySmall),
+                  ],
+                ),
+              ),
+              CountBadge(
+                label: '${(pct * 100).round()}%',
+                color: pct > 0 ? AppColors.teal : AppColors.inkSoft,
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: AppSpacing.s14),
+          ChunkyProgressBar(value: pct, color: AppColors.teal),
+          const SizedBox(height: AppSpacing.s8),
           Text(
-            sessions == 0 ? 'No data' : '$sessions session${sessions == 1 ? '' : 's'}',
-            style: const TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 10,
-            ),
+            done == 0
+                ? 'Start your first session!'
+                : 'Next milestone at ${_nextMilestone(done)} sessions',
+            style: AppTextStyles.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _nextMilestone(int done) {
+    const milestones = [10, 25, 50, 100, _totalSessions];
+    return milestones.firstWhere((m) => m > done, orElse: () => _totalSessions);
+  }
+}
+
+// ── Practise CTA ───────────────────────────────────────────────────────────
+
+class _PractiseCta extends StatelessWidget {
+  const _PractiseCta({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChunkyCard(
+      fill: AppColors.coralSoft,
+      borderColor: AppColors.coral,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const IconTile(
+                icon: Icons.mic_rounded,
+                color: AppColors.coral,
+                tinted: false,
+              ),
+              const SizedBox(width: AppSpacing.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Practise a conversation',
+                        style: AppTextStyles.titleLarge),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Interviews, group discussions, sales calls',
+                      style: AppTextStyles.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s14),
+          ChunkyButton(
+            label: 'Start speaking',
+            icon: Icons.play_arrow_rounded,
+            onPressed: onTap,
           ),
         ],
       ),
@@ -1285,432 +638,141 @@ class _SkillCell extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 6. LEADERBOARD CARD
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Skills ─────────────────────────────────────────────────────────────────
 
-class _LeaderboardCard extends StatelessWidget {
-  final UserProfile? profile;
-  const _LeaderboardCard({this.profile});
+class _SkillGrid extends StatelessWidget {
+  const _SkillGrid({required this.profile});
+
+  final UserProfile profile;
+
+  /// Height of one skill cell: icon row + numeral + progress bar.
+  static const _cellHeight = 118.0;
+
+  /// The six skills the evaluator scores, with a fixed display order and
+  /// colour so a skill looks the same wherever it appears.
+  static const _skills = <String, (String, IconData, Color)>{
+    'clarity': ('Clarity', Icons.lightbulb_rounded, AppColors.sun),
+    'fluency': ('Fluency', Icons.waves_rounded, AppColors.teal),
+    'confidence': ('Confidence', Icons.bolt_rounded, AppColors.coral),
+    'vocabulary': ('Vocabulary', Icons.menu_book_rounded, AppColors.grape),
+    'grammar': ('Grammar', Icons.spellcheck_rounded, AppColors.info),
+    'pronunciation': ('Pronunciation', Icons.record_voice_over_rounded,
+        AppColors.success),
+  };
 
   @override
   Widget build(BuildContext context) {
-    const rankColor = Color(0xFFF59E0B);
-
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        // Real, server-authoritative XP leaderboard (GET /leaderboard) —
-        // no longer gated behind "Coming Soon" now that it's wired up.
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const LeaderboardPage()),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppColors.glassBorder.withValues(alpha: 0.4),
-          ),
-        ),
+    if (profile.skillProgress.isEmpty) {
+      return ChunkyCard(
         child: Row(
           children: [
-            // Leaderboard icon
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.leaderboard_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-
-            // Text
+            const Mascot(mood: MascotMood.thinking, size: 62, animate: false),
+            const SizedBox(width: AppSpacing.s12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Leaderboard',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    profile != null
-                        ? 'See how you rank among all speakers'
-                        : 'Compete with speakers worldwide',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+              child: Text(
+                'Finish a practice session and your six skill scores will '
+                'appear here.',
+                style: AppTextStyles.bodyMedium,
               ),
-            ),
-
-            const SizedBox(width: 12),
-
-            // Arrow
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: Colors.white,
-                size: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 8. RECENT ACTIVITY
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _RecentActivity extends StatelessWidget {
-  final List<Map<String, dynamic>> sessions;
-  final bool loading;
-  const _RecentActivity({required this.sessions, required this.loading});
-
-  @override
-  Widget build(BuildContext context) {
-    final recent = sessions.take(5).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Header ──────────────────────────────────────────────────────────
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Recent Sessions',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (sessions.isNotEmpty)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.20)),
-                ),
-                child: const Text(
-                  'View All',
-                  style: TextStyle(
-                    color: AppColors.primaryLight,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 14),
-
-        // ── Body ─────────────────────────────────────────────────────────────
-        if (loading)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 32),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                  color: AppColors.glassBorder.withValues(alpha: 0.4)),
-            ),
-            child: const Center(
-              child: CircularProgressIndicator(
-                  color: AppColors.primary, strokeWidth: 2),
-            ),
-          )
-        else if (recent.isEmpty)
-          _emptyState()
-        else
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                  color: AppColors.glassBorder.withValues(alpha: 0.4)),
-            ),
-            clipBehavior: Clip.hardEdge,
-            child: Column(
-              children: [
-                for (int i = 0; i < recent.length; i++) ...[
-                  _SessionRow(session: recent[i]),
-                  if (i < recent.length - 1)
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: AppColors.glassBorder.withValues(alpha: 0.25),
-                      indent: 68,
-                      endIndent: 16,
-                    ),
-                ],
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _emptyState() => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 36),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: AppColors.glassBorder.withValues(alpha: 0.4)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.mic_none_rounded,
-                  color: AppColors.primary, size: 26),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'No sessions yet',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Start your first AI roleplay',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
             ),
           ],
         ),
       );
-}
-
-class _SessionRow extends StatelessWidget {
-  final Map<String, dynamic> session;
-  const _SessionRow({required this.session});
-
-  /// Safely extracts a timestamp string from a session field.
-  /// Handles three forms Firestore/Node may return:
-  ///   - ISO string          "2024-01-15T12:00:00.000Z"
-  ///   - Firestore Timestamp { "_seconds": 1705320000, "_nanoseconds": 0 }
-  ///   - null / missing
-  static String? _parseTimestamp(dynamic value) {
-    if (value == null) return null;
-    if (value is String) return value;
-    if (value is Map) {
-      final seconds = value['_seconds'] ?? value['seconds'];
-      if (seconds is num) {
-        return DateTime.fromMillisecondsSinceEpoch(seconds.toInt() * 1000,
-                isUtc: true)
-            .toIso8601String();
-      }
-    }
-    return null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final title = session['scenarioTitle']?.toString() ?? 'Session';
-    final score = (session['overallScore'] as num?)?.toDouble();
-    final status = session['status']?.toString() ?? 'completed';
-    final endedAt = _parseTimestamp(session['endedAt']);
-
-    final isAbandoned = status == 'abandoned';
-
-    // Score — always use primary color
-    const scoreColor = AppColors.primary;
-    final scoreBg = score != null
-        ? AppColors.primary.withValues(alpha: 0.12)
-        : AppColors.surfaceVariant;
-    final scoreStr = score != null ? '${score.round()}' : '—';
-
-    // Accent colour for the left bar
-    final accentColor = isAbandoned
-        ? AppColors.textMuted.withValues(alpha: 0.4)
-        : AppColors.primary.withValues(alpha: 0.6);
-
-    String? timeAgo;
-    if (endedAt != null) {
-      try {
-        final dt = DateTime.parse(endedAt);
-        final diff = DateTime.now().difference(dt);
-        if (diff.inDays > 0) {
-          timeAgo = '${diff.inDays}d ago';
-        } else if (diff.inHours > 0) {
-          timeAgo = '${diff.inHours}h ago';
-        } else {
-          timeAgo = '${diff.inMinutes}m ago';
-        }
-      } catch (_) {}
     }
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Left accent bar ──────────────────────────────────────────────
-          Container(width: 3, color: accentColor),
+    // Explicit rows rather than a shrink-wrapped GridView: the grid reserved
+    // a trailing row's worth of height inside the outer ListView, leaving a
+    // large gap before the next section.
+    final cells = [
+      for (final entry in _skills.entries)
+        _SkillCell(
+          label: entry.value.$1,
+          icon: entry.value.$2,
+          color: entry.value.$3,
+          stat: profile.skillProgress[entry.key],
+        ),
+    ];
 
-          // ── Row content ──────────────────────────────────────────────────
-          Expanded(
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    return Column(
+      children: [
+        for (var i = 0; i < cells.length; i += 2)
+          Padding(
+            padding: EdgeInsets.only(
+              bottom: i + 2 < cells.length ? AppSpacing.s12 : 0,
+            ),
+            // A fixed height rather than IntrinsicHeight: the cell's Column
+            // uses spaceBetween (so it wants max height), which made
+            // IntrinsicHeight resolve to a huge row.
+            child: SizedBox(
+              height: _cellHeight,
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Icon
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: isAbandoned
-                          ? AppColors.textMuted.withValues(alpha: 0.15)
-                          : AppColors.primary,
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Icon(
-                      isAbandoned
-                          ? Icons.cancel_outlined
-                          : Icons.record_voice_over_rounded,
-                      color: Colors.white,
-                      size: 19,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Title + status
+                  Expanded(child: cells[i]),
+                  const SizedBox(width: AppSpacing.s12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            color: isAbandoned
-                                ? AppColors.textSecondary
-                                : AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13.5,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 5),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 2.5),
-                              decoration: BoxDecoration(
-                                color: isAbandoned
-                                    ? AppColors.textMuted
-                                        .withValues(alpha: 0.08)
-                                    : AppColors.emerald
-                                        .withValues(alpha: 0.10),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                isAbandoned ? 'Abandoned' : 'Completed',
-                                style: TextStyle(
-                                  color: isAbandoned
-                                      ? AppColors.textMuted
-                                      : AppColors.emerald,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            if (timeAgo != null) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                timeAgo,
-                                style: const TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
+                    child: i + 1 < cells.length
+                        ? cells[i + 1]
+                        : const SizedBox.shrink(),
                   ),
-
-                  // Score badge
-                  if (!isAbandoned && score != null) ...[
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 52,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            scoreStr,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 17,
-                            ),
-                          ),
-                          const Text(
-                            'Score',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SkillCell extends StatelessWidget {
+  const _SkillCell({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.stat,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final SkillStat? stat;
+
+  @override
+  Widget build(BuildContext context) {
+    final score = stat?.avg;
+    final hasData = score != null && (stat?.sessions ?? 0) > 0;
+
+    return ChunkyCard(
+      padding: const EdgeInsets.all(AppSpacing.s12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: hasData ? color : AppColors.inkSoft),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTextStyles.labelSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            hasData ? '${score.round()}' : '—',
+            style: AppTextStyles.numeral.copyWith(
+              fontSize: 26,
+              color: hasData ? AppColors.forScore(score) : AppColors.inkSoft,
+            ),
+          ),
+          ChunkyProgressBar(
+            value: hasData ? score / 100 : 0,
+            color: hasData ? AppColors.forScore(score) : AppColors.inkSoft,
+            height: 8,
           ),
         ],
       ),
@@ -1718,42 +780,230 @@ class _SessionRow extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PROFILE ERROR BANNER
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Leaderboard teaser ─────────────────────────────────────────────────────
 
-class _ProfileErrorBanner extends StatelessWidget {
-  final VoidCallback onRetry;
-  const _ProfileErrorBanner({required this.onRetry});
+class _LeaderboardTeaser extends StatelessWidget {
+  const _LeaderboardTeaser({required this.profile, required this.onTap});
+
+  final UserProfile? profile;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.10),
-        borderRadius: AppRadius.chipRadius,
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
-      ),
+    final p = profile;
+    return ChunkyCard(
+      onTap: onTap,
       child: Row(
         children: [
-          const Icon(Icons.wifi_off_rounded, color: AppColors.warning, size: 18),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'Could not load profile. Pull down to retry.',
-              style: TextStyle(color: AppColors.warning, fontSize: 13),
+          const IconTile(
+            icon: Icons.emoji_events_rounded,
+            color: AppColors.sun,
+            tinted: false,
+          ),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Where you rank', style: AppTextStyles.titleMedium),
+                const SizedBox(height: 2),
+                Text(
+                  p == null
+                      ? 'See how you compare'
+                      : '${p.xp} XP · Lv ${p.level} ${p.levelLabel}',
+                  style: AppTextStyles.bodySmall,
+                ),
+              ],
             ),
           ),
-          GestureDetector(
-            onTap: onRetry,
-            child: const Text(
-              'Retry',
-              style: TextStyle(
-                  color: AppColors.warning,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13),
+          const Icon(Icons.chevron_right_rounded, color: AppColors.inkSoft),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Recent activity ────────────────────────────────────────────────────────
+
+class _RecentActivity extends StatelessWidget {
+  const _RecentActivity({
+    required this.sessions,
+    required this.loading,
+    required this.onStart,
+  });
+
+  final List<Map<String, dynamic>> sessions;
+  final bool loading;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return Column(
+        children: List.generate(
+          3,
+          (i) => Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+            child: ChunkyCard(
+              padding: const EdgeInsets.all(AppSpacing.s14),
+              child: Row(
+                children: const [
+                  SkeletonBox(width: 40, height: 40),
+                  SizedBox(width: AppSpacing.s12),
+                  Expanded(child: SkeletonBox(height: 16)),
+                ],
+              ),
             ),
+          ),
+        ),
+      );
+    }
+
+    if (sessions.isEmpty) {
+      return ChunkyCard(
+        padding: EdgeInsets.zero,
+        child: EmptyState(
+          title: 'No sessions yet',
+          message: 'Your practice history will appear here.',
+          actionLabel: 'Start practising',
+          mood: MascotMood.encouraging,
+          onAction: onStart,
+        ),
+      );
+    }
+
+    final recent = sessions.take(3).toList();
+    return Column(
+      children: [
+        for (var i = 0; i < recent.length; i++)
+          FadeInUp(
+            delay: AppMotion.staggerFor(i),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+              child: _SessionRow(session: recent[i]),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SessionRow extends StatelessWidget {
+  const _SessionRow({required this.session});
+
+  final Map<String, dynamic> session;
+
+  /// Session documents come straight from Firestore, so every field is
+  /// treated as possibly missing or the wrong type.
+  String get _title {
+    final t = session['scenarioTitle'] ?? session['scenarioId'];
+    return t is String && t.isNotEmpty ? t : 'Practice session';
+  }
+
+  int? get _score {
+    final raw = session['overallScore'] ?? session['score'];
+    if (raw is num) return raw.round();
+    return null;
+  }
+
+  String get _when {
+    final raw = session['createdAt'] ?? session['endedAt'];
+    DateTime? dt;
+    if (raw is String) dt = DateTime.tryParse(raw);
+    if (raw is int) {
+      dt = DateTime.fromMillisecondsSinceEpoch(
+        // Firestore may hand back seconds rather than milliseconds.
+        raw > 100000000000 ? raw : raw * 1000,
+      );
+    }
+    if (dt == null) return '';
+
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.day}/${dt.month}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final score = _score;
+    final tint = score != null ? AppColors.forScore(score) : AppColors.inkSoft;
+
+    return ChunkyCard(
+      padding: const EdgeInsets.all(AppSpacing.s14),
+      child: Row(
+        children: [
+          IconTile(icon: Icons.mic_rounded, color: tint, size: 40),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _title,
+                  style: AppTextStyles.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (_when.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(_when, style: AppTextStyles.bodySmall),
+                ],
+              ],
+            ),
+          ),
+          if (score != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: tint,
+                borderRadius: AppRadius.pillRadius,
+              ),
+              child: Text(
+                '$score',
+                style: AppTextStyles.numeralSmall.copyWith(
+                  color: AppColors.inkOnDark,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Inline error ───────────────────────────────────────────────────────────
+
+class _InlineErrorBanner extends StatelessWidget {
+  const _InlineErrorBanner({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChunkyCard(
+      fill: AppColors.errorSoft,
+      borderColor: AppColors.error,
+      padding: const EdgeInsets.all(AppSpacing.s12),
+      child: Row(
+        children: [
+          const Icon(Icons.cloud_off_rounded, color: AppColors.error, size: 20),
+          const SizedBox(width: AppSpacing.s10),
+          Expanded(
+            child: Text(
+              "Showing saved data — we couldn't refresh.",
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.ink),
+            ),
+          ),
+          ChunkyButton(
+            label: 'Retry',
+            variant: ChunkyButtonVariant.secondary,
+            size: ChunkyButtonSize.sm,
+            expand: false,
+            onPressed: onRetry,
           ),
         ],
       ),
