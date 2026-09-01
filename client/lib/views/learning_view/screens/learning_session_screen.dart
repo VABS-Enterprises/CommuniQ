@@ -48,7 +48,10 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
   // MCQ States
   late List<int?> _selectedOptionIndices;
   late List<List<String>> _mcqOptionsList;
-  late List<int> _correctOptionIndices;
+
+  /// Per-step feedback returned by the server after grading. The client has no
+  /// answer key, so this is the only source of the message shown to the user.
+  late List<String?> _stepFeedback;
   late List<int> _mcqAttemptsList;
   late List<bool> _isMcqWrongList;
   // Coins awarded per MCQ step, as returned by the server (drives the "+N
@@ -88,13 +91,10 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
     _isMcqWrongList = List.filled(mcqCount, false);
     _mcqCoinsAwarded = List.filled(mcqCount, 0);
     _mcqOptionsList = [];
-    _correctOptionIndices = [];
+    _stepFeedback = List.filled(mcqCount, null);
 
-    for (var mcq in widget.level.mcqs) {
-      final options = [mcq.correctOption, ...mcq.incorrectOptions];
-      options.shuffle();
-      _correctOptionIndices.add(options.indexOf(mcq.correctOption));
-      _mcqOptionsList.add(options);
+    for (final mcq in widget.level.mcqs) {
+      _mcqOptionsList.add(mcq.options);
     }
 
     _micRecordCtrl = AnimationController(
@@ -229,6 +229,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
       if (!mounted) return;
       setState(() {
         _isSubmittingMcq = false;
+        _stepFeedback[idx] = result.feedback;
         if (result.correct) {
           _isSubmitted[idx] = true;
           _mcqCoinsAwarded[idx] = result.coinsAwarded;
@@ -569,7 +570,10 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
         children: [
           ...List.generate(_mcqOptionsList[index].length, (optionIdx) {
             final isSelected = _selectedOptionIndices[index] == optionIdx;
-            final isCorrectOption = optionIdx == _correctOptionIndices[index];
+            // With no local key, "correct" is simply the option the server
+            // accepted — known only once this step has been submitted.
+            final isCorrectOption =
+                _isSubmitted[index] && optionIdx == _selectedOptionIndices[index];
             
             Color itemColor = AppColors.surface;
             Color borderColor = AppColors.border;
@@ -670,7 +674,8 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    isSubmitted ? mcq.correctFeedback : mcq.incorrectFeedback,
+                    _stepFeedback[index] ??
+                        (isSubmitted ? 'Correct!' : 'Not quite — try again.'),
                     style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
                   ),
                 ],
