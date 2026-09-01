@@ -1,15 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'package:communiq/core/theme/app_theme.dart';
 import 'package:communiq/core/constants/app_colors.dart';
-import 'package:communiq/core/services/auth_service.dart';
-import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
-import 'package:communiq/views/onboarding/screens/welcome_screen.dart';
-import 'package:communiq/views/onboarding/screens/splash_screen.dart';
-import 'package:communiq/views/dev/component_gallery.dart';
+import 'package:communiq/core/routes/app_router.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +29,7 @@ void main() async {
     return;
   }
 
-  runApp(const MyApp());
+  runApp(MyApp());
   FlutterNativeSplash.remove();
 }
 
@@ -52,7 +49,7 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
     setState(() => _retrying = true);
     try {
       await Firebase.initializeApp();
-      runApp(const MyApp());
+      runApp(MyApp());
     } catch (_) {
       setState(() => _retrying = false);
     }
@@ -126,104 +123,18 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
 const _kGallery = bool.fromEnvironment('GALLERY');
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  MyApp({super.key});
+
+  final GoRouter _router = createRouter(gallery: _kGallery);
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'CommuniQ',
       theme: AppTheme.light,
       themeMode: ThemeMode.light,
-      home: _kGallery ? const ComponentGallery() : const SplashScreen(),
-    );
-  }
-}
-
-/// Guards the app with Firebase auth state. Unauthenticated users are sent to
-/// the welcome/onboarding screen. Authenticated users go straight to the main app.
-class AuthGuard extends StatefulWidget {
-  const AuthGuard({super.key});
-
-  @override
-  State<AuthGuard> createState() => _AuthGuardState();
-}
-
-class _AuthGuardState extends State<AuthGuard> {
-  int _streamKey = 0;
-
-  void _retry() => setState(() => _streamKey++);
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder(
-      key: ValueKey(_streamKey),
-      stream: AuthService.authStateChanges,
-      builder: (context, snapshot) {
-        debugPrint('[AuthGuard] snapshot: state=${snapshot.connectionState}, hasData=${snapshot.hasData}, user=${snapshot.data?.uid}');
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: AppColors.bg,
-            body: Center(
-                child: CircularProgressIndicator(
-                    color: AppColors.coral)),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return Scaffold(
-            backgroundColor: AppColors.bg,
-            body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.wifi_off_rounded,
-                      color: AppColors.inkSoft, size: 48),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Connection error',
-                    style: TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'We could not reach authentication services.\n'
-                    'Please check your connection.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: AppColors.inkMuted, fontSize: 13),
-                  ),
-                  const SizedBox(height: 24),
-                  TextButton(
-                    onPressed: _retry,
-                    child: const Text('Retry',
-                        style: TextStyle(
-                            color: AppColors.coral,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15)),
-                  ),
-                  TextButton(
-                    onPressed: () => AuthService.signOut(),
-                    child: const Text('Sign Out',
-                        style:
-                            TextStyle(color: AppColors.inkSoft)),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        if (snapshot.hasData) {
-          debugPrint('[AuthGuard] User detected! Returning MainNavigationView');
-          return const MainNavigationView();
-        }
-
-        debugPrint('[AuthGuard] No user. Returning WelcomeScreen');
-        return const WelcomeScreen();
-      },
+      routerConfig: _router,
     );
   }
 }

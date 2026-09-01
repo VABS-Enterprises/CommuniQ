@@ -4,7 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/services/level_service.dart';
 import 'package:communiq/models/communiq_level.dart';
-import 'package:communiq/views/home_view/widgets/quick_actions_row.dart';
+import 'package:go_router/go_router.dart';
+import 'package:communiq/core/routes/app_routes.dart';
 
 class ContinueCard extends StatefulWidget {
   const ContinueCard({super.key});
@@ -80,7 +81,7 @@ class _ContinueCardState extends State<ContinueCard> {
     final hub = _hubFor(_level!.id);
 
     return GestureDetector(
-      onTap: () => SwitchToLearningTabNotification().dispatch(context),
+      onTap: () => context.go(AppRoutes.learning),
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(

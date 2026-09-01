@@ -4,7 +4,8 @@ import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/models/user_profile.dart';
-import 'package:communiq/views/home_view/widgets/quick_actions_row.dart';
+import 'package:go_router/go_router.dart';
+import 'package:communiq/core/routes/app_routes.dart';
 
 class HomeTopBar extends StatelessWidget {
   final UserProfile? profile;
@@ -182,7 +183,7 @@ class HomeTopBar extends StatelessWidget {
           ],
         ),
         GestureDetector(
-          onTap: () => SwitchToProfileTabNotification().dispatch(context),
+          onTap: () => context.go(AppRoutes.profile),
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
