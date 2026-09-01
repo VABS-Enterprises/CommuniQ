@@ -27,6 +27,12 @@ enum MascotMood {
   /// Gentle nudge after a miss — a wink.
   encouraging,
 
+  /// Pleased, with the face fully readable — raised brows, wide eyes, a small
+  /// wing lift. Used where the mascot rests on screen and needs to stay
+  /// expressive, unlike [happy] and [celebrating], which squeeze the eyes shut
+  /// and read as a blob at small sizes.
+  proud,
+
   /// Something went wrong. Droopy eyes, looking down.
   sad,
 }
@@ -157,6 +163,7 @@ class _MascotState extends State<Mascot> with TickerProviderStateMixin {
   double _bobAmplitude(MascotMood m) => switch (m) {
         MascotMood.celebrating => 0.055,
         MascotMood.happy => 0.03,
+        MascotMood.proud => 0.035,
         MascotMood.listening => 0.018,
         MascotMood.sad => 0.008,
         _ => 0.02,
@@ -295,6 +302,17 @@ class _Pose {
     winkRight: 1,
   );
 
+  static const _Pose proud = _Pose(
+    eyeOpen: 1.1,
+    eyeCurve: 0,
+    pupilX: 0,
+    pupilY: -0.05,
+    browAngle: -0.26,
+    wingLift: 0.3,
+    leanY: -0.015,
+    beakOpen: 0.45,
+  );
+
   static const _Pose sad = _Pose(
     eyeOpen: 0.55,
     eyeCurve: 0,
@@ -313,6 +331,7 @@ class _Pose {
         MascotMood.listening => listening,
         MascotMood.celebrating => celebrating,
         MascotMood.encouraging => encouraging,
+        MascotMood.proud => proud,
         MascotMood.sad => sad,
       };
 
