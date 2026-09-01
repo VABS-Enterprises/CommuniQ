@@ -1,141 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/app_text_styles.dart';
+import 'package:communiq/core/data/scenario_presets.dart';
 import 'package:communiq/models/roleplay_config.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_conversation_screen.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Preset scenario data — system prompts baked into the client so no Firestore
-// lookup is required. Each entry maps exactly to what the Node backend stores
-// as `customSystemPrompt` on the session document.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const List<Map<String, dynamic>> _kPresets = [
-  {
-    'key': 'job_interview',
-    'title': 'Job Interview',
-    'subtitle': 'Answer tough HR questions',
-    'icon': Icons.work_outline,
-    'image': 'assets/images/scenarios/introduce_yourself.png',
-    'systemPrompt': 'You are an experienced HR interviewer conducting a job interview for a mid-to-senior '
-        'position at a reputable Indian tech company. Ask behavioral and situational questions '
-        'using the STAR framework. Be professional and curious. Follow up on vague or incomplete '
-        'answers — push gently for specifics. Occasionally challenge weak answers to see if the '
-        'candidate can handle pressure.',
-    'defaultPersona': 'Friendly HR',
-    'defaultTone': 'Professional',
-    'defaultLevel': 'Hard',
-    'defaultRole': 'You as Candidate',
-    'defaultTraits': 'Logical',
-  },
-  {
-    'key': 'negotiation',
-    'title': 'Negotiation',
-    'subtitle': 'Negotiate a raise or budget',
-    'icon': Icons.handshake,
-    'image': 'assets/images/scenarios/salary_negotiation.png',
-    'systemPrompt': 'You are a skeptical department head being approached for a salary raise or budget '
-        'increase. You are not hostile, but you need solid justification — data, outcomes, '
-        'market benchmarks. Challenge weak arguments respectfully. If presented with strong '
-        'evidence and clear business impact, acknowledge it and show willingness to consider '
-        'the request.',
-    'defaultPersona': 'Strict Manager',
-    'defaultTone': 'Neutral',
-    'defaultLevel': 'Hard',
-    'defaultRole': 'You as Employee',
-    'defaultTraits': 'Assertive',
-  },
-  {
-    'key': 'assertiveness',
-    'title': 'Technical Solving',
-    'subtitle': 'Master technical logic problems',
-    'icon': Icons.bolt,
-    'image': 'assets/images/scenarios/technical_solving.png',
-    'systemPrompt': 'You are a senior technical lead. Present a complex architectural or logical problem '
-        'and ask the user to explain their approach. Be helpful but probe for edge cases. '
-        'The user needs to practice explaining technical trade-offs clearly and logically.',
-    'defaultPersona': 'Strict Manager',
-    'defaultTone': 'Professional',
-    'defaultLevel': 'Medium',
-    'defaultRole': 'You as Employee',
-    'defaultTraits': 'Assertive',
-  },
-  {
-    'key': 'small_talk',
-    'title': 'Sales Pitch',
-    'subtitle': 'Pitch your product to a client',
-    'icon': Icons.chat_bubble_outline,
-    'image': 'assets/images/scenarios/sales_pitch.png',
-    'systemPrompt': 'You are a potential enterprise client. The user is pitching a new software solution. '
-        'Listen to their pitch, ask about ROI, and raise one common objection. See how the '
-        'user handles persuasion and objection management.',
-    'defaultPersona': 'Strict Manager',
-    'defaultTone': 'Neutral',
-    'defaultLevel': 'Medium',
-    'defaultRole': 'You as Speaker',
-    'defaultTraits': 'Logical',
-  },
-  {
-    'key': 'leadership',
-    'title': 'Explain Concept',
-    'subtitle': 'Simplify complex technical ideas',
-    'icon': Icons.groups,
-    'image': 'assets/images/scenarios/complex_concept.png',
-    'systemPrompt': 'You are a non-technical project stakeholder. Ask the user to explain a technical '
-        'innovation or architecture. If they use too much jargon, ask for simplification. '
-        'Focus on how clearly they can communicate value to a non-technical audience.',
-    'defaultPersona': 'Friendly Colleague',
-    'defaultTone': 'Friendly',
-    'defaultLevel': 'Medium',
-    'defaultRole': 'You as Manager',
-    'defaultTraits': 'Emotional',
-  },
-  {
-    'key': 'feedback',
-    'title': 'Group Discussion',
-    'subtitle': 'Discussion on AI trends',
-    'icon': Icons.feedback_outlined,
-    'image': 'assets/images/scenarios/gd_ai.png',
-    'systemPrompt': 'You are a participants in a group discussion about the future of AI. '
-        'Help the user practice turn-taking, building on others arguments, and '
-        'presenting structured viewpoints in a high-pressure corporate setting.',
-    'defaultPersona': 'Friendly Colleague',
-    'defaultTone': 'Neutral',
-    'defaultLevel': 'Medium',
-    'defaultRole': 'You as Manager',
-    'defaultTraits': 'Emotional',
-  },
-  {
-    'key': 'conflict',
-    'title': 'Conflict Resolution',
-    'subtitle': 'Handle a difficult client escalation',
-    'icon': Icons.balance,
-    'image': 'assets/images/scenarios/difficult_client.png',
-    'systemPrompt': 'You are an upset client whose project was delayed. You are demanding an explanation. '
-        'The user needs to practice de-escalation, show empathy, and offer a professional '
-        'remedy without promising more than can be delivered.',
-    'defaultPersona': 'Angry Client',
-    'defaultTone': 'Aggressive',
-    'defaultLevel': 'Hard',
-    'defaultRole': 'You as Manager',
-    'defaultTraits': 'Emotional',
-  },
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Per-scenario accent colours — matched to categories_section.dart
-// ─────────────────────────────────────────────────────────────────────────────
-
-const Map<String, List<Color>> _kScenarioColors = {
-  'assertiveness': [Color(0xFFFF6B35), Color(0xFFFF9A62)],
-  'job_interview': [Color(0xFF4FACFE), Color(0xFF00D4FF)],
-  'negotiation': [Color(0xFF43E97B), Color(0xFF38F9D7)],
-  'leadership': [Color(0xFF667EEA), Color(0xFFA78BFA)],
-  'conflict': [Color(0xFFFC466B), Color(0xFFFF6B6B)],
-  'small_talk': [Color(0xFF7B61FF), Color(0xFF9D7BFF)],
-  'feedback': [Color(0xFFF7971E), Color(0xFFFFD200)],
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Widget
@@ -159,7 +29,7 @@ enum _Mode { preset, custom }
 class _SetupScenarioPageState extends State<SetupScenarioPage> {
   // ── Mode ────────────────────────────────────────────────────────────────────
   late _Mode _mode;
-  Map<String, dynamic>? _selectedPreset;
+  ScenarioPreset? _selectedPreset;
 
   // ── Custom scenario text ────────────────────────────────────────────────────
   late final TextEditingController _scenarioController;
@@ -206,24 +76,27 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
     _backstoryController = TextEditingController();
 
     if (widget.prefilledPresetKey != null) {
-      final preset = _kPresets.firstWhere(
-        (p) => p['key'] == widget.prefilledPresetKey,
-        orElse: () => _kPresets.first,
-      );
-      _mode = _Mode.preset;
-      _applyPreset(preset);
+      // An unknown key falls back to a custom scenario rather than silently
+      // prefilling the wrong one.
+      final preset = presetForKey(widget.prefilledPresetKey);
+      if (preset != null) {
+        _mode = _Mode.preset;
+        _applyPreset(preset);
+      } else {
+        _mode = _Mode.custom;
+      }
     } else {
       _mode = _Mode.custom;
     }
   }
 
-  void _applyPreset(Map<String, dynamic> preset) {
+  void _applyPreset(ScenarioPreset preset) {
     _selectedPreset = preset;
-    _persona = preset['defaultPersona'] as String;
-    _tone = preset['defaultTone'] as String;
-    _level = preset['defaultLevel'] as String;
-    _role = preset['defaultRole'] as String;
-    _traits = preset['defaultTraits'] as String;
+    _persona = preset.persona;
+    _tone = preset.tone;
+    _level = preset.level;
+    _role = preset.role;
+    _traits = preset.traits;
   }
 
   @override
@@ -244,7 +117,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
 
   String _generateSummary() {
     final context = _mode == _Mode.preset
-        ? (_selectedPreset?['title'] ?? 'scenario')
+        ? (_selectedPreset?.title ?? 'scenario')
         : (_scenarioController.text.trim().isNotEmpty
             ? _scenarioController.text.trim().split('\n').first
             : 'your scenario');
@@ -270,11 +143,11 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
     setState(() => _isStarting = true);
 
     final scenarioPrompt = _mode == _Mode.preset
-        ? (_selectedPreset!['systemPrompt'] as String)
+        ? _selectedPreset!.systemPrompt
         : _buildCustomSystemPrompt();
 
     final scenarioTitle = _mode == _Mode.preset
-        ? (_selectedPreset!['title'] as String)
+        ? _selectedPreset!.title
         : _scenarioController.text.trim().split('\n').first;
 
     final backstory = _backstoryController.text.trim();
@@ -306,12 +179,12 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
         scenarioId: '',
         scenarioTitle: scenarioTitle,
         scenario: _mode == _Mode.preset
-            ? (_selectedPreset!['subtitle'] as String)
+            ? _selectedPreset!.subtitle
             : _scenarioController.text.trim(),
         persona: _persona,
         difficulty: _level,
         category: _mode == _Mode.preset
-            ? (_selectedPreset!['title'] as String)
+            ? _selectedPreset!.title
             : 'Custom',
         tone: _tone,
         timeLimit: 'No limit',
