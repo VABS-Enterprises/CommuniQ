@@ -217,6 +217,42 @@ class _HomeViewState extends State<HomeView> {
                 _PractiseCta(
                   onTap: () => context.push(AppRoutes.roleplaySetup),
                 ),
+                const SizedBox(height: AppSpacing.s12),
+
+                // Real entry point to the contest flow. The card this replaces
+                // hardcoded a rank and a countdown for a feature that was a
+                // mock behind a "Coming Soon" gate.
+                ChunkyCard(
+                  onTap: () => context.push(AppRoutes.contest),
+                  accent: AppColors.sun,
+                  child: Row(
+                    children: [
+                      const IconTile(
+                        icon: Icons.emoji_events_rounded,
+                        color: AppColors.sun,
+                        tinted: false,
+                      ),
+                      const SizedBox(width: AppSpacing.s12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Enter a contest',
+                                style: AppTextStyles.titleLarge),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Debate, GD, extempore or quiz — scored and ranked',
+                              style: AppTextStyles.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded,
+                          color: AppColors.inkSoft),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.section),
 
                 if (!_isLoading && _profile != null) ...[

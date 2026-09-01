@@ -8,6 +8,7 @@ import 'package:communiq/core/constants/motion.dart';
 import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/models/communiq_level.dart';
+import 'package:communiq/models/contest_models.dart';
 import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/roleplay_config.dart';
@@ -15,8 +16,11 @@ import 'package:communiq/models/session_result_model.dart';
 
 import 'package:communiq/views/auth/screens/login_screen.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
-import 'package:communiq/views/contest_view/screens/contest_entry_page.dart';
-import 'package:communiq/views/contest_view/screens/contest_page.dart';
+import 'package:communiq/views/contest_view/screens/contest_history_page.dart';
+import 'package:communiq/views/contest_view/screens/contest_hub_page.dart';
+import 'package:communiq/views/contest_view/screens/contest_leaderboard_page.dart';
+import 'package:communiq/views/contest_view/screens/contest_play_page.dart';
+import 'package:communiq/views/contest_view/screens/contest_result_page.dart';
 import 'package:communiq/views/contest_view/screens/leaderboard_page.dart';
 import 'package:communiq/views/dev/component_gallery.dart';
 import 'package:communiq/views/home_view/screens/home_view.dart';
@@ -314,12 +318,29 @@ GoRouter createRouter({bool gallery = false}) {
       GoRoute(
         path: AppRoutes.contest,
         parentNavigatorKey: _rootKey,
-        builder: (_, __) => const ContestPage(),
+        builder: (_, __) => const ContestHubPage(),
       ),
       GoRoute(
-        path: AppRoutes.contestEntry,
+        path: AppRoutes.contestPlay,
         parentNavigatorKey: _rootKey,
-        builder: (_, __) => const ContestEntryPage(),
+        builder: (_, state) =>
+            ContestPlayPage(type: state.extra! as ContestType),
+      ),
+      GoRoute(
+        path: AppRoutes.contestResult,
+        parentNavigatorKey: _rootKey,
+        builder: (_, state) =>
+            ContestResultPage(result: state.extra! as ContestResult),
+      ),
+      GoRoute(
+        path: AppRoutes.contestHistory,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const ContestHistoryPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.contestLeaderboard,
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const ContestLeaderboardPage(),
       ),
       GoRoute(
         path: AppRoutes.leaderboard,
