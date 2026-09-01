@@ -3,23 +3,26 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:communiq/core/services/level_service.dart';
+import 'package:communiq/core/services/learning_service.dart';
 import 'package:communiq/models/communiq_level.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
 import 'package:communiq/views/learning_view/screens/learning_session_screen.dart';
-import 'package:communiq/core/services/api_service.dart';
-import 'package:communiq/core/constants/api_constants.dart';
-import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/common_widgets/sky_campus_background.dart';
+import 'package:communiq/core/constants/app_colors.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DESIGN TOKENS
+// This screen previously defined its own background/surface colors that were
+// subtly different hex values than AppColors.background/surface, so this
+// screen visibly didn't match the rest of the app when navigating to/from it.
+// Now aliased directly to AppColors so it can never drift again.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const _kBg        = Color(0xFF050816);
-const _kSurface   = Color(0xFF0F172A);
-const _kBorder    = Color(0x1AFFFFFF);
-const _kPath      = Color(0xFF5B52F0);
-const _kPathLight = Color(0xFF818CF8);
+const _kBg        = AppColors.background;
+const _kSurface   = AppColors.surface;
+const _kBorder    = Color(0x1AFFFFFF); // deliberate translucent glass edge, distinct from AppColors.glassBorder
+const _kPath      = AppColors.primary;
+const _kPathLight = AppColors.primaryLight;
 
 // Hub illustrations are now managed via CommuniqLevel.imageAsset getter
 
@@ -89,8 +92,9 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
   List<CommuniqLevel> _levels  = [];
   Set<int>            _done    = {};
   bool                _loading = true;
-  int                 _totalCoins = 0; 
-  Map<int, int>       _levelCoins = {}; // Tracking actual coins per level
+  int                 _totalCoins = 0;
+  Map<int, int>       _levelCoins = {}; // Cosmetic per-level coin cache (display only, not a security gate)
+  bool                _progressSyncFailed = false; // server reconciliation failed — showing cached/local data
 
   late final AnimationController _shimCtrl;
   late final AnimationController _glowCtrl;
@@ -123,54 +127,65 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
   Future<void> _load() async {
     try {
       final p = await SharedPreferences.getInstance();
-      
-      // Step 1: Sync from server (best effort)
-      try {
-        final profile = await SessionService.instance.fetchProfile();
-        if (profile.learningProgress.isNotEmpty) {
-          final Set<String> doneIdsStr = {};
-          for (final entry in profile.learningProgress) {
-            final id = entry['id']?.toString();
-            if (id != null) {
-              doneIdsStr.add(id);
-              if (entry['coins'] != null) {
-                await p.setInt('level_${id}_coins', entry['coins'] as int);
-              }
-              if (entry['ai_evaluated_score'] != null) {
-                await p.setInt('level_${id}_score', entry['ai_evaluated_score'] as int);
-              }
-            }
-          }
-          if (doneIdsStr.isNotEmpty) {
-            await p.setStringList('completed_level_ids', doneIdsStr.toList());
-          }
-        }
-      } catch (e) {
-        debugPrint('[LearningView] Sync from server failed: $e');
-      }
-
       final lvls = await LevelService.instance.fetchLevels();
-      final doneIds = (p.getStringList('completed_level_ids') ?? []).map(int.parse).toSet();
-      int total = 0;
-      Map<int, int> lCoins = {};
-      for (final id in doneIds) {
-        final c = p.getInt('level_${id}_coins') ?? 0;
-        total += c;
-        lCoins[id] = c;
-      }
+
+      // Seed instantly from the last-known cache (fast initial paint /
+      // offline fallback). This is READ-ONLY seed data — the server
+      // reconciliation below is what actually gates unlocks.
+      final cachedDoneIds =
+          (p.getStringList('completed_level_ids') ?? []).map(int.parse).toSet();
+      final cachedCoins = p.getInt('total_coins_cache') ?? 0;
+      Map<int, int> lCoins = {
+        for (final id in cachedDoneIds) id: p.getInt('level_${id}_coins') ?? 0,
+      };
+
       if (mounted) {
         setState(() {
           _levels = lvls;
-          _done = doneIds;
-          _totalCoins = total;
+          _done = cachedDoneIds;
+          _totalCoins = cachedCoins;
           _levelCoins = lCoins;
           _loading = false;
           _needsScrollToCur = true;
           _sw = 0;
         });
       }
-    } catch (_) {
+
+      // Server is the source of truth — reconcile coins/completed levels
+      // (and therefore journey-unlock gating) from GET /learning/progress.
+      await _refreshFromServer();
+    } catch (e) {
+      debugPrint('[LearningView] load failed: $e');
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Fetches authoritative progress from the server and reconciles local
+  /// state + cache. Failures are non-fatal — the UI keeps showing
+  /// cached/local data (read-only) and surfaces a retry banner rather than
+  /// crashing or blocking the screen.
+  Future<void> _refreshFromServer() async {
+    try {
+      final progress = await LearningService.getProgress();
+      final p = await SharedPreferences.getInstance();
+      await p.setStringList(
+        'completed_level_ids',
+        progress.completedLevelIds.map((id) => id.toString()).toList(),
+      );
+      await p.setInt('total_coins_cache', progress.coins);
+      if (mounted) {
+        setState(() {
+          _done = progress.completedLevelIds;
+          _totalCoins = progress.coins;
+          _progressSyncFailed = false;
+          _needsScrollToCur = true;
+          _sw = 0;
+        });
+      }
+    } catch (e) {
+      debugPrint('[LearningView] server progress reconciliation failed — '
+          'showing cached/local state: $e');
+      if (mounted) setState(() => _progressSyncFailed = true);
     }
   }
 
@@ -289,7 +304,13 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
         Navigator.pop(context);
         final res = await Navigator.push<dynamic>(
           context,
-          MaterialPageRoute(builder: (_) => LearningSessionScreen(level: level, isAlreadyCompleted: isDone)),
+          MaterialPageRoute(
+            builder: (_) => LearningSessionScreen(
+              level: level,
+              isAlreadyCompleted: isDone,
+              initialCoins: _totalCoins,
+            ),
+          ),
         );
         if (res != null && res is Map) {
           final coins = res['coins'] as int? ?? 0;
@@ -305,12 +326,15 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
 
   void _onLevelComplete(CommuniqLevel level, int earnedCoins, int? aiScore) async {
     final prefs = await SharedPreferences.getInstance();
+    // Optimistic local update so animations/UI feel instant; _refreshFromServer
+    // below reconciles the authoritative _done/_totalCoins right after. The
+    // learning_session_screen already called POST /learning/levels/:id/complete
+    // (server-verified) before returning here.
     setState(() {
       _done.add(level.id);
-      _totalCoins += earnedCoins;
       _levelCoins[level.id] = earnedCoins;
-      _needsScrollToCur = true; 
-      _sw = 0; 
+      _needsScrollToCur = true;
+      _sw = 0;
     });
     await prefs.setStringList('completed_level_ids', _done.map((id) => id.toString()).toList());
     await prefs.setInt('level_${level.id}_coins', earnedCoins);
@@ -329,23 +353,9 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
       });
     }
 
-    try {
-      final List<Map<String, dynamic>> progressList = [];
-      for (final id in _done) {
-        final lvl = _levels.firstWhere((l) => l.id == id, orElse: () => level);
-        progressList.add({
-          'id': id,
-          'scenario_name': lvl.title,
-          'journey_name': lvl.journeyTitle,
-          'journey_number': lvl.journeyId,
-          'coins': prefs.getInt('level_${id}_coins') ?? 60,
-          'ai_evaluated_score': prefs.getInt('level_${id}_score'),
-        });
-      }
-      await ApiService.patch(ApiConstants.userProfile, body: {'learning_progress': progressList});
-    } catch (e) {
-      debugPrint('Sync failed: $e');
-    }
+    // Reconcile _totalCoins/_done with the server — it is the sole source
+    // of truth for anything that gates journey unlocks.
+    await _refreshFromServer();
   }
 
   void _flyParticles({required String icon, required GlobalKey targetKey, int count = 5, bool isBig = false}) {
@@ -408,6 +418,8 @@ class _LearningViewState extends State<LearningView> with TickerProviderStateMix
           Column(
             children: [
               _Header(pct: pct, coinKey: _coinKey, profileKey: _profileKey, totalCoins: _totalCoins),
+              if (_progressSyncFailed)
+                _SyncErrorBanner(onRetry: _refreshFromServer),
               Expanded(
                 child: _loading
                     ? const Center(child: CircularProgressIndicator(color: _kPath))
@@ -787,14 +799,14 @@ class _MilestoneCard extends StatelessWidget {
                 ),
                 child: Row(children: [
                   Icon(Icons.monetization_on_rounded,
-                      color: unlocked ? const Color(0xFFFFD700) : Colors.grey,
+                      color: unlocked ? AppColors.gold : Colors.grey,
                       size: 14),
                   const SizedBox(width: 4),
                   Text(
                     // Show actual earned / max possible (10 scenarios × 60 coins each)
                     '$coinsEarned / ${totalCount * 60}',
                     style: TextStyle(
-                      color: unlocked ? const Color(0xFFFFD700) : Colors.grey.shade500,
+                      color: unlocked ? AppColors.gold : Colors.grey.shade500,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -865,6 +877,48 @@ class _MilestoneCard extends StatelessWidget {
               ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown when GET /learning/progress fails — informs the user that coins /
+/// completed levels on screen may be stale cached data, with a manual retry.
+class _SyncErrorBanner extends StatelessWidget {
+  final VoidCallback onRetry;
+  const _SyncErrorBanner({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    // Same visual treatment as home_view.dart's _ProfileErrorBanner — one
+    // "load/sync failed, tap to retry" style used consistently app-wide.
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.cloud_off_rounded, color: AppColors.warning, size: 18),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              "Couldn't sync progress — showing cached data.",
+              style: TextStyle(color: AppColors.warning, fontSize: 13),
+            ),
+          ),
+          GestureDetector(
+            onTap: onRetry,
+            child: const Text(
+              'Retry',
+              style: TextStyle(color: AppColors.warning, fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );
@@ -1000,7 +1054,7 @@ class _SheetState extends State<_Sheet> with SingleTickerProviderStateMixin {
     final pad = MediaQuery.of(context).viewInsets.bottom + 32;
     return Container(
       padding: EdgeInsets.fromLTRB(24, 0, 24, pad),
-      decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), border: Border.all(color: _kBorder, width: 1.5)),
+      decoration: BoxDecoration(color: _kSurface, borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), border: Border.all(color: _kBorder, width: 1.5)),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const SizedBox(height: 12),
         Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(2))),

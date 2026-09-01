@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/views/auth/screens/login_screen.dart';
@@ -13,18 +12,13 @@ class WelcomeScreen extends StatefulWidget {
 
 class _WelcomeScreenState extends State<WelcomeScreen>
     with TickerProviderStateMixin {
-  // Looping orb pulse
+  // Looping orb pulse — one gentle breathing glow, nothing more.
   late AnimationController _orbCtrl;
-  // Looping background drift
-  late AnimationController _bgCtrl;
   // One-shot entrance
   late AnimationController _entranceCtrl;
 
   late Animation<double> _orbScale;
   late Animation<double> _orbGlowAlpha;
-  late Animation<double> _ring1;
-  late Animation<double> _ring2;
-  late Animation<double> _ring3;
 
   late Animation<double> _fadeLogo;
   late Animation<double> _scaleOrb;
@@ -45,32 +39,16 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       duration: const Duration(milliseconds: 3200),
     )..repeat(reverse: true);
 
-    _bgCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 9),
-    )..repeat();
-
     _entranceCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..forward();
 
-    // Orb pulse
+    // Orb pulse — subtle scale + glow-intensity breathing, no ring stack.
     _orbScale = Tween<double>(begin: 0.97, end: 1.03)
         .animate(CurvedAnimation(parent: _orbCtrl, curve: Curves.easeInOut));
-    _orbGlowAlpha = Tween<double>(begin: 0.28, end: 0.55)
+    _orbGlowAlpha = Tween<double>(begin: 0.28, end: 0.5)
         .animate(CurvedAnimation(parent: _orbCtrl, curve: Curves.easeInOut));
-
-    _ring1 = Tween<double>(begin: 1.0, end: 1.12)
-        .animate(CurvedAnimation(parent: _orbCtrl, curve: Curves.easeInOut));
-    _ring2 = Tween<double>(begin: 1.06, end: 1.18)
-        .animate(CurvedAnimation(
-            parent: _orbCtrl,
-            curve: const Interval(0.1, 1.0, curve: Curves.easeInOut)));
-    _ring3 = Tween<double>(begin: 1.1, end: 1.24)
-        .animate(CurvedAnimation(
-            parent: _orbCtrl,
-            curve: const Interval(0.2, 1.0, curve: Curves.easeInOut)));
 
     // Entrance animations (staggered)
     _fadeLogo = CurvedAnimation(
@@ -113,7 +91,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   void dispose() {
     _orbCtrl.dispose();
-    _bgCtrl.dispose();
     _entranceCtrl.dispose();
     super.dispose();
   }
@@ -122,20 +99,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // ── Animated cosmic background ────────────────────────────────
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _bgCtrl,
-              builder: (_, __) => CustomPaint(
-                painter: _CosmicBgPainter(_bgCtrl.value),
-              ),
-            ),
-          ),
-
-          // ── Content ──────────────────────────────────────────────────
-          SafeArea(
+      body: OnboardingBackground(
+        // Same two-orb ambient background every other onboarding screen
+        // uses — replaces this screen's old, much busier three-blob
+        // animated background (one of which sat behind the CTA button).
+        child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28),
               child: Column(
@@ -254,93 +222,48 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 ],
               ),
             ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   // ── Orb ────────────────────────────────────────────────────────────────────
 
+  // One circular icon, one soft ambient glow behind it, a gentle breathing
+  // pulse on that glow's intensity. That's it — no stacked concentric rings.
   Widget _buildOrb() {
     return SizedBox(
-      width: 230,
-      height: 230,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Outer haze ring
-          Transform.scale(
-            scale: _ring3.value,
-            child: Container(
-              width: 228,
-              height: 228,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.05),
+      width: 150,
+      height: 150,
+      child: Center(
+        child: Transform.scale(
+          scale: _orbScale.value,
+          child: Container(
+            width: 122,
+            height: 122,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary,
+              border: Border.all(
+                color: AppColors.primaryLight.withValues(alpha: 0.25),
+                width: 1,
               ),
-            ),
-          ),
-          // Mid diffuse ring
-          Transform.scale(
-            scale: _ring2.value,
-            child: Container(
-              width: 185,
-              height: 185,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.09),
-              ),
-            ),
-          ),
-          // Inner crisp ring
-          Transform.scale(
-            scale: _ring1.value,
-            child: Container(
-              width: 152,
-              height: 152,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.22),
-                  width: 1,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: _orbGlowAlpha.value),
+                  blurRadius: 48,
+                  spreadRadius: 6,
                 ),
+              ],
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/hummingbird.png',
+                fit: BoxFit.cover,
               ),
             ),
           ),
-          // Core orb
-          Transform.scale(
-            scale: _orbScale.value,
-            child: Container(
-              width: 122,
-              height: 122,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary
-                        .withValues(alpha: _orbGlowAlpha.value),
-                    blurRadius: 64,
-                    spreadRadius: 12,
-                  ),
-                  BoxShadow(
-                    color: AppColors.violet
-                        .withValues(alpha: _orbGlowAlpha.value * 0.5),
-                    blurRadius: 90,
-                    spreadRadius: 6,
-                  ),
-                ],
-              ),
-              child: ClipOval(
-                child: Image.asset(
-                  'assets/images/hummingbird.png',
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -400,50 +323,4 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       color: AppColors.cardBorder,
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Cosmic Background Painter
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _CosmicBgPainter extends CustomPainter {
-  final double t;
-  _CosmicBgPainter(this.t);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final sin = math.sin(t * 2 * math.pi);
-    final cos = math.cos(t * 2 * math.pi);
-
-    // Top-left indigo bloom
-    _drawOrb(canvas,
-        offset: Offset(w * 0.05 + sin * 8, h * 0.08 + cos * 6),
-        radius: w * 0.62,
-        color: const Color(0xFF5B52F0).withValues(alpha: 0.14 + sin * 0.02));
-
-    // Top-right violet bloom
-    _drawOrb(canvas,
-        offset: Offset(w * 0.9 + cos * 6, h * 0.05 + sin * 8),
-        radius: w * 0.45,
-        color: const Color(0xFF7C3AED).withValues(alpha: 0.08 + cos * 0.015));
-
-    // Bottom sky-blue bloom
-    _drawOrb(canvas,
-        offset: Offset(w * 0.5 + sin * 12, h * 0.92 + cos * 5),
-        radius: w * 0.5,
-        color: const Color(0xFF0EA5E9).withValues(alpha: 0.07 + sin * 0.01));
-  }
-
-  void _drawOrb(Canvas canvas,
-      {required Offset offset, required double radius, required Color color}) {
-    final paint = Paint()
-      ..color = color
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.55);
-    canvas.drawCircle(offset, radius, paint);
-  }
-
-  @override
-  bool shouldRepaint(_CosmicBgPainter old) => old.t != t;
 }

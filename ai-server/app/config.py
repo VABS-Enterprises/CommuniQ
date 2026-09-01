@@ -10,19 +10,29 @@ class Settings:
     port: int = int(os.getenv("PORT", "8000"))
     llm_model: str = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
 
+    # ── Environment ────────────────────────────────────────────────────────────
+    # "development" (default) | "production"
+    # Controls whether missing security config (internal API key, CORS origins)
+    # is a startup warning (dev) or a hard startup failure (production).
+    environment: str = os.getenv("ENVIRONMENT", "development").strip().lower()
+
     # ── Internal security ─────────────────────────────────────────────────────
     # Shared secret between Node backend and ai-server.
     # When set, ALL non-health endpoints require the header:
     #   X-Ai-Server-Key: <value>
     # Must match AI_SERVER_INTERNAL_KEY in server/.env.
-    # If empty, auth is skipped with a startup warning (dev/local only).
+    # If empty, auth is skipped with a startup warning in development.
+    # In production (ENVIRONMENT=production), an empty key fails startup — see validate().
     internal_api_key: str = os.getenv("AI_SERVER_INTERNAL_KEY", "").strip()
 
     # Comma-separated list of allowed CORS origins.
     # In production set to the Node backend's public URL, e.g.:
     #   ALLOWED_ORIGINS=https://communiq-backend.onrender.com
-    # Defaults to "*" only when the env var is absent (dev/local).
-    allowed_origins_raw: str = os.getenv("ALLOWED_ORIGINS", "*").strip()
+    # Defaults to "" (no origins allowed) when the env var is absent — this is an
+    # internal service called only by the Node backend, not a public API, so it
+    # must not default open. "*" is still accepted if explicitly set, but is
+    # rejected at startup in production — see validate().
+    allowed_origins_raw: str = os.getenv("ALLOWED_ORIGINS", "").strip()
 
     # ── Conversation pipeline backends ────────────────────────────────────────
     # Used by /session/opening and /session/turn.
@@ -80,8 +90,12 @@ class Settings:
     kokoro_voice: str = os.getenv("KOKORO_VOICE", "af_heart")
 
     @property
+    def is_production(self) -> bool:
+        return self.environment == "production"
+
+    @property
     def allowed_origins(self) -> list[str]:
-        """Parsed list of allowed CORS origins. ['*'] when wildcard."""
+        """Parsed list of allowed CORS origins. ['*'] when wildcard, [] when unset."""
         raw = self.allowed_origins_raw
         if raw == "*":
             return ["*"]
@@ -92,17 +106,38 @@ class Settings:
         _log = _logging.getLogger("communiq.config")
 
         if not self.internal_api_key:
+            if self.is_production:
+                raise RuntimeError(
+                    "AI_SERVER_INTERNAL_KEY is not set while ENVIRONMENT=production. "
+                    "Refusing to start: the ai-server would accept requests from ANY "
+                    "caller. Set AI_SERVER_INTERNAL_KEY in ai-server/.env (it must "
+                    "match AI_SERVER_INTERNAL_KEY in server/.env)."
+                )
             _log.warning(
                 "AI_SERVER_INTERNAL_KEY is not set. "
                 "The ai-server will accept requests from ANY caller. "
                 "Set AI_SERVER_INTERNAL_KEY in ai-server/.env for production."
             )
 
-        if self.allowed_origins == ["*"]:
-            _log.warning(
-                "ALLOWED_ORIGINS is '*' — ai-server accepts requests from any origin. "
-                "Set ALLOWED_ORIGINS to the Node backend URL in production."
-            )
+        if self.allowed_origins_raw == "" or self.allowed_origins == ["*"]:
+            if self.is_production:
+                raise RuntimeError(
+                    "ALLOWED_ORIGINS is unset or '*' while ENVIRONMENT=production. "
+                    "Refusing to start: set ALLOWED_ORIGINS to the Node backend's "
+                    "actual origin (e.g. https://communiq-backend.onrender.com) in "
+                    "ai-server/.env."
+                )
+            if self.allowed_origins == ["*"]:
+                _log.warning(
+                    "ALLOWED_ORIGINS is '*' — ai-server accepts requests from any origin. "
+                    "Set ALLOWED_ORIGINS to the Node backend URL in production."
+                )
+            else:
+                _log.warning(
+                    "ALLOWED_ORIGINS is not set — ai-server will accept no cross-origin "
+                    "browser requests. Set ALLOWED_ORIGINS to the Node backend URL if "
+                    "browser-based CORS access is needed."
+                )
 
         groq_backends = {self.asr_backend, self.llm_backend, self.eval_llm_backend}
         if "groq" in groq_backends and not self.groq_api_key:

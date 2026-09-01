@@ -40,6 +40,27 @@ from services.whisper_stt import FasterWhisperSTTService
 load_dotenv()
 logger = logging.getLogger("communiq.pipecat.agent")
 
+# Hard wall-clock cap on a single live-voice session — mirrors bot.py's
+# SESSION_MAX_DURATION_SECONDS (same env var, same default) so both pipeline
+# implementations enforce the same limit. Without it a client that never
+# triggers on_participant_left would run the local STT/LLM/TTS stack forever.
+SESSION_MAX_DURATION_SECONDS = int(os.getenv("PIPECAT_MAX_SESSION_SECONDS", str(30 * 60)))
+
+
+async def _enforce_session_timeout(session_id: str, task: PipelineTask) -> None:
+    """Force-cancel the pipeline task if the session outlives the hard cap."""
+    try:
+        await asyncio.sleep(SESSION_MAX_DURATION_SECONDS)
+    except asyncio.CancelledError:
+        return
+    logger.warning(
+        "Session hit hard duration cap (%ds) — force-cancelling pipeline "
+        "(timeout, NOT a normal participant-left end) — session=%s",
+        SESSION_MAX_DURATION_SECONDS,
+        session_id,
+    )
+    await task.cancel()
+
 
 async def run_agent(
     session_id: str,
@@ -153,6 +174,13 @@ async def run_agent(
         ),
     )
 
+    # Hard session-duration cap — see _enforce_session_timeout above. Cancelled
+    # as soon as the session ends any other way so it can't fire post-shutdown.
+    timeout_task = asyncio.create_task(
+        _enforce_session_timeout(session_id, task),
+        name=f"session-timeout-{session_id}",
+    )
+
     @transport.event_handler("on_first_participant_joined")
     async def on_first_participant_joined(transport, participant):
         logger.info(
@@ -164,7 +192,11 @@ async def run_agent(
 
     @transport.event_handler("on_participant_left")
     async def on_participant_left(transport, participant, reason):
-        logger.info("User left room — session=%s reason=%s", session_id, reason)
+        logger.info(
+            "User left room — session=%s reason=%s (normal end, before the %ds duration cap).",
+            session_id, reason, SESSION_MAX_DURATION_SECONDS,
+        )
+        timeout_task.cancel()
         await task.cancel()
 
     runner = PipelineRunner()
@@ -173,4 +205,5 @@ async def run_agent(
     except asyncio.CancelledError:
         pass
     finally:
+        timeout_task.cancel()
         logger.info("Agent finished — session=%s", session_id)

@@ -280,9 +280,11 @@ async def session_evaluate(
     try:
         result = parse_evaluation(raw)
     except ValueError as e:
+        # Raw excerpt kept short — it's raw LLM output and may quote the
+        # user's own speech, so only log enough to debug the parse failure.
         logger.error(
             "Evaluation parse failed — session=%s: %s\nRaw output: %s",
-            req.sessionId, e, raw[:500],
+            req.sessionId, e, raw[:100],
         )
         raise HTTPException(
             status_code=500, detail=f"Evaluation parsing failed: {e}"

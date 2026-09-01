@@ -150,8 +150,7 @@ class _ContestPageState extends State<ContestPage>
                   onSeeAll: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          LeaderboardPage(userRank: _state.rank),
+                      builder: (_) => const LeaderboardPage(),
                     ),
                   ),
                 ),
@@ -431,7 +430,7 @@ class _MiniPodiumItem extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: rank == 1 
-                      ? const Color(0xFFFFD700) 
+                      ? AppColors.gold 
                       : rank == 2 
                           ? const Color(0xFFC0C0C0) 
                           : const Color(0xFFCD7F32),
@@ -439,7 +438,7 @@ class _MiniPodiumItem extends StatelessWidget {
                 ),
                 boxShadow: isCenter ? [
                   BoxShadow(
-                    color: const Color(0xFFFFD700).withValues(alpha: 0.25),
+                    color: AppColors.gold.withValues(alpha: 0.25),
                     blurRadius: 15,
                     spreadRadius: 2,
                   )
@@ -578,10 +577,10 @@ class _ContestHistorySection extends StatelessWidget {
 
   Widget _scoreChip(int score) {
     final color = score >= 80
-        ? const Color(0xFF22C55E)
+        ? AppColors.scoreExcellent
         : score >= 65
             ? AppColors.primaryLight
-            : const Color(0xFFFBBF24);
+            : AppColors.scoreNeedsWork;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(

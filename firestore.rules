@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// CommuniQ — Firestore Security Rules
+// ─────────────────────────────────────────────────────────────────────────────
+// Context: almost all reads/writes in this app go through the Node backend
+// (server/), which uses the firebase-admin SDK. The admin SDK bypasses these
+// rules entirely, so this file only governs *direct* client-SDK access (e.g.
+// from the Flutter app talking to Firestore without going through the Node
+// API). The app is not currently designed to do that, so the default posture
+// below is deny-everything, with narrow, explicit self-service exceptions for
+// the collections whose ownership model is unambiguous from the backend code
+// (server/src/models/*.js — see the comments below for the exact source).
+//
+// Deploy with: firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny — nothing is readable or writable unless explicitly
+    // allowed by a more specific match block below.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // users/{uid} — server/src/models/userModel.js
+    // Document ID is the Firebase Auth uid itself. A signed-in user may only
+    // read/write their own profile document.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // sessions/{sessionId} — server/src/models/sessionModel.js
+    // Ownership is tracked via the `userId` field (session IDs are
+    // server-generated UUIDs, not the uid). A user may only access sessions
+    // that belong to them.
+    match /sessions/{sessionId} {
+      allow read, update, delete: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.userId;
+    }
+
+    // evaluationReports/{sessionId} — server/src/models/evaluationModel.js
+    // Ownership is tracked via the `userId` field. Reports are generated
+    // exclusively by the Node backend after session evaluation, so only
+    // reads are allowed here; writes stay denied for direct client access.
+    match /evaluationReports/{sessionId} {
+      allow read: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+      allow write: if false;
+    }
+
+    // scenarios/{scenarioId} — server/src/models/scenarioModel.js
+    // Shared reference/template data with no per-user ownership field.
+    // Scenario documents also carry a `systemPrompt` field that must never
+    // reach the client directly (the Node API strips it before responding).
+    // The ownership model here is "no ownership" — only the backend (via
+    // firebase-admin) should ever read or write this collection, so direct
+    // client SDK access is fully denied rather than guessed at.
+    match /scenarios/{scenarioId} {
+      allow read, write: if false;
+    }
+  }
+}

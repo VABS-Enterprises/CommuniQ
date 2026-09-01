@@ -22,7 +22,7 @@ CommuniQ is built as a monorepo with three independent sub-projects that work to
                ▼                      ▼
 ┌──────────────────────┐   ┌─────────────────────────┐
 │      AI Server       │   │    General Server        │
-│   (Python FastAPI)   │   │    (Planned)             │
+│   (Python FastAPI)   │   │    (Node.js / Express)   │
 │                      │   │                          │
 │  - STT (Whisper)     │   │  - User accounts         │
 │  - LLM roleplay      │   │  - Session history       │
@@ -98,9 +98,9 @@ ai-server/
 
 ### General Server (`server/`)
 
-Planned backend for non-AI concerns: user authentication, session persistence, scenario template storage, and progress tracking.
+Backend for non-AI concerns: user authentication, session persistence, scenario template storage, and progress tracking. Implemented as a Node.js / Express REST API, authenticated via Bearer tokens (Firebase ID tokens), backed by Firestore through the firebase-admin SDK.
 
-**Current status:** Folder placeholder only. No code yet.
+**Current status:** Implemented and deployed. Exposes session, user, and scenario endpoints and proxies conversation turns to the AI server.
 
 ---
 
@@ -288,4 +288,4 @@ User speaks
 | Flutter features | Not started |
 | AI server — Groq connectivity | Done (test_groq.py working) |
 | AI server — full implementation | In progress (AI-server branch) |
-| General server | Not started |
+| General server | Implemented and deployed (Bearer-auth REST API over Firestore) |

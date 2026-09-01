@@ -23,8 +23,14 @@ rtc:
 # API keys — the Node backend uses these to mint access tokens.
 # LiveKit 1.10+ requires the secret to be at least 32 characters.
 # Must match server/.env LIVEKIT_API_KEY and LIVEKIT_API_SECRET.
+#
+# SECURITY: the placeholder below is for LOCAL DEV ONLY. This file (and any
+# secret value committed in it) must NEVER be deployed to production.
+# Production LiveKit credentials must be generated fresh (e.g. a long random
+# string, not this repo's dev value) and injected via the hosting platform's
+# secret store (e.g. Render dashboard env vars) — never committed to git.
 keys:
-  devkey: communiq-local-dev-livekit-secret-min-32ch
+  devkey: REPLACE_WITH_STRONG_RANDOM_SECRET_MIN_32_CHARS
 
 # Built-in TURN relay (UDP only for local dev).
 # Do not set tls_port here unless you provide TLS cert paths — LiveKit 1.10+

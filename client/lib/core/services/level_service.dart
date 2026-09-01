@@ -27,12 +27,20 @@ class LevelService {
   }
 
   /// Clears all learning progress from SharedPreferences.
+  ///
+  /// Must cover every cache key learning_view.dart writes, or a stale value
+  /// survives sign-out and can flash on the next account signed into this
+  /// device (e.g. a previous user's coin total) until the first server
+  /// refresh completes. `total_coins_cache` doesn't match 'level_*' or
+  /// 'completed_level_ids' so it needs its own explicit check.
   Future<void> clearProgress() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final keys = prefs.getKeys();
       for (final key in keys) {
-        if (key == 'completed_level_ids' || key.startsWith('level_')) {
+        if (key == 'completed_level_ids' ||
+            key == 'total_coins_cache' ||
+            key.startsWith('level_')) {
           await prefs.remove(key);
         }
       }

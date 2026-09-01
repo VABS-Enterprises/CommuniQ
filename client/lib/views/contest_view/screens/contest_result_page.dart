@@ -77,9 +77,9 @@ class _ContestResultPageState extends State<ContestResultPage>
   }
 
   Color get _scoreColor {
-    if (widget.score >= 80) return const Color(0xFF22C55E);
+    if (widget.score >= 80) return AppColors.scoreExcellent;
     if (widget.score >= 65) return AppColors.primaryLight;
-    return const Color(0xFFFBBF24);
+    return AppColors.scoreNeedsWork;
   }
 
   @override
@@ -192,16 +192,16 @@ class _ContestResultPageState extends State<ContestResultPage>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 10, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF22C55E)
+                                  color: AppColors.scoreExcellent
                                       .withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                      color: const Color(0xFF22C55E)
+                                      color: AppColors.scoreExcellent
                                           .withValues(alpha: 0.35)),
                                 ),
                                 child: const Text('🏆 New Best!',
                                     style: TextStyle(
-                                        color: Color(0xFF22C55E),
+                                        color: AppColors.scoreExcellent,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 11)),
                               ),
@@ -232,7 +232,7 @@ class _ContestResultPageState extends State<ContestResultPage>
                               icon: Icons.star_rounded,
                               label: 'XP Earned',
                               value: '+$_xp XP',
-                              color: const Color(0xFFFBBF24))),
+                              color: AppColors.scoreNeedsWork)),
                     ],
                   ),
                 ),
@@ -318,17 +318,17 @@ class _ContestResultPageState extends State<ContestResultPage>
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF22C55E)
+                            color: AppColors.scoreExcellent
                                 .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                                color: const Color(0xFF22C55E)
+                                color: AppColors.scoreExcellent
                                     .withValues(alpha: 0.3)),
                           ),
                           child: const Center(
                             child: Text('✅ XP Claimed!',
                                 style: TextStyle(
-                                    color: Color(0xFF22C55E),
+                                    color: AppColors.scoreExcellent,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15)),
                           ),

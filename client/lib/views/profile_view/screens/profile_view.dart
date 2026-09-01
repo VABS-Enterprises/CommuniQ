@@ -12,6 +12,7 @@ import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/models/user_profile.dart';
 import 'package:communiq/views/premium_view/screens/premium_screen.dart';
 import 'package:communiq/common_widgets/sky_campus_background.dart';
+import 'package:communiq/common_widgets/icon_badge.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -25,6 +26,8 @@ class _ProfileViewState extends State<ProfileView> {
   OnboardingData? _onboarding;
   bool _loading = true;
   bool _error = false;
+  bool _trainingOptedIn = true;
+  bool _trainingConsentUpdating = false;
 
   StreamSubscription<UserProfile>? _profileSub;
 
@@ -66,10 +69,23 @@ class _ProfileViewState extends State<ProfileView> {
       } catch (e) {
         debugPrint('[ProfileView] Onboarding fetch skipped: $e');
       }
+      bool trainingOptedIn = _trainingOptedIn;
+      try {
+        final res =
+            await ApiService.instance.dio.get(ApiConstants.userEvaluationProfile);
+        final consent =
+            (res.data as Map<String, dynamic>?)?['trainingConsent'] as Map<String, dynamic>?;
+        if (consent != null && consent['optedIn'] is bool) {
+          trainingOptedIn = consent['optedIn'] as bool;
+        }
+      } catch (e) {
+        debugPrint('[ProfileView] Training consent fetch skipped: $e');
+      }
       if (mounted) {
         setState(() {
           _profile = profile;
           _onboarding = onboarding;
+          _trainingOptedIn = trainingOptedIn;
           _loading = false;
         });
       }
@@ -113,6 +129,30 @@ class _ProfileViewState extends State<ProfileView> {
     );
     if (confirm == true && mounted) {
       await AuthService.signOut();
+    }
+  }
+
+  Future<void> _updateTrainingConsent(bool optedIn) async {
+    final previous = _trainingOptedIn;
+    setState(() {
+      _trainingOptedIn = optedIn;
+      _trainingConsentUpdating = true;
+    });
+    try {
+      await ApiService.instance.dio.patch(
+        ApiConstants.userTrainingConsent,
+        data: {'optedIn': optedIn},
+      );
+    } catch (e) {
+      debugPrint('[ProfileView] Training consent update failed: $e');
+      if (mounted) {
+        setState(() => _trainingOptedIn = previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update your preference. Try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _trainingConsentUpdating = false);
     }
   }
 
@@ -212,7 +252,7 @@ class _ProfileViewState extends State<ProfileView> {
                                   ? 'Premium'
                                   : 'Free (Tap to upgrade)',
                               trailingColor: _profile?.isPremium == true
-                                  ? const Color(0xFFFFD700)
+                                  ? AppColors.gold
                                   : AppColors.primary,
                               onTap: _profile?.isPremium == true
                                   ? null
@@ -223,6 +263,21 @@ class _ProfileViewState extends State<ProfileView> {
                                               builder: (_) =>
                                                   const PremiumScreen()));
                                     },
+                            ),
+                          ])),
+
+                          // ── Privacy ──────────────────────────────────────
+                          SliverToBoxAdapter(
+                              child: _buildSection('Privacy', [
+                            _buildSwitchTile(
+                              Icons.model_training_rounded,
+                              'Improve CommuniQ with my sessions',
+                              subtitle: 'Lets your anonymised session data help train '
+                                  'future models. You can turn this off anytime without '
+                                  'losing access to any feature.',
+                              value: _trainingOptedIn,
+                              updating: _trainingConsentUpdating,
+                              onChanged: _updateTrainingConsent,
                             ),
                           ])),
 
@@ -263,15 +318,9 @@ class _ProfileViewState extends State<ProfileView> {
                                           .withValues(alpha: 0.4)),
                                 ),
                                 child: ListTile(
-                                  leading: Container(
-                                    width: 34,
-                                    height: 34,
-                                    decoration: BoxDecoration(
-                                      color: Colors.redAccent,
-                                      borderRadius: BorderRadius.circular(9),
-                                    ),
-                                    child: const Icon(Icons.logout_rounded,
-                                        color: Colors.white, size: 17),
+                                  leading: const IconBadge(
+                                    icon: Icons.logout_rounded,
+                                    color: AppColors.error,
                                   ),
                                   title: const Text('Log Out',
                                       style: TextStyle(
@@ -309,7 +358,7 @@ class _ProfileViewState extends State<ProfileView> {
               color: AppColors.surface,
               shape: BoxShape.circle,
               border: Border.all(
-                  color: AppColors.glassBorder.withValues(alpha: 0.5)),
+                  color: AppColors.glassBorder.withValues(alpha: 0.4)),
             ),
             child: const Icon(Icons.cloud_off_rounded,
                 color: AppColors.textMuted, size: 32),
@@ -416,15 +465,7 @@ class _ProfileViewState extends State<ProfileView> {
     Color? trailingColor,
   }) {
     return ListTile(
-      leading: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: Icon(icon, color: Colors.white, size: 17),
-      ),
+      leading: IconBadge(icon: icon),
       title: Text(title,
           style:
               const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
@@ -441,6 +482,38 @@ class _ProfileViewState extends State<ProfileView> {
       dense: true,
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+    );
+  }
+
+  Widget _buildSwitchTile(
+    IconData icon,
+    String title, {
+    required String subtitle,
+    required bool value,
+    required bool updating,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return ListTile(
+      leading: IconBadge(icon: icon),
+      title: Text(title,
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+      subtitle: Text(subtitle,
+          style: const TextStyle(
+              color: AppColors.textSecondary, fontSize: 12, height: 1.4)),
+      isThreeLine: true,
+      trailing: updating
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: AppColors.primary),
+            )
+          : Switch(
+              value: value,
+              activeColor: AppColors.primary,
+              onChanged: onChanged,
+            ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
     );
   }
 }
@@ -484,7 +557,7 @@ class _ProfileHeroHeader extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: isPremium
-                          ? const Color(0xFFFFD700)
+                          ? AppColors.gold
                           : AppColors.primary,
                     ),
                     child: CircleAvatar(
@@ -562,7 +635,7 @@ class _ProfileHeroHeader extends StatelessWidget {
                         if (isPremium)
                           _Chip(
                             label: 'Premium',
-                            color: const Color(0xFFFFD700),
+                            color: AppColors.gold,
                             icon: Icons.workspace_premium_rounded,
                             textColor: Colors.black,
                           )
@@ -758,15 +831,7 @@ class _OnboardingSection extends StatelessWidget {
   }
 
   Widget _infoTile(IconData icon, String title, String value) => ListTile(
-        leading: Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(9),
-          ),
-          child: Icon(icon, color: Colors.white, size: 17),
-        ),
+        leading: IconBadge(icon: icon),
         title: Text(title,
             style: const TextStyle(
                 color: AppColors.textPrimary, fontSize: 13)),
@@ -785,15 +850,7 @@ class _OnboardingSection extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Icon(icon, color: Colors.white, size: 17),
-            ),
+            IconBadge(icon: icon),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

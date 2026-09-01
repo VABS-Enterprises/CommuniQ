@@ -1698,10 +1698,10 @@ class _RoleplayConversationScreenState
       builder: (_, __) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: const Color(0xFF22C55E).withValues(alpha: 0.10),
+          color: AppColors.scoreExcellent.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: const Color(0xFF22C55E).withValues(
+              color: AppColors.scoreExcellent.withValues(
                   alpha: 0.3 + 0.2 * _pulseController.value)),
         ),
         child: Row(
@@ -1712,7 +1712,7 @@ class _RoleplayConversationScreenState
               height: 5,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF22C55E).withValues(
+                color: AppColors.scoreExcellent.withValues(
                     alpha: 0.6 + 0.4 * _pulseController.value),
               ),
             ),
@@ -1720,7 +1720,7 @@ class _RoleplayConversationScreenState
             const Text(
               'LIVE',
               style: TextStyle(
-                color: Color(0xFF22C55E),
+                color: AppColors.scoreExcellent,
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.8,

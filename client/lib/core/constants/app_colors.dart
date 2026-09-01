@@ -42,6 +42,22 @@ class AppColors {
   static const Color warning = Color(0xFFF59E0B);       // Amber
   static const Color amber = Color(0xFFF59E0B);         // Alias
 
+  // ── Score coloring (3-tier: excellent / needs-work) ─────────────────────
+  // A distinct, brighter green/amber pair from success/warning above —
+  // already used identically (as raw hex) across every score/rank display
+  // in the app (contest results, leaderboards, attempts, roleplay feedback).
+  // Centralised here as the single source of truth for that existing look,
+  // not introduced as a new color.
+  static const Color scoreExcellent = Color(0xFF22C55E);
+  static const Color scoreNeedsWork = Color(0xFFFBBF24);
+
+  // ── Gold / premium accent ────────────────────────────────────────────────
+  // Single source of truth for the "1st place / premium" gold accent — was
+  // previously hand-typed as Color(0xFFFFD700) in 6+ files.
+  static const Color gold = Color(0xFFFFD700);
+  static const Color goldLight = Color(0xFFFFE066);
+  static const Color goldDark = Color(0xFFD4AF00);
+
   // ── Gradients ────────────────────────────────────────────────────────────
   static const List<Color> primaryGradient = [Color(0xFF6366F1), Color(0xFF7C3AED)];
   static const List<Color> goldGradient = [Color(0xFFF59E0B), Color(0xFFD97706)];

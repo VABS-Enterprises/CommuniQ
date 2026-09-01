@@ -13,8 +13,10 @@ class PremiumScreen extends StatefulWidget {
 class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateMixin {
   bool _isAnnual = true;
 
-  // Custom premium colors
-  static const Color _kPremiumGold = Color(0xFFFFD700);
+  // Custom premium colors — gold aliases the shared AppColors.gold token so
+  // there's one source of truth for the "gold" hex even though this screen's
+  // orange/pink/purple accents are a deliberately distinct premium sub-brand.
+  static const Color _kPremiumGold = AppColors.gold;
   static const Color _kPremiumOrange = Color(0xFFFF8C00);
   static const Color _kPremiumPink = Color(0xFFFF2A5F);
   static const Color _kPremiumPurple = Color(0xFF9D00FF);

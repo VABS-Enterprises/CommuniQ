@@ -14,13 +14,14 @@ Start:
 """
 
 import asyncio
+import hmac
 import logging
 import os
 import subprocess
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
 from bot import run_bot
@@ -36,6 +37,30 @@ logger = logging.getLogger("pipecat.communiq.server")
 
 NODE_BACKEND_URL     = os.getenv("NODE_BACKEND_URL", "http://localhost:3000").rstrip("/")
 PIPECAT_WEBHOOK_SECRET = os.getenv("PIPECAT_WEBHOOK_SECRET", "")
+_WORKER_SECRET_HEADER = "X-Communiq-Worker-Secret"
+
+
+async def verify_webhook_secret(request: Request) -> None:
+    """
+    Guards /start-agent and /stop-agent with the same shared secret this
+    worker sends as X-Communiq-Worker-Secret on its outbound calls to Node
+    (see bot.py). Fails closed (401) if PIPECAT_WEBHOOK_SECRET is unset.
+    """
+    if not PIPECAT_WEBHOOK_SECRET:
+        logger.error(
+            "PIPECAT_WEBHOOK_SECRET is not set — rejecting request (fail closed)."
+        )
+        raise HTTPException(status_code=401, detail="Worker auth is not configured")
+
+    supplied = request.headers.get(_WORKER_SECRET_HEADER, "")
+    if not supplied or not hmac.compare_digest(supplied, PIPECAT_WEBHOOK_SECRET):
+        logger.warning(
+            "Rejected request to %s — missing/invalid %s header (client=%s)",
+            request.url.path,
+            _WORKER_SECRET_HEADER,
+            request.client.host if request.client else "unknown",
+        )
+        raise HTTPException(status_code=401, detail="Missing or invalid webhook secret")
 
 app = FastAPI(
     title="CommuniQ Pipecat Worker",
@@ -133,7 +158,7 @@ class StopAgentRequest(BaseModel):
     session_id: str
 
 
-@app.post("/start-agent")
+@app.post("/start-agent", dependencies=[Depends(verify_webhook_secret)])
 async def start_agent(body: StartAgentRequest):
     """
     Spawn a Pipecat agent for the given session.
@@ -167,7 +192,7 @@ async def start_agent(body: StartAgentRequest):
     return {"status": "started", "session_id": body.session_id}
 
 
-@app.post("/stop-agent")
+@app.post("/stop-agent", dependencies=[Depends(verify_webhook_secret)])
 async def stop_agent(body: StopAgentRequest):
     """
     Cancel the Pipecat agent for the given session.
@@ -209,22 +234,34 @@ def _nvidia_gpu_line() -> str | None:
 
 @app.get("/health")
 async def health():
-    """Returns worker status, active agents, optional GPU VRAM, and CP3 stack versions."""
+    """
+    Returns worker status, active agents, optional GPU VRAM, and CP3 stack versions.
+
+    This endpoint only ever runs bot.py's pipeline (Groq STT/LLM + Edge-TTS) —
+    agent.py's local-model pipeline (faster-whisper/Ollama/Kokoro) is not wired
+    to any entry point (see requirements.txt's CP3/CP4 section), so its config
+    is reported separately and clearly marked inactive rather than mixed in
+    with real, live pipeline state.
+    """
     active = [sid for sid, t in _active_agents.items() if not t.done()]
     return {
         "status": "ok",
+        "active_pipeline": "bot.py (Groq STT + Groq LLM + Edge-TTS)",
         "active_sessions": len(active),
         "session_ids": active,
-        "whisper_device": os.getenv("WHISPER_DEVICE", "cuda"),
-        "whisper_model": os.getenv("WHISPER_MODEL", "small"),
-        "whisper_compute_type": os.getenv("WHISPER_COMPUTE_TYPE", "int8"),
-        "llm_base_url": os.getenv("LLM_BASE_URL", "http://localhost:11434/v1"),
-        "llm_model": os.getenv("LLM_MODEL", ""),
-        "kokoro_voice": os.getenv("KOKORO_VOICE", "af_heart"),
         "nvidia_smi_memory_mib": _nvidia_gpu_line(),
         "cp3_stack": get_cp3_stack_info(),
         "firestore_sync_enabled": bool(
             (os.getenv("NODE_INTERNAL_URL") or "").strip()
             and len((os.getenv("PIPECAT_WEBHOOK_SECRET") or "").strip()) >= 16
         ),
+        "local_model_config_inactive": {
+            "note": "agent.py is not wired to any entry point — these values are not in effect.",
+            "whisper_device": os.getenv("WHISPER_DEVICE", "cuda"),
+            "whisper_model": os.getenv("WHISPER_MODEL", "small"),
+            "whisper_compute_type": os.getenv("WHISPER_COMPUTE_TYPE", "int8"),
+            "llm_base_url": os.getenv("LLM_BASE_URL", "http://localhost:11434/v1"),
+            "llm_model": os.getenv("LLM_MODEL", ""),
+            "kokoro_voice": os.getenv("KOKORO_VOICE", "af_heart"),
+        },
     }

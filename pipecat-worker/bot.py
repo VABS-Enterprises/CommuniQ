@@ -82,6 +82,15 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 NODE_BACKEND_URL = os.getenv("NODE_BACKEND_URL", "http://localhost:3000").rstrip("/")
 PIPECAT_WEBHOOK_SECRET = os.getenv("PIPECAT_WEBHOOK_SECRET", "")
 
+# Hard wall-clock cap on a single live-voice session. Without this, a client
+# that never triggers on_participant_left (e.g. it stalls without cleanly
+# leaving the LiveKit room) would keep the pipeline — and Groq STT+LLM
+# billing — running indefinitely. There is no existing time-based session
+# limit elsewhere in the codebase (server/ only caps turn COUNT via
+# MAX_TURNS_PER_SESSION=50, not wall-clock duration), so this introduces one.
+# 30 minutes is a generous default for a practice roleplay session.
+SESSION_MAX_DURATION_SECONDS = int(os.getenv("PIPECAT_MAX_SESSION_SECONDS", str(30 * 60)))
+
 # ─── TTS text normaliser ──────────────────────────────────────────────────────
 #
 # Edge TTS reads raw text, so numbers/units/abbreviations that look obvious to
@@ -615,6 +624,30 @@ class AiTranscriptPoster(FrameProcessor):
         )
 
 
+# ─── Session duration cap ─────────────────────────────────────────────────────
+
+
+async def _enforce_session_timeout(session_id: str, task: PipelineTask) -> None:
+    """
+    Runs alongside the pipeline task for the lifetime of the session. If the
+    session is still active after SESSION_MAX_DURATION_SECONDS, force-ends the
+    pipeline (via EndFrame, same mechanism as on_participant_left) regardless
+    of participant activity. Cancelled by the caller as soon as the session
+    ends normally so it never fires after a clean shutdown.
+    """
+    try:
+        await asyncio.sleep(SESSION_MAX_DURATION_SECONDS)
+    except asyncio.CancelledError:
+        return
+    logger.warning(
+        "[%s] Session hit hard duration cap (%ds) — force-ending pipeline "
+        "(timeout, NOT a normal participant-left end).",
+        session_id,
+        SESSION_MAX_DURATION_SECONDS,
+    )
+    await task.queue_frame(EndFrame())
+
+
 # ─── Bot entrypoint ───────────────────────────────────────────────────────────
 
 
@@ -788,6 +821,14 @@ async def run_bot(
         params=PipelineParams(allow_interruptions=True),
     )
 
+    # Hard session-duration cap — see _enforce_session_timeout. Runs for the
+    # whole pipeline lifetime; cancelled below once the session ends any other
+    # way so it can never fire after a clean shutdown.
+    timeout_task = asyncio.create_task(
+        _enforce_session_timeout(session_id, task),
+        name=f"session-timeout-{session_id}",
+    )
+
     # ── Event handlers ────────────────────────────────────────────────────────
 
     @transport.event_handler("on_first_participant_joined")
@@ -799,10 +840,13 @@ async def run_bot(
     @transport.event_handler("on_participant_left")
     async def on_participant_left(transport, participant_id, reason):
         logger.info(
-            "[%s] Participant left (%s) — sending EndFrame to pipeline.",
+            "[%s] Participant left (%s) — sending EndFrame to pipeline "
+            "(normal end, before the %ds duration cap).",
             session_id,
             reason,
+            SESSION_MAX_DURATION_SECONDS,
         )
+        timeout_task.cancel()
         await task.queue_frame(EndFrame())
 
     # ── Run ───────────────────────────────────────────────────────────────────
@@ -810,4 +854,5 @@ async def run_bot(
     try:
         await runner.run(task)
     finally:
+        timeout_task.cancel()
         logger.info("[%s] Bot pipeline finished.", session_id)

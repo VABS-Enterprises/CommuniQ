@@ -5,15 +5,17 @@ import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
 
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/common_widgets/sky_campus_background.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/user_profile.dart';
-import 'package:communiq/views/contest_view/screens/leaderboard_page.dart';
 import 'package:communiq/views/home_view/widgets/ai_insight_card.dart';
 import 'package:communiq/views/home_view/widgets/contest_card.dart';
 import 'package:communiq/views/home_view/widgets/continue_card.dart';
 import 'package:communiq/views/home_view/widgets/quick_actions_row.dart';
+import 'package:communiq/views/contest_view/screens/leaderboard_page.dart';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // HOME VIEW
 // ─────────────────────────────────────────────────────────────────────────────
@@ -591,7 +593,7 @@ class _LevelXpBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder.withValues(alpha: 0.5)),
+        border: Border.all(color: AppColors.glassBorder.withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
@@ -907,7 +909,7 @@ class _JourneyCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         border:
-            Border.all(color: AppColors.glassBorder.withValues(alpha: 0.5)),
+            Border.all(color: AppColors.glassBorder.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1080,7 +1082,7 @@ class _SkillGrid extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         border:
-            Border.all(color: AppColors.glassBorder.withValues(alpha: 0.5)),
+            Border.all(color: AppColors.glassBorder.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1297,11 +1299,11 @@ class _LeaderboardCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
+        // Real, server-authoritative XP leaderboard (GET /leaderboard) —
+        // no longer gated behind "Coming Soon" now that it's wired up.
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => const LeaderboardPage(userRank: 24),
-          ),
+          MaterialPageRoute(builder: (_) => const LeaderboardPage()),
         );
       },
       child: Container(
@@ -1310,7 +1312,7 @@ class _LeaderboardCard extends StatelessWidget {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppColors.glassBorder.withValues(alpha: 0.5),
+            color: AppColors.glassBorder.withValues(alpha: 0.4),
           ),
         ),
         child: Row(
@@ -1456,7 +1458,7 @@ class _RecentActivity extends StatelessWidget {
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                  color: AppColors.glassBorder.withValues(alpha: 0.45)),
+                  color: AppColors.glassBorder.withValues(alpha: 0.4)),
             ),
             clipBehavior: Clip.hardEdge,
             child: Column(
@@ -1728,18 +1730,18 @@ class _ProfileErrorBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+        color: AppColors.warning.withValues(alpha: 0.10),
+        borderRadius: AppRadius.chipRadius,
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.wifi_off_rounded, color: Colors.orange, size: 18),
+          const Icon(Icons.wifi_off_rounded, color: AppColors.warning, size: 18),
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
               'Could not load profile. Pull down to retry.',
-              style: TextStyle(color: Colors.orange, fontSize: 13),
+              style: TextStyle(color: AppColors.warning, fontSize: 13),
             ),
           ),
           GestureDetector(
@@ -1747,7 +1749,7 @@ class _ProfileErrorBanner extends StatelessWidget {
             child: const Text(
               'Retry',
               style: TextStyle(
-                  color: Colors.orange,
+                  color: AppColors.warning,
                   fontWeight: FontWeight.bold,
                   fontSize: 13),
             ),

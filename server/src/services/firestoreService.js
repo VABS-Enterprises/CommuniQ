@@ -4,6 +4,7 @@ const { createUserDoc, createGoogleUserDoc } = require('../models/userModel');
 const { createSessionDoc } = require('../models/sessionModel');
 const { createEvaluationDoc } = require('../models/evaluationModel');
 const { stripSystemPrompt } = require('../models/scenarioModel');
+const { createContestAttemptDoc } = require('../models/contestModel');
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
@@ -228,6 +229,95 @@ async function createScenario(data) {
   return data;
 }
 
+// ─── Self-learning evaluation model (paper §3.4) ───────────────────────────────
+
+async function getEvaluationModelDoc(scenarioType) {
+  const snap = await db.collection('evaluationModel').doc(scenarioType).get();
+  if (!snap.exists) return null;
+  return snap.data();
+}
+
+async function setEvaluationModelDoc(scenarioType, data) {
+  await db.collection('evaluationModel').doc(scenarioType).set(data, { merge: true });
+}
+
+/**
+ * Fetches recent evaluationReports across ALL scenario types in one query
+ * (bounded by lookback + maxSample), rather than one query per type. The
+ * retraining job groups these in memory by scenarioType — this keeps Loop A
+ * to a single Firestore read per cycle regardless of how many scenario types
+ * exist. Only requires a single-field index on generatedAt, which Firestore
+ * provides automatically.
+ */
+async function getRecentEvaluationReportsAll(lookbackMs, maxSample = 2000) {
+  const cutoff = new Date(Date.now() - lookbackMs);
+  const snap = await db
+    .collection('evaluationReports')
+    .where('generatedAt', '>=', cutoff)
+    .orderBy('generatedAt', 'desc')
+    .limit(maxSample)
+    .get();
+  return snap.docs.map((d) => d.data());
+}
+
+// ─── Contests ─────────────────────────────────────────────────────────────────
+
+async function createContestAttempt(attemptId, data) {
+  const doc = createContestAttemptDoc(attemptId, data);
+  await db.collection('contestAttempts').doc(attemptId).set(doc);
+  return doc;
+}
+
+function _serializeContestAttempt(data) {
+  const result = { ...data };
+  if (result.submittedAt?.toDate) result.submittedAt = result.submittedAt.toDate().toISOString();
+  return result;
+}
+
+/**
+ * Sorts in memory (rather than an indexed orderBy) to avoid requiring a new
+ * Firestore composite index for userId+submittedAt — matches the existing
+ * getWeeklyTopUsersByXp precedent.
+ */
+async function getUserContestAttempts(userId, limitCount = 20) {
+  const snap = await db.collection('contestAttempts').where('userId', '==', userId).get();
+  const docs = snap.docs.map((d) => d.data());
+  docs.sort((a, b) => {
+    const at = a.submittedAt?.toMillis ? a.submittedAt.toMillis() : 0;
+    const bt = b.submittedAt?.toMillis ? b.submittedAt.toMillis() : 0;
+    return bt - at;
+  });
+  return docs.slice(0, limitCount).map(_serializeContestAttempt);
+}
+
+/**
+ * Leaderboard = each user's single best attempt, optionally filtered to one
+ * contestType. Overfetches the top 500 raw attempts by score (single-field
+ * orderBy — no composite index needed) and dedupes/filters in memory, since
+ * a per-user "best score" isn't expressible as a plain Firestore query.
+ */
+async function getContestLeaderboard(contestType, limitCount = 50) {
+  const snap = await db.collection('contestAttempts').orderBy('overallScore', 'desc').limit(500).get();
+  const bestByUser = new Map();
+  for (const doc of snap.docs) {
+    const data = doc.data();
+    if (contestType && data.contestType !== contestType) continue;
+    const existing = bestByUser.get(data.userId);
+    if (!existing || existing.overallScore < data.overallScore) {
+      bestByUser.set(data.userId, {
+        userId: data.userId,
+        name: data.name,
+        overallScore: data.overallScore,
+        contestType: data.contestType,
+        motion: data.motion,
+      });
+    }
+  }
+  return Array.from(bestByUser.values())
+    .sort((a, b) => b.overallScore - a.overallScore)
+    .slice(0, limitCount);
+}
+
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
 
 async function getTopUsersByXp(limit = 50) {
@@ -238,7 +328,7 @@ async function getTopUsersByXp(limit = 50) {
     .get();
   return snap.docs.map((doc) => {
     const { name, xp, level, badges } = doc.data();
-    return { name, xp, level, badges };
+    return { uid: doc.id, name, xp, level, badges };
   });
 }
 
@@ -256,7 +346,7 @@ async function getWeeklyTopUsersByXp(limit = 50) {
   return snap.docs
     .map((doc) => {
       const { name, xp, level, badges } = doc.data();
-      return { name, xp, level, badges };
+      return { uid: doc.id, name, xp, level, badges };
     })
     .sort((a, b) => b.xp - a.xp)
     .slice(0, limit);
@@ -285,4 +375,10 @@ module.exports = {
   createScenario,
   getTopUsersByXp,
   getWeeklyTopUsersByXp,
+  getEvaluationModelDoc,
+  setEvaluationModelDoc,
+  getRecentEvaluationReportsAll,
+  createContestAttempt,
+  getUserContestAttempts,
+  getContestLeaderboard,
 };

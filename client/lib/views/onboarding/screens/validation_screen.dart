@@ -549,7 +549,7 @@ class _ReviewCard extends StatelessWidget {
                     padding: EdgeInsets.only(right: 2),
                     child: Icon(
                       Icons.star_rounded,
-                      color: Color(0xFFFBBF24),
+                      color: AppColors.scoreNeedsWork,
                       size: 14,
                     ),
                   ),

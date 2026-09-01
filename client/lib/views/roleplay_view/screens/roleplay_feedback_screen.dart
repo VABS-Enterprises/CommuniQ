@@ -337,12 +337,12 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                         _chip(
                           emoji: '🔥',
                           label: '${widget.newStreak}-day streak',
-                          color: const Color(0xFFFBBF24),
+                          color: AppColors.scoreNeedsWork,
                         ),
                       ...widget.newBadges.map((b) => _chip(
                             icon: Icons.military_tech_rounded,
                             label: b,
-                            color: const Color(0xFFFBBF24),
+                            color: AppColors.scoreNeedsWork,
                           )),
                     ],
                   ),

@@ -101,7 +101,7 @@ class _PerformanceCardState extends State<PerformanceCard>
                   icon: Icons.speed_rounded,
                   label: 'Best Score',
                   value: '${widget.bestScore}%',
-                  color: const Color(0xFF22C55E),
+                  color: AppColors.scoreExcellent,
                 ),
               ),
             ],

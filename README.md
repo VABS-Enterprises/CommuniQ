@@ -260,7 +260,7 @@ Open **4 terminals** from the repo root.
 |----------|---------|-------------|
 | **1 — Node** | `cd server && npm start` | Auth, sessions, Firestore |
 | **2 — ai-server** | `cd ai-server && venv\Scripts\activate && uvicorn app.main:app --reload --port 8000` | Opening turn + evaluation |
-| **3 — Pipecat** | `cd pipecat-worker && uvicorn worker:app --host 0.0.0.0 --port 9000` | Live voice pipeline |
+| **3 — Pipecat** | `cd pipecat-worker && uvicorn main:app --host 0.0.0.0 --port 9000` | Live voice pipeline |
 | **4 — Flutter** | `cd client && flutter run` | Mobile app |
 
 **Verify each service is up:**

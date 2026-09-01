@@ -50,12 +50,12 @@ class ContestMainCard extends StatelessWidget {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 14),
+                    Icon(Icons.star_rounded, color: AppColors.scoreNeedsWork, size: 14),
                     SizedBox(width: 4),
                     Text(
                       '+100 XP',
                       style: TextStyle(
-                        color: Color(0xFFFBBF24),
+                        color: AppColors.scoreNeedsWork,
                         fontWeight: FontWeight.bold,
                         fontSize: 11,
                       ),

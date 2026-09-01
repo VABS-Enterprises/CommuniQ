@@ -11,10 +11,16 @@ class LearningSessionScreen extends StatefulWidget {
   final CommuniqLevel level;
   final bool isAlreadyCompleted;
 
+  /// The user's current server-known coin total (learning_view's
+  /// `_totalCoins`), used to seed the header display before the first
+  /// server response arrives this session.
+  final int initialCoins;
+
   const LearningSessionScreen({
     super.key,
     required this.level,
     this.isAlreadyCompleted = false,
+    this.initialCoins = 0,
   });
 
   @override
@@ -25,7 +31,16 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
     with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPageIndex = 0;
+
+  // Header display — mirrors the server's authoritative running coin total
+  // (updated from LearningAnswerResult.totalCoins on every graded MCQ).
   int _coins = 0;
+
+  // Coins earned specifically during this level attempt (cosmetic, used only
+  // for the per-level breakdown shown on the learning map's milestone cards —
+  // NOT used to gate anything, since the real gate is the server's `coins`
+  // total reconciled in learning_view.dart).
+  int _levelCoinsEarned = 0;
 
   // State for each page (N MCQs + 1 Response)
   late List<bool> _isSubmitted;
@@ -36,6 +51,10 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
   late List<int> _correctOptionIndices;
   late List<int> _mcqAttemptsList;
   late List<bool> _isMcqWrongList;
+  // Coins awarded per MCQ step, as returned by the server (drives the "+N
+  // Coins" badge — never computed locally from attempt count).
+  late List<int> _mcqCoinsAwarded;
+  bool _isSubmittingMcq = false;
 
   final TextEditingController _textController = TextEditingController();
 
@@ -59,6 +78,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
   @override
   void initState() {
     super.initState();
+    _coins = widget.initialCoins;
     final mcqCount = widget.level.mcqs.length;
     final totalPages = mcqCount + 1;
 
@@ -66,6 +86,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
     _selectedOptionIndices = List.filled(mcqCount, null);
     _mcqAttemptsList = List.filled(mcqCount, 0);
     _isMcqWrongList = List.filled(mcqCount, false);
+    _mcqCoinsAwarded = List.filled(mcqCount, 0);
     _mcqOptionsList = [];
     _correctOptionIndices = [];
 
@@ -175,27 +196,59 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
   }
 
   // ── MCQ submission ─────────────────────────────────────────────────────────
+  //
+  // Grading is server-authoritative (POST /learning/answer): the client only
+  // sends the exact option text the user tapped and renders whatever the
+  // server decides. It must never compute correctness or coin awards itself
+  // — that closed a loophole where a decompiled client could read the
+  // answer key straight out of static_levels.dart.
 
-  void _submitMcqPage() {
-    setState(() {
-      final idx = _currentPageIndex;
-      if (_isMcqWrongList[idx]) {
+  Future<void> _submitMcqPage() async {
+    final idx = _currentPageIndex;
+    if (_isMcqWrongList[idx]) {
+      setState(() {
         _isMcqWrongList[idx] = false;
         _selectedOptionIndices[idx] = null;
-        return;
-      }
-      if (_selectedOptionIndices[idx] != _correctOptionIndices[idx]) {
-        _mcqAttemptsList[idx]++;
-        _isMcqWrongList[idx] = true;
-      } else {
-        _isSubmitted[idx] = true;
-        if (!widget.isAlreadyCompleted) {
-          int earned = 10 - (_mcqAttemptsList[idx] * 3);
-          if (earned < 1) earned = 1;
-          _coins += earned;
+      });
+      return;
+    }
+
+    final selectedIdx = _selectedOptionIndices[idx];
+    if (selectedIdx == null || _isSubmittingMcq) return;
+
+    setState(() => _isSubmittingMcq = true);
+    try {
+      final result = await LearningService.submitAnswer(
+        levelId: widget.level.id,
+        // Server's learningLevels.json steps are 1-based (step: 1..5),
+        // matching the original content data — idx is the client's 0-based
+        // page index, so it must be converted here.
+        step: idx + 1,
+        selectedOption: _mcqOptionsList[idx][selectedIdx],
+      );
+      if (!mounted) return;
+      setState(() {
+        _isSubmittingMcq = false;
+        if (result.correct) {
+          _isSubmitted[idx] = true;
+          _mcqCoinsAwarded[idx] = result.coinsAwarded;
+          if (!widget.isAlreadyCompleted) {
+            _coins = result.totalCoins;
+            _levelCoinsEarned += result.coinsAwarded;
+          }
+        } else {
+          _mcqAttemptsList[idx]++;
+          _isMcqWrongList[idx] = true;
         }
-      }
-    });
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmittingMcq = false);
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not check your answer: $msg')),
+      );
+    }
   }
 
   // ── Response submission with AI evaluation ─────────────────────────────────
@@ -226,8 +279,13 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
         _evalResult = result;
         _isEvaluating = false;
         _isSubmitted[_currentPageIndex] = true;
-        
-        // Only award coins if this is the first time completing the level
+
+        // Note: the free-text response isn't covered by the new
+        // /learning/answer contract (that endpoint only grades MCQ steps),
+        // so its coin bonus is still computed from the AI evaluation score
+        // returned by /levels/evaluate rather than a dedicated grading
+        // endpoint. Only award coins if this is the first time completing
+        // the level.
         if (!widget.isAlreadyCompleted) {
           final score = result.overallScore;
           int responseCoins = 1;
@@ -239,8 +297,22 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
             responseCoins = 4;
           }
           _coins += responseCoins;
+          _levelCoinsEarned += responseCoins;
         }
       });
+
+      // Ask the server to verify + mark the level complete. It independently
+      // checks that every MCQ step was answered correctly before allowing
+      // this to succeed, so a rejection here is expected/non-fatal if our
+      // local flow ever gets out of sync — never crash on it.
+      if (!widget.isAlreadyCompleted) {
+        try {
+          await LearningService.completeLevel(widget.level.id);
+        } catch (e) {
+          debugPrint(
+              '[LearningSessionScreen] completeLevel failed (non-fatal): $e');
+        }
+      }
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');
@@ -268,7 +340,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
       );
     } else {
       Navigator.pop(context, {
-        'coins': _coins,
+        'coins': _levelCoinsEarned,
         'score': _evalResult?.overallScore,
       });
     }
@@ -286,6 +358,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
   bool _canSubmit() {
     final mcqCount = widget.level.mcqs.length;
     if (_currentPageIndex < mcqCount) {
+      if (_isSubmittingMcq) return false;
       if (_isMcqWrongList[_currentPageIndex]) return true;
       if (_isSubmitted[_currentPageIndex]) return false;
       return _selectedOptionIndices[_currentPageIndex] != null;
@@ -326,9 +399,9 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
             margin: const EdgeInsets.only(right: 16),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFD700).withOpacity(0.14),
+              color: AppColors.gold.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.3)),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -338,7 +411,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
                 Text(
                   '$_coins',
                   style: const TextStyle(
-                    color: Color(0xFFFFD700),
+                    color: AppColors.gold,
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                   ),
@@ -434,7 +507,8 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: _isEvaluating && isResponsePage
+                          child: (_isEvaluating && isResponsePage) ||
+                                  (_isSubmittingMcq && isMcq)
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
@@ -588,8 +662,8 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
                       if (isSubmitted) ...[
                         const Spacer(),
                         Text(
-                          '+${(10 - (_mcqAttemptsList[index] * 3) < 1 ? 1 : 10 - (_mcqAttemptsList[index] * 3))} Coins',
-                          style: const TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold),
+                          '+${_mcqCoinsAwarded[index]} Coins',
+                          style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ],
@@ -857,13 +931,13 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
           const SizedBox(height: 8),
           if (isCorrect)
             Text(
-              '+${_currentPageIndex < widget.level.mcqs.length 
-                ? (10 - (_mcqAttemptsList[_currentPageIndex] * 3) < 1 ? 1 : 10 - (_mcqAttemptsList[_currentPageIndex] * 3)) 
-                : (_evalResult != null 
+              '+${_currentPageIndex < widget.level.mcqs.length
+                ? _mcqCoinsAwarded[_currentPageIndex]
+                : (_evalResult != null
                     ? (_evalResult!.overallScore > 75 ? 10 : (_evalResult!.overallScore > 50 ? 7 : (_evalResult!.overallScore > 30 ? 4 : 1)))
                     : 10)} Coins',
               style: const TextStyle(
-                color: Color(0xFFFFD700),
+                color: AppColors.gold,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -902,7 +976,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
     final scoreColor = score >= 75
         ? Colors.green
         : score >= 50
-            ? const Color(0xFFFFD700)
+            ? AppColors.gold
             : AppColors.error;
 
     return SingleChildScrollView(
@@ -942,7 +1016,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
                 Text(
                   '+${score > 75 ? 10 : (score > 50 ? 7 : (score > 30 ? 4 : 1))} Coins',
                   style: TextStyle(
-                    color: Color(0xFFFFD700),
+                    color: AppColors.gold,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -982,7 +1056,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
             _buildBulletCard(
               label: 'Areas to Improve',
               icon: Icons.trending_up_rounded,
-              color: const Color(0xFFFFD700),
+              color: AppColors.gold,
               items: result.improvements,
             ),
 
@@ -1000,7 +1074,7 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
         final color = val >= 75
             ? Colors.green
             : val >= 50
-                ? const Color(0xFFFFD700)
+                ? AppColors.gold
                 : AppColors.error;
         return Expanded(
           child: Container(

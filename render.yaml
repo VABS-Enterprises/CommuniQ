@@ -13,6 +13,15 @@
 #   2. Confirm FASTAPI_URL is set to https://communiq-ai-server.onrender.com
 #      (Render resolves the fromService reference at deploy time).
 #   3. Add every secret marked sync: false in the dashboard Environment tab.
+#
+# Required dashboard secrets (all marked sync: false below — Render will not
+# set these for you, and the services will run insecurely or fail to start
+# until they are filled in):
+#   - AI_SERVER_INTERNAL_KEY  (communiq-ai-server AND communiq-server — same
+#     value on both; this is the shared server-to-server auth secret between
+#     the Node backend and the AI server)
+#   - ALLOWED_ORIGINS         (communiq-ai-server AND communiq-server — see
+#     the per-service comments below for what each should be set to)
 
 services:
   # ── AI server (FastAPI) ───────────────────────────────────────────────────────
@@ -26,6 +35,16 @@ services:
     envVars:
       - key: GROQ_API_KEY
         sync: false   # paste your Groq API key in the Render dashboard
+      - key: AI_SERVER_INTERNAL_KEY
+        sync: false   # shared secret with communiq-server — must be the EXACT
+                       # same value as AI_SERVER_INTERNAL_KEY on communiq-server
+                       # below. Without this set on both services, the AI
+                       # server is effectively unauthenticated in production.
+      - key: ALLOWED_ORIGINS
+        sync: false   # set to the Node backend's URL only, e.g.
+                       # https://communiq-server.onrender.com — this server is
+                       # only ever called server-to-server, never from a
+                       # browser, so it should not accept arbitrary origins
 
   # ── Node.js backend ───────────────────────────────────────────────────────────
   - type: web
@@ -53,5 +72,12 @@ services:
         sync: false   # paste the full -----BEGIN PRIVATE KEY----- block
       - key: ADMIN_SECRET
         sync: false
+      - key: AI_SERVER_INTERNAL_KEY
+        sync: false   # shared secret with communiq-ai-server — must be the
+                       # EXACT same value as AI_SERVER_INTERNAL_KEY on
+                       # communiq-ai-server above.
       - key: ALLOWED_ORIGINS
-        value: '*'    # tighten this to your domain in production
+        sync: false   # MUST be set explicitly in the Render dashboard to the
+                       # actual production frontend origin(s), comma-separated
+                       # (e.g. https://app.communiq.in) — never '*' in
+                       # production, that allows any site to call this API

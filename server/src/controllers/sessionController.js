@@ -25,6 +25,8 @@ const {
   evaluateSession,
 } = require('../services/fastApiService');
 const { computeXpAward, computeLevel, computeStreak, computeNewBadges } = require('../services/xpService');
+const { personalizeEvaluation } = require('../services/evaluationModelService');
+const { triggerRetrainIfDue } = require('../services/evaluationModelJob');
 const livekit = require('../services/livekitService');
 
 /**
@@ -304,11 +306,18 @@ async function endSession(req, res) {
     // Bug3 fix: run evaluation BEFORE marking the session complete.
     const evaluation = await evaluateSession(sessionId, rawTranscript, scenarioType);
 
-    // Compute overall score from individual skill scores.
-    const scoreValues = Object.values(evaluation.scores || {});
-    const overallScore = scoreValues.length > 0
-      ? Math.round(scoreValues.reduce((sum, v) => sum + v, 0) / scoreValues.length)
-      : null;
+    // Self-learning evaluation model (paper §3.4, Loop B): compare this session's
+    // raw scores against the current adaptive thresholds/weights and the user's
+    // own rolling history. ai-server's raw scores/strengths/improvements are left
+    // untouched — this only adds a structured `adaptive` block on top of them.
+    const personalization = await personalizeEvaluation({
+      scenarioType,
+      scores: evaluation.scores,
+      strengths: evaluation.strengths,
+      improvements: evaluation.improvements,
+      user,
+    });
+    const overallScore = personalization.legacyOverallScore;
 
     // Evaluation succeeded — now safe to finalize the session
     await completeSession(sessionId, durationSeconds, overallScore);
@@ -316,13 +325,15 @@ async function endSession(req, res) {
     // Write evaluation report
     const report = await writeEvaluationReport(sessionId, {
       userId,
+      scenarioType,
       scores: evaluation.scores,
       fillerWordCount: evaluation.fillerWordCount,
       fillerWords: evaluation.fillerWords,
-      strengths: evaluation.strengths,
-      improvements: evaluation.improvements,
+      strengths: personalization.rankedStrengths,
+      improvements: personalization.rankedImprovements,
       recommendedNextType: evaluation.recommendedNextType,
       rawTranscript,
+      adaptive: personalization.adaptiveBlock,
     });
 
     // XP + gamification
@@ -360,6 +371,8 @@ async function endSession(req, res) {
       streak: newStreak,
       lastActiveDate: FieldValue.serverTimestamp(),
       skillProgress: updatedSkillProgress,
+      skillHistory: personalization.updatedSkillHistory,
+      [`scenarioCategoryCounts.${scenarioType}`]: FieldValue.increment(1),
     };
     if (newBadges.length > 0) {
       userUpdates.badges = FieldValue.arrayUnion(...newBadges);
@@ -373,15 +386,20 @@ async function endSession(req, res) {
     // No-op when LIVEKIT_ENABLED=false (classic HTTP mode).
     await livekit.deleteRoom(sessionId);
 
+    // Loop A: fire-and-forget check on whether the population model is due for
+    // retraining. Never awaited — must not add latency to this response.
+    triggerRetrainIfDue();
+
     return res.status(200).json({
       report: {
         scores: evaluation.scores,
         fillerWordCount: evaluation.fillerWordCount,
         fillerWords: evaluation.fillerWords,
-        strengths: evaluation.strengths,
-        improvements: evaluation.improvements,
+        strengths: personalization.rankedStrengths,
+        improvements: personalization.rankedImprovements,
         recommendedNextType: evaluation.recommendedNextType,
         rawTranscript,
+        adaptive: personalization.adaptiveBlock,
       },
       xpAwarded,
       newLevel,

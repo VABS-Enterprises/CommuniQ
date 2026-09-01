@@ -74,7 +74,7 @@ class ContestHistoryPage extends StatelessWidget {
                       label: 'Best Rank',
                       value: '#${history.map((h) => h.rank).reduce((a, b) => a < b ? a : b)}',
                       icon: Icons.emoji_events_rounded,
-                      color: const Color(0xFFFBBF24),
+                      color: AppColors.scoreNeedsWork,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -83,7 +83,7 @@ class ContestHistoryPage extends StatelessWidget {
                       label: 'Top Score',
                       value: '${history.map((h) => h.bestScore).reduce((a, b) => a > b ? a : b)}%',
                       icon: Icons.speed_rounded,
-                      color: const Color(0xFF22C55E),
+                      color: AppColors.scoreExcellent,
                     ),
                   ),
                 ],
@@ -157,10 +157,10 @@ class _HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scoreColor = item.bestScore >= 80
-        ? const Color(0xFF22C55E)
+        ? AppColors.scoreExcellent
         : item.bestScore >= 65
             ? AppColors.primaryLight
-            : const Color(0xFFFBBF24);
+            : AppColors.scoreNeedsWork;
 
     return Container(
       padding: const EdgeInsets.all(18),

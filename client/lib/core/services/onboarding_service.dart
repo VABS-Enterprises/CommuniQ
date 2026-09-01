@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/models/demo_evaluation_result.dart';
@@ -10,15 +10,18 @@ class OnboardingService {
   OnboardingService._();
 
   static const String _pendingKey = 'pending_onboarding';
+  static const _storage = FlutterSecureStorage();
 
   // ── Local storage ─────────────────────────────────────────────────────────
+  // Encrypted-at-rest storage (Keychain / Keystore-backed) — this holds
+  // personal challenges, goals, and speaking-style notes before they're
+  // synced to the server, so it must not sit in plaintext SharedPreferences.
 
   static Future<void> saveLocally(OnboardingData data) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_pendingKey, data.toJsonString());
+      await _storage.write(key: _pendingKey, value: data.toJsonString());
       debugPrint('');
-      debugPrint('[Onboarding] ── Saved to SharedPreferences ─────────────');
+      debugPrint('[Onboarding] ── Saved to secure storage ─────────────');
       debugPrint('[Onboarding]   contexts      : ${data.contexts}');
       debugPrint('[Onboarding]   challenges    : ${data.challenges}');
       debugPrint('[Onboarding]   speakingStyle : ${data.speakingStyle ?? "—"}');
@@ -34,8 +37,7 @@ class OnboardingService {
 
   static Future<OnboardingData?> loadLocal() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_pendingKey);
+      final raw = await _storage.read(key: _pendingKey);
       if (raw == null) {
         debugPrint('[Onboarding] loadLocal → no pending data');
         return null;
@@ -54,8 +56,7 @@ class OnboardingService {
 
   static Future<bool> hasPendingData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.containsKey(_pendingKey);
+      return await _storage.containsKey(key: _pendingKey);
     } catch (_) {
       return false;
     }
@@ -63,8 +64,7 @@ class OnboardingService {
 
   static Future<void> clearLocal() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_pendingKey);
+      await _storage.delete(key: _pendingKey);
       debugPrint('[Onboarding] 🗑  Local pending data cleared');
     } catch (e) {
       debugPrint('[Onboarding] ❌ clearLocal failed: $e');

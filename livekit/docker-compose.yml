@@ -1,6 +1,10 @@
 version: "3.8"
 
-# CommuniQ — LiveKit server (local dev)
+# CommuniQ — LiveKit server (LOCAL DEV — this is the dev compose file)
+#
+# See docker-compose.prod.yml alongside this file for the production
+# variant (TLS enabled, cert paths supplied via env/volume mount). Do not
+# deploy this file as-is — it disables TLS and uses dev-only credentials.
 #
 # Usage:
 #   docker compose up -d
@@ -10,7 +14,8 @@ version: "3.8"
 # Verify running: curl http://localhost:7880
 #
 # On a laptop (dev): livekit.yaml has use_external_ip: false
-# On a VPS (prod):   set use_external_ip: true + update turn.domain
+# On a VPS (prod):   use docker-compose.prod.yml + set use_external_ip: true
+#                     in livekit.yaml + update turn.domain
 
 services:
   livekit:

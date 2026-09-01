@@ -1,6 +1,6 @@
 # Pipecat worker — real-time LiveKit voice agent for CommuniQ
 # Run:  pip install -r requirements.txt
-# Start: uvicorn worker:app --port 9000
+# Start: uvicorn main:app --port 9000
 
 # Pipecat core + service extras
 #   groq    — GroqSTTService, GroqLLMService, GroqTTSService
@@ -22,3 +22,16 @@ python-dotenv>=1.0.0
 # Microsoft periodically rotates their anti-abuse tokens; upgrade this when
 # a 403 WSServerHandshakeError reappears (pip install --upgrade edge-tts).
 edge-tts>=7.2.8
+
+# ── CP3/CP4 local-model path (agent.py) — commented out by default ─────────
+# The live pipeline (bot.py, run by main.py) is Groq-cloud-only and does not
+# need any of these. agent.py implements an alternative local-model pipeline
+# (faster-whisper STT + Ollama/vLLM LLM + Kokoro TTS) intended for once a
+# fine-tuned model (see training/, "communiq:8b") is trained and needs local
+# GPU hosting. Uncomment this block — and build from a CUDA base image, per
+# the Dockerfile's CP3 comment — before running agent.py instead of bot.py.
+# numpy>=2.1.0,<3
+# faster-whisper
+# kokoro>=0.9.0; python_version < "3.13"
+# soundfile
+# torch

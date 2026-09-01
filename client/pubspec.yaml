@@ -33,6 +33,10 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.2.3
+
+  # Encrypted-at-rest local storage (Keychain / Keystore-backed) for
+  # sensitive cached data (profile PII, pending onboarding answers).
+  flutter_secure_storage: ^9.2.2
   firebase_core: ^4.5.0
   firebase_auth: ^6.2.0
   google_sign_in: ^6.2.1

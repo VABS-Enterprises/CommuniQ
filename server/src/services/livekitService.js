@@ -122,7 +122,13 @@ async function dispatchAgent(sessionId, systemPrompt, openingText = '') {
   try {
     const res = await fetch(`${PIPECAT_WORKER_URL}/start-agent`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Required since the worker now authenticates inbound /start-agent
+        // calls with the same shared secret it uses for its own outbound
+        // webhook calls back to this server.
+        'X-Communiq-Worker-Secret': process.env.PIPECAT_WEBHOOK_SECRET || '',
+      },
       body: JSON.stringify({
         session_id: sessionId,
         livekit_url: LIVEKIT_URL,

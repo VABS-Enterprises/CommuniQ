@@ -25,6 +25,27 @@ const { FieldValue } = require('firebase-admin/firestore');
  *   grammar        { avg: number, sessions: number }
  *   pronunciation  { avg: number, sessions: number }
  *
+ * skillHistory     object      bounded rolling window (last 5 sessions) per dimension,
+ *                              used by the self-learning evaluation model (paper §3.4)
+ *                              to compute each user's rolling mean μ_{i,d}. Separate from
+ *                              skillProgress (an unbounded running mean, used by the UI) —
+ *                              this field only feeds evaluationModelService.js.
+ *   {dimension}    { window: number[], updatedAt: number }
+ *
+ * scenarioCategoryCounts  object   { [scenarioType]: number } — incremented on every
+ *                                  session end. Descriptive-only in v1 (not yet fed
+ *                                  back into scoring) — the paper's "preferred
+ *                                  scenario categories" part of the longitudinal user model U_i.
+ *
+ * sessionIntervals  number[]  capped at last 10 — hours between consecutive session
+ *                              starts. Descriptive-only in v1 — the paper's "session
+ *                              frequency" part of U_i.
+ *
+ * trainingConsent  object      { optedIn: boolean, updatedAt: timestamp } — whether the
+ *                              user allows their session data to be used for future
+ *                              model training. Defaults to opted-in with an easy opt-out,
+ *                              per the paper's data-governance section (§3.6).
+ *
  * onboarding       object      merged by POST /onboarding
  *   contexts       string[]
  *   challenges     string[]
@@ -40,6 +61,15 @@ const { FieldValue } = require('firebase-admin/firestore');
 /**
  * Creates a brand-new user document for email/password registration.
  */
+function _defaultAdaptiveFields() {
+  return {
+    skillHistory: {},
+    scenarioCategoryCounts: {},
+    sessionIntervals: [],
+    trainingConsent: { optedIn: true, updatedAt: FieldValue.serverTimestamp() },
+  };
+}
+
 function createUserDoc(uid, { email, name }) {
   return {
     uid,
@@ -55,7 +85,7 @@ function createUserDoc(uid, { email, name }) {
     lastActiveDate: null,
     badges: [],
     isPremium: false,
-    learning_progress: [],
+    ..._defaultAdaptiveFields(),
   };
 }
 
@@ -78,7 +108,7 @@ function createGoogleUserDoc(uid, { email, name, photoURL }) {
     lastActiveDate: null,
     badges: [],
     isPremium: false,
-    learning_progress: [],
+    ..._defaultAdaptiveFields(),
   };
 }
 

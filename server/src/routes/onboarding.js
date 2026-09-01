@@ -4,10 +4,41 @@ const multer = require('multer');
 const { verifyToken } = require('../middleware/auth');
 const { saveOnboarding, getOnboarding, evaluateIntroDemo, transcribeDemo } = require('../controllers/onboardingController');
 
+// Only accept common audio MIME types for the uploaded demo recording.
+const ALLOWED_AUDIO_MIME_TYPES = new Set([
+  'audio/wav',
+  'audio/x-wav',
+  'audio/mpeg',
+  'audio/mp4',
+  'audio/webm',
+  'audio/ogg',
+  'audio/x-m4a',
+]);
+
+function audioFileFilter(req, file, cb) {
+  if (!ALLOWED_AUDIO_MIME_TYPES.has(file.mimetype)) {
+    const err = new Error(`Unsupported audio type: ${file.mimetype}`);
+    err.code = 'UNSUPPORTED_MEDIA_TYPE';
+    return cb(err);
+  }
+  cb(null, true);
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB cap
+  fileFilter: audioFileFilter,
 });
+
+function handleMulterError(err, req, res, next) {
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'Audio file too large — maximum is 10 MB' });
+  }
+  if (err && err.code === 'UNSUPPORTED_MEDIA_TYPE') {
+    return res.status(415).json({ error: err.message || 'Unsupported audio file type' });
+  }
+  next(err);
+}
 
 // Allow a few retries per window — called once per account creation
 const saveLimiter = rateLimit({
@@ -39,7 +70,7 @@ const transcribeLimiter = rateLimit({
  * Unauthenticated — transcribes a voice recording via Groq Whisper.
  * Used in the onboarding demo so users can speak instead of type.
  */
-router.post('/transcribe', transcribeLimiter, upload.single('audio'), transcribeDemo);
+router.post('/transcribe', transcribeLimiter, upload.single('audio'), handleMulterError, transcribeDemo);
 
 /*
  * POST /onboarding/demo

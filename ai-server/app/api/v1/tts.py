@@ -3,9 +3,10 @@ import logging
 import subprocess
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from app.config import settings
+from app.dependencies import verify_internal_api_key
 from app.schemas.tts import TTSRequest
 from app.services import tts_facade
 from app.services.tts import validate_voice
@@ -15,7 +16,7 @@ logger = logging.getLogger("communiq")
 router = APIRouter()
 
 
-@router.post("/tts")
+@router.post("/tts", dependencies=[Depends(verify_internal_api_key)])
 async def tts(req: TTSRequest):
     """
     Synthesise text to MP3 audio.
@@ -26,8 +27,10 @@ async def tts(req: TTSRequest):
     try:
         audio_bytes = await tts_facade.synthesize_full(req.text, resolved_voice)
     except RuntimeError as e:
-        logger.error("TTS failed: %s", e)
-        raise HTTPException(status_code=502, detail=str(e))
+        logger.exception("TTS failed")
+        raise HTTPException(
+            status_code=502, detail="Voice synthesis failed. Please try again."
+        ) from e
 
     return Response(content=audio_bytes, media_type="audio/mpeg")
 

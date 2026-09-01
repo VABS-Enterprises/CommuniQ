@@ -10,9 +10,15 @@ const { auth } = require('../config/firebase');
  */
 async function verifyToken(req, res, next) {
   // DEV BYPASS — allows Flutter to call the API during development without a
-  // real Firebase token. Completely disabled in production.
-  // Remove this block (or set NODE_ENV=production) before any real deployment.
-  if (process.env.NODE_ENV !== 'production' && req.headers['x-dev-uid']) {
+  // real Firebase token. Completely disabled in production, and additionally
+  // requires an explicit opt-in via ENABLE_DEV_AUTH_BYPASS=true so it can
+  // never be triggered just because NODE_ENV happens to be unset/misconfigured.
+  // Remove this block (or leave ENABLE_DEV_AUTH_BYPASS unset) before any real deployment.
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.ENABLE_DEV_AUTH_BYPASS === 'true' &&
+    req.headers['x-dev-uid']
+  ) {
     req.uid = req.headers['x-dev-uid'];
     req.email = req.headers['x-dev-email'] || 'dev@communiq.test';
     req.name = 'Dev User';

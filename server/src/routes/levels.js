@@ -2,12 +2,24 @@ const router = require('express').Router();
 const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
+const rateLimit = require('express-rate-limit');
 const { verifyToken } = require('../middleware/auth');
 const { evaluateLearningAnswer } = require('../services/fastApiService');
 
 // Path to the levels JSON file at the project root.
 // __dirname = server/src/routes → ../../.. = project root
 const LEVELS_PATH = path.join(__dirname, '..', '..', '..', 'communiq_levels.json');
+
+// /levels/evaluate: 15/min per uid — each call costs an LLM evaluation call.
+// Keyed on req.uid (runs after verifyToken) so IP rotation can't bypass it.
+const evaluateRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 15,
+  keyGenerator: (req) => req.uid || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests — please slow down' },
+});
 
 router.get('/', verifyToken, async (req, res) => {
   try {
@@ -35,7 +47,7 @@ router.get('/', verifyToken, async (req, res) => {
  * Body: { question, userResponse, topic, difficulty?, expectedKeyPoints? }
  * Returns: { scores, overallScore, strengths, improvements, feedback }
  */
-router.post('/evaluate', verifyToken, async (req, res) => {
+router.post('/evaluate', verifyToken, evaluateRateLimit, async (req, res) => {
   const { question, userResponse, topic, difficulty, expectedKeyPoints } = req.body;
 
   if (typeof userResponse !== 'string' || userResponse.trim().length < 5) {

@@ -1,0 +1,60 @@
+version: "3.8"
+
+# CommuniQ — LiveKit server (PRODUCTION TEMPLATE — this is the prod compose file)
+#
+# See docker-compose.yml alongside this file for the local-dev variant
+# (TLS disabled, dev-only credentials). This file is the production
+# counterpart, with TLS enabled for the signaling and TURN/TLS ports.
+#
+# ⚠️  THIS IS A TEMPLATE, NOT A READY-TO-RUN FILE. Before using it you must:
+#   1. Obtain real TLS certificates for your domain (e.g. via Let's Encrypt /
+#      certbot, or your cloud provider's managed TLS). There are no real
+#      certs in this repo — the paths below are placeholders.
+#   2. Mount those certs into the container (see the `volumes:` placeholder
+#      below) and point livekit.yaml's tls config / cert env vars at them.
+#   3. Set `use_external_ip: true` and a real `turn.domain` in livekit.yaml.
+#   4. Generate a fresh, strong random LiveKit API key/secret for production
+#      and inject it via your hosting platform's secret store (env vars),
+#      never by committing it into livekit.yaml.
+#
+# Usage (once the above is done):
+#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml logs -f
+#   docker compose -f docker-compose.prod.yml down
+
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --config /etc/livekit/livekit.yaml
+    restart: unless-stopped
+    ports:
+      # WebRTC signaling + HTTP API
+      - "7880:7880"
+      # WebRTC signaling over TLS
+      - "7881:7881"
+      # TURN relay (UDP) — relay for clients behind strict NAT
+      - "3478:3478/udp"
+      # TURN/TLS — requires tls_port to be set in livekit.yaml along with
+      # valid cert/key paths; do not expose this port until certs are in place.
+      - "5349:5349"
+      # WebRTC media UDP range — must match livekit.yaml port_range_start/end
+      - "50000-50200:50000-50200/udp"
+    volumes:
+      - ./livekit.yaml:/etc/livekit/livekit.yaml:ro
+      # Placeholder cert mount — replace ${LIVEKIT_TLS_CERT_DIR} with the real
+      # host path (or a secret volume from your platform) containing
+      # fullchain.pem / privkey.pem before deploying. Not usable as-is.
+      - ${LIVEKIT_TLS_CERT_DIR:-./certs}:/etc/livekit/certs:ro
+    environment:
+      # Example of injecting the production API secret via the host's secret
+      # store instead of committing it in livekit.yaml. Wire this into
+      # livekit.yaml's keys section (or use LiveKit's env-based key config)
+      # rather than hardcoding a value in the yaml file for production.
+      - LIVEKIT_KEYS=${LIVEKIT_KEYS:?set LIVEKIT_KEYS via your deployment platform's secret store}
+
+# Reminder: add the following to livekit.yaml's `port` / TLS section for this
+# compose file to actually serve TLS (not included here since it requires
+# real cert paths):
+#   tls_port: 5349
+#   key_file: /etc/livekit/certs/privkey.pem
+#   cert_file: /etc/livekit/certs/fullchain.pem

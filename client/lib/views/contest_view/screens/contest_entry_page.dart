@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/glow.dart';
-import 'package:communiq/views/contest_view/screens/contest_page.dart';
 
 class ContestEntryPage extends StatelessWidget {
   const ContestEntryPage({super.key});
@@ -113,18 +112,17 @@ class ContestEntryPage extends StatelessWidget {
               
               const SizedBox(height: 20),
               
-              // Weekly Contest (Active)
+              // Weekly Contest — the live screen (contest_page.dart) is
+              // currently a client-side mock: scores/rank/leaderboard are
+              // computed in-memory with no backend, so it's gated behind
+              // "Coming Soon" to avoid showing users fabricated numbers.
+              // See contest_state.dart.
               _ContestTypeCard(
                 title: 'Weekly Contest',
                 subtitle: 'Compete and climb leaderboard',
-                tagText: 'Active',
-                isActive: true,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ContestPage()),
-                  );
-                },
+                tagText: 'Coming Soon',
+                isInactive: true,
+                onTap: () => _showComingSoon(context),
               ),
               
               const SizedBox(height: 20),

@@ -1,11 +1,18 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const { db } = require('./config/firebase');
 const { version } = require('../package.json');
 const { startStaleSessionJob } = require('./services/staleSessionJob');
+const { startEvaluationModelJob } = require('./services/evaluationModelJob');
+const { validateSecrets } = require('./config/validateSecrets');
+
+// Fail fast (in production) or warn loudly (elsewhere) if shared secrets are
+// missing, too short, or still set to the .env.example placeholder value.
+validateSecrets();
 
 const authRoutes = require('./routes/auth');
 const onboardingRoutes = require('./routes/onboarding');
@@ -14,8 +21,13 @@ const scenarioRoutes = require('./routes/scenarios');
 const leaderboardRoutes = require('./routes/leaderboard');
 const userRoutes = require('./routes/user');
 const levelsRoutes = require('./routes/levels');
+const learningRoutes = require('./routes/learning');
+const contestRoutes = require('./routes/contest');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
+
+app.use(helmet());
 
 // Request logging: compact in dev, Apache combined format in production
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -70,6 +82,9 @@ app.use('/scenarios', scenarioRoutes);
 app.use('/leaderboard', leaderboardRoutes);
 app.use('/user', userRoutes);
 app.use('/levels', levelsRoutes);
+app.use('/learning', learningRoutes);
+app.use('/contest', contestRoutes);
+app.use('/admin', adminRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -86,6 +101,7 @@ const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`CommuniQ backend running on port ${PORT}`);
   startStaleSessionJob();
+  startEvaluationModelJob();
 });
 
 // Graceful shutdown — finish in-flight requests before exiting

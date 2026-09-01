@@ -12,7 +12,7 @@ class AIInsightCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.glassBorder.withValues(alpha: 0.5),
+          color: AppColors.glassBorder.withValues(alpha: 0.4),
         ),
       ),
       child: Column(

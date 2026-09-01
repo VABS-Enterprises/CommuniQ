@@ -139,7 +139,7 @@ class _ProgressSummary extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text('$best%',
                     style: const TextStyle(
-                        color: Color(0xFF22C55E),
+                        color: AppColors.scoreExcellent,
                         fontWeight: FontWeight.bold,
                         fontSize: 22)),
               ],
@@ -190,10 +190,10 @@ class _AttemptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = attempt.score >= 80
-        ? const Color(0xFF22C55E)
+        ? AppColors.scoreExcellent
         : attempt.score >= 65
             ? AppColors.primaryLight
-            : const Color(0xFFFBBF24);
+            : AppColors.scoreNeedsWork;
 
     return Container(
       padding: const EdgeInsets.all(18),

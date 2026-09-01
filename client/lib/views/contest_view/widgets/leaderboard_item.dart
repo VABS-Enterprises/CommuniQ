@@ -7,12 +7,22 @@ class LeaderboardItem extends StatelessWidget {
   final int score;
   final bool isCurrentUser;
 
+  /// Defaults to '$score%' (the contest-percentage display). Pass a custom
+  /// builder for non-percentage values, e.g. XP: (xp) => '$xp XP'.
+  final String Function(int score)? scoreLabelBuilder;
+
+  /// Defaults to the percentage-based thresholds in [_scoreColor]. Pass a
+  /// custom builder when [score] isn't a 0-100 percentage (e.g. XP).
+  final Color Function(int score)? scoreColorBuilder;
+
   const LeaderboardItem({
     super.key,
     required this.rank,
     required this.name,
     required this.score,
     this.isCurrentUser = false,
+    this.scoreLabelBuilder,
+    this.scoreColorBuilder,
   });
 
   @override
@@ -136,17 +146,19 @@ class LeaderboardItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: _scoreColor(score).withValues(alpha: 0.1),
+              color: (scoreColorBuilder?.call(score) ?? _scoreColor(score))
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: _scoreColor(score).withValues(alpha: 0.3),
+                color: (scoreColorBuilder?.call(score) ?? _scoreColor(score))
+                    .withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
             child: Text(
-              '$score%',
+              scoreLabelBuilder?.call(score) ?? '$score%',
               style: TextStyle(
-                color: _scoreColor(score),
+                color: scoreColorBuilder?.call(score) ?? _scoreColor(score),
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
               ),
@@ -178,8 +190,8 @@ class LeaderboardItem extends StatelessWidget {
   }
 
   Color _scoreColor(int s) {
-    if (s >= 85) return const Color(0xFF22C55E);
+    if (s >= 85) return AppColors.scoreExcellent;
     if (s >= 70) return AppColors.primaryLight;
-    return const Color(0xFFFBBF24);
+    return AppColors.scoreNeedsWork;
   }
 }

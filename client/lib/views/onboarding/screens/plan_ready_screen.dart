@@ -348,12 +348,12 @@ class _BuildingViewState extends State<_BuildingView>
                     ? Container(
                         key: const ValueKey('check'),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF22C55E).withValues(alpha: 0.15),
+                          color: AppColors.scoreExcellent.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.check_rounded,
-                          color: Color(0xFF22C55E),
+                          color: AppColors.scoreExcellent,
                           size: 13,
                         ),
                       )

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/constants/radius.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Progress Bar
@@ -278,9 +279,24 @@ class _OnboardingButtonState extends State<OnboardingButton> {
           width: double.infinity,
           height: 58,
           decoration: BoxDecoration(
-            color: widget.enabled ? AppColors.primary : AppColors.surfaceVariant,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [],
+            gradient: widget.enabled
+                ? LinearGradient(
+                    colors: AppColors.primaryGradient,
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  )
+                : null,
+            color: widget.enabled ? null : AppColors.surfaceVariant,
+            borderRadius: AppRadius.buttonRadius,
+            boxShadow: widget.enabled
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
           ),
           child: Center(
             child: Text(

@@ -27,8 +27,20 @@ class ApiConstants {
   static const String levels = '/levels';
   static const String levelsEvaluate = '/levels/evaluate';
 
+  // Server-authoritative learning-module progress/grading (MCQ answers are
+  // graded server-side — the client must never compute correctness/coins
+  // locally for these).
+  static const String learningProgress = '/learning/progress';
+  static const String learningAnswer = '/learning/answer';
+  // Full endpoint is '${learningLevelsBase}/$levelId/complete'.
+  static const String learningLevelsBase = '/learning/levels';
+
   // User profile (full Firestore doc, includes skillProgress)
   static const String userProfile = '/user/profile';
+  // Data-governance opt-in/out for training-data use (paper §3.6)
+  static const String userTrainingConsent = '/user/training-consent';
+  // Self-learning evaluation model transparency data (skillHistory, etc.)
+  static const String userEvaluationProfile = '/user/evaluation-profile';
 
   // Leaderboards
   static const String leaderboard = '/leaderboard';
