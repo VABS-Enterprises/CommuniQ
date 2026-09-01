@@ -8,7 +8,11 @@ load_dotenv()
 class Settings:
     groq_api_key: str = os.getenv("GROQ_API_KEY", "")
     port: int = int(os.getenv("PORT", "8000"))
-    llm_model: str = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+    # Groq retired the llama-3.1-* models; requests for them now fail with
+    # model_not_found, which took down every evaluation path in the app.
+    # openai/gpt-oss-20b is the current Groq-hosted equivalent and returns
+    # the strict JSON these evaluators parse.
+    llm_model: str = os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
 
     # ── Environment ────────────────────────────────────────────────────────────
     # "development" (default) | "production"
@@ -50,7 +54,7 @@ class Settings:
     # Defaults to groq because evaluation needs stronger reasoning than
     # conversation turns — keep this on 8B even when turns use a local 3B model.
     eval_llm_backend: str = os.getenv("EVAL_LLM_BACKEND", "groq").strip().lower()
-    eval_llm_model: str = os.getenv("EVAL_LLM_MODEL", "llama-3.1-8b-instant")
+    eval_llm_model: str = os.getenv("EVAL_LLM_MODEL", "openai/gpt-oss-20b")
 
     # ── Local STT (ASR_BACKEND=local) ─────────────────────────────────────────
     # Whisper model size: "tiny" | "base" | "small" | "medium" | "large-v3"

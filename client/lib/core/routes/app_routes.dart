@@ -46,10 +46,13 @@ abstract final class AppRoutes {
   static const sessionReport = '/session-report';
 
   static const contest = '/contest';
-  static const contestEntry = '/contest/entry';
+  static const contestPlay = '/contest/play';
   static const contestResult = '/contest/result';
   static const contestHistory = '/contest/history';
-  static const contestAttempts = '/contest/attempts';
+  static const contestLeaderboard = '/contest/leaderboard';
+
+  /// App-wide XP standings — distinct from [contestLeaderboard], which ranks
+  /// contest scores.
   static const leaderboard = '/leaderboard';
 
   static const premium = '/premium';
