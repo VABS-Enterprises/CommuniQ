@@ -13,7 +13,8 @@ import 'package:communiq/models/user_profile.dart';
 import 'package:communiq/views/home_view/widgets/ai_insight_card.dart';
 import 'package:communiq/views/home_view/widgets/contest_card.dart';
 import 'package:communiq/views/home_view/widgets/continue_card.dart';
-import 'package:communiq/views/home_view/widgets/quick_actions_row.dart';
+import 'package:go_router/go_router.dart';
+import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/views/contest_view/screens/leaderboard_page.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -530,7 +531,7 @@ class _HomeHeader extends StatelessWidget {
 
         // Profile avatar
         GestureDetector(
-          onTap: () => SwitchToProfileTabNotification().dispatch(context),
+          onTap: () => context.go(AppRoutes.profile),
           child: Container(
             width: 44,
             height: 44,

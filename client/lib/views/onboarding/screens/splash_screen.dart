@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:communiq/core/constants/app_colors.dart';
-import 'package:communiq/main.dart';
+import 'package:go_router/go_router.dart';
+import 'package:communiq/core/routes/app_routes.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -79,14 +80,9 @@ class _SplashScreenState extends State<SplashScreen>
     _textController.forward();
     await Future.delayed(const Duration(milliseconds: 2600));
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (_, animation, __) => const AuthGuard(),
-        transitionsBuilder: (_, animation, __, child) =>
-            FadeTransition(opacity: animation, child: child),
-        transitionDuration: const Duration(milliseconds: 800),
-      ),
-    );
+    // Head for welcome; the router's redirect sends an already-signed-in user
+    // straight to /home instead.
+    context.go(AppRoutes.welcome);
   }
 
   @override

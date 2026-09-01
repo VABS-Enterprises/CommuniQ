@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -71,6 +72,10 @@ class _MascotState extends State<Mascot> with TickerProviderStateMixin {
 
   MascotMood _from = MascotMood.idle;
 
+  /// Held so dispose can cancel it — a bare Future.delayed would keep firing
+  /// after the widget is gone.
+  Timer? _blinkTimer;
+
   @override
   void initState() {
     super.initState();
@@ -101,14 +106,17 @@ class _MascotState extends State<Mascot> with TickerProviderStateMixin {
   /// Blinks on an irregular cadence — a fixed interval reads mechanical.
   void _scheduleBlink() {
     if (!mounted || !widget.animate) return;
+    _blinkTimer?.cancel();
     final ms = 1800 + math.Random().nextInt(2600);
-    Future.delayed(Duration(milliseconds: ms), () async {
+    _blinkTimer = Timer(Duration(milliseconds: ms), () async {
       if (!mounted || !widget.animate) return;
       // Eyes are already shut in these moods; blinking would be invisible.
       if (widget.mood != MascotMood.celebrating &&
           widget.mood != MascotMood.happy) {
         await _blink.forward();
-        if (mounted) await _blink.reverse();
+        if (!mounted) return;
+        await _blink.reverse();
+        if (!mounted) return;
       }
       _scheduleBlink();
     });
@@ -131,12 +139,14 @@ class _MascotState extends State<Mascot> with TickerProviderStateMixin {
         _scheduleBlink();
       } else {
         _idle.stop();
+        _blinkTimer?.cancel();
       }
     }
   }
 
   @override
   void dispose() {
+    _blinkTimer?.cancel();
     _idle.dispose();
     _blink.dispose();
     _moodShift.dispose();
