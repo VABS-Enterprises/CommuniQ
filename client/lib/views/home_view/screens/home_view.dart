@@ -19,6 +19,7 @@ import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/services/auth_service.dart';
+import 'package:communiq/core/services/leaderboard_service.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/user_profile.dart';
 import 'package:communiq/views/home_view/widgets/continue_card.dart';
@@ -39,6 +40,9 @@ class _HomeViewState extends State<HomeView> {
 
   List<Map<String, dynamic>> _sessions = [];
   bool _sessionsLoading = true;
+
+  List<LeaderboardEntry> _leaderboard = [];
+  bool _leaderboardLoading = true;
 
   StreamSubscription<UserProfile>? _profileSub;
 
@@ -68,11 +72,27 @@ class _HomeViewState extends State<HomeView> {
       _profileError = false;
       if (_profile == null) _isLoading = true;
       _sessionsLoading = true;
+      _leaderboardLoading = true;
     });
     await Future.wait([
       forceRefresh ? _forceRefreshProfile() : _loadProfile(),
       _loadSessions(),
+      _loadLeaderboard(),
     ]);
+  }
+
+  Future<void> _loadLeaderboard() async {
+    try {
+      final entries = await LeaderboardService.fetchAllTime();
+      if (!mounted) return;
+      setState(() {
+        _leaderboard = entries;
+        _leaderboardLoading = false;
+      });
+    } catch (e) {
+      debugPrint('[HomeView] fetchLeaderboard failed: $e');
+      if (mounted) setState(() => _leaderboardLoading = false);
+    }
   }
 
   Future<void> _forceRefreshProfile() async {
@@ -152,17 +172,18 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
-    // A total failure with nothing cached gets the full error screen; a failure
-    // with cached data shows the data plus an inline banner.
-    if (_profileError && _profile == null && !_isLoading) {
-      return PlayfulBackground(
-        child: Scaffold(
-          backgroundColor: AppColors.transparent,
-          body: SafeArea(
-            child: ErrorStateView(
-              title: "Can't reach CommuniQ",
-              message: 'Check your connection and try again.',
+<<<<<<< HEAD
+    return SkyCampusBackground(
+      child: Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          onRefresh: () => _loadAll(forceRefresh: true),
+          color: AppColors.primary,
+          backgroundColor: AppColors.surface,
               onRetry: () => _loadAll(forceRefresh: true),
+>>>>>>> d2fd5e4c90b760bb23c52acef18d6156fde8ecc5
             ),
           ),
         ),
@@ -172,7 +193,6 @@ class _HomeViewState extends State<HomeView> {
     return PlayfulBackground(
       seed: 1,
       child: Scaffold(
-        backgroundColor: AppColors.transparent,
         body: SafeArea(
           bottom: false,
           child: RefreshIndicator(
@@ -278,6 +298,8 @@ class _HomeViewState extends State<HomeView> {
                 ),
                 _LeaderboardTeaser(
                   profile: _profile,
+                  entries: _leaderboard,
+                  loading: _leaderboardLoading,
                   onTap: () => context.push(AppRoutes.leaderboard),
                 ),
                 const SizedBox(height: AppSpacing.section),
@@ -420,10 +442,16 @@ class _MascotGreeting extends StatelessWidget {
       children: [
         Mascot(mood: mood, size: 108),
         const SizedBox(width: AppSpacing.s8),
+        // A flat, borderless speech bubble rather than another hard-shadowed
+        // ChunkyCard — this is ambient chatter, not a piece of data, and
+        // shouldn't compete visually with the cards below it.
         Expanded(
-          child: ChunkyCard(
-            accent: AppColors.brand,
+          child: Container(
             padding: const EdgeInsets.all(AppSpacing.s14),
+            decoration: BoxDecoration(
+              color: AppColors.brandSoft,
+              borderRadius: AppRadius.cardRadius,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -442,6 +470,9 @@ class _MascotGreeting extends StatelessWidget {
 
 // ── Stats ──────────────────────────────────────────────────────────────────
 
+// A single card with two columns split by a hairline divider, rather than two
+// separate hard-shadowed cards side by side — one box carrying two numbers
+// instead of two boxes, which is most of what "too many boxes" meant here.
 class _StatsRow extends StatelessWidget {
   const _StatsRow({required this.profile});
 
@@ -450,39 +481,48 @@ class _StatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = profile;
-    return Row(
-      children: [
-        Expanded(
-          child: _StatCard(
-            icon: Icons.local_fire_department_rounded,
-            color: AppColors.sun,
-            label: 'Day streak',
-            value: p == null ? '—' : '${p.streak}',
-            caption: p == null
-                ? ''
-                : p.streak == 0
-                    ? 'Start today'
-                    : 'Keep it up!',
-          ),
+    return ChunkyCard(
+      padding: const EdgeInsets.all(AppSpacing.s14),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _StatColumn(
+                icon: Icons.local_fire_department_rounded,
+                color: AppColors.sun,
+                label: 'Day streak',
+                value: p == null ? '—' : '${p.streak}',
+                caption: p == null
+                    ? ''
+                    : p.streak == 0
+                        ? 'Start today'
+                        : 'Keep it up!',
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.s14),
+              child: VerticalDivider(width: 1, color: AppColors.outline),
+            ),
+            Expanded(
+              child: _StatColumn(
+                icon: Icons.bolt_rounded,
+                color: AppColors.sun,
+                label: 'Total XP',
+                value: p == null ? '—' : '${p.xp}',
+                caption: p == null ? '' : 'Lv ${p.level} · ${p.levelLabel}',
+                progress: p?.xpProgress,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: AppSpacing.s12),
-        Expanded(
-          child: _StatCard(
-            icon: Icons.bolt_rounded,
-            color: AppColors.sun,
-            label: 'Total XP',
-            value: p == null ? '—' : '${p.xp}',
-            caption: p == null ? '' : 'Lv ${p.level} · ${p.levelLabel}',
-            progress: p?.xpProgress,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({
+class _StatColumn extends StatelessWidget {
+  const _StatColumn({
     required this.icon,
     required this.color,
     required this.label,
@@ -500,36 +540,33 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChunkyCard(
-      padding: const EdgeInsets.all(AppSpacing.s14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              IconTile(icon: icon, color: color, size: 36),
-              const SizedBox(width: AppSpacing.s8),
-              Expanded(child: Text(label, style: AppTextStyles.labelSmall)),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            IconTile(icon: icon, color: color, size: 32),
+            const SizedBox(width: AppSpacing.s8),
+            Expanded(child: Text(label, style: AppTextStyles.labelSmall)),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.s10),
+        Text(value, style: AppTextStyles.numeral.copyWith(fontSize: 26)),
+        if (caption.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(
+            caption,
+            style: AppTextStyles.bodySmall,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: AppSpacing.s10),
-          Text(value, style: AppTextStyles.numeral.copyWith(fontSize: 28)),
-          if (caption.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(
-              caption,
-              style: AppTextStyles.bodySmall,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-          if (progress != null) ...[
-            const SizedBox(height: AppSpacing.s10),
-            ChunkyProgressBar(value: progress!, color: color, height: 10),
-          ],
         ],
-      ),
+        if (progress != null) ...[
+          const SizedBox(height: AppSpacing.s10),
+          ChunkyProgressBar(value: progress!, color: color, height: 10),
+        ],
+      ],
     );
   }
 }
@@ -537,29 +574,35 @@ class _StatCard extends StatelessWidget {
 class _StatsSkeleton extends StatelessWidget {
   const _StatsSkeleton();
 
+  static const _column = Expanded(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SkeletonBox(width: 90, height: 14),
+        SizedBox(height: AppSpacing.s12),
+        SkeletonBox(width: 56, height: 26),
+        SizedBox(height: AppSpacing.s8),
+        SkeletonBox(height: 12),
+      ],
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: List.generate(
-        2,
-        (i) => Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(right: i == 0 ? AppSpacing.s12 : 0),
-            child: ChunkyCard(
-              padding: const EdgeInsets.all(AppSpacing.s14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  SkeletonBox(width: 100, height: 14),
-                  SizedBox(height: AppSpacing.s12),
-                  SkeletonBox(width: 60, height: 28),
-                  SizedBox(height: AppSpacing.s8),
-                  SkeletonBox(height: 12),
-                ],
-              ),
+    return ChunkyCard(
+      padding: const EdgeInsets.all(AppSpacing.s14),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: const [
+            _column,
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.s14),
+              child: VerticalDivider(width: 1, color: AppColors.outline),
             ),
-          ),
+            _column,
+          ],
         ),
       ),
     );
@@ -825,41 +868,197 @@ class _SkillCell extends StatelessWidget {
 // ── Leaderboard teaser ─────────────────────────────────────────────────────
 
 class _LeaderboardTeaser extends StatelessWidget {
-  const _LeaderboardTeaser({required this.profile, required this.onTap});
+  const _LeaderboardTeaser({
+    required this.profile,
+    required this.entries,
+    required this.loading,
+    required this.onTap,
+  });
 
   final UserProfile? profile;
+  final List<LeaderboardEntry> entries;
+  final bool loading;
   final VoidCallback onTap;
+
+  static const _medalColors = {
+    1: AppColors.sun,
+    2: AppColors.inkSoft,
+    3: Color(0xFFC98A4B), // bronze — not a semantic app colour, medal-only
+  };
 
   @override
   Widget build(BuildContext context) {
-    final p = profile;
-    return ChunkyCard(
-      onTap: onTap,
-      child: Row(
-        children: [
-          const IconTile(
-            icon: Icons.emoji_events_rounded,
-            color: AppColors.sun,
-            tinted: false,
-          ),
-          const SizedBox(width: AppSpacing.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Where you rank', style: AppTextStyles.titleMedium),
-                const SizedBox(height: 2),
-                Text(
-                  p == null
-                      ? 'See how you compare'
-                      : '${p.xp} XP · Lv ${p.level} ${p.levelLabel}',
-                  style: AppTextStyles.bodySmall,
-                ),
-              ],
+    if (loading) {
+      return ChunkyCard(
+        padding: const EdgeInsets.all(AppSpacing.s14),
+        child: Column(
+          children: List.generate(
+            3,
+            (i) => Padding(
+              padding: EdgeInsets.only(bottom: i < 2 ? AppSpacing.s12 : 0),
+              child: const Row(
+                children: [
+                  SkeletonBox(width: 32, height: 32, radius: BorderRadius.all(Radius.circular(16))),
+                  SizedBox(width: AppSpacing.s12),
+                  Expanded(child: SkeletonBox(height: 14)),
+                ],
+              ),
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.inkSoft),
+        ),
+      );
+    }
+
+    // Fetch failed, or genuinely nobody has XP yet — fall back to a simple
+    // "go compare" card rather than showing an empty list.
+    if (entries.isEmpty) {
+      final p = profile;
+      return ChunkyCard(
+        onTap: onTap,
+        child: Row(
+          children: [
+            const IconTile(
+              icon: Icons.emoji_events_rounded,
+              color: AppColors.sun,
+              tinted: false,
+            ),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Where you rank', style: AppTextStyles.titleMedium),
+                  const SizedBox(height: 2),
+                  Text(
+                    p == null
+                        ? 'See how you compare'
+                        : '${p.xp} XP · Lv ${p.level} ${p.levelLabel}',
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.inkSoft),
+          ],
+        ),
+      );
+    }
+
+    final top3 = entries.take(3).toList();
+    final myUid = profile?.uid;
+    final myIndex =
+        myUid == null ? -1 : entries.indexWhere((e) => e.uid == myUid);
+    final iAmInTop3 = myIndex >= 0 && myIndex < 3;
+
+    return ChunkyCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.s14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < top3.length; i++) ...[
+            _LeaderboardRow(
+              rank: i + 1,
+              name: top3[i].name,
+              xp: top3[i].xp,
+              medalColor: _medalColors[i + 1],
+              highlighted: i == myIndex,
+            ),
+            if (i < top3.length - 1) const SizedBox(height: AppSpacing.s10),
+          ],
+          if (!iAmInTop3 && myIndex >= 0) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.s10),
+              child: Divider(height: 1, color: AppColors.outline),
+            ),
+            _LeaderboardRow(
+              rank: myIndex + 1,
+              name: 'You',
+              xp: entries[myIndex].xp,
+              highlighted: true,
+            ),
+          ] else if (!iAmInTop3 && myIndex < 0 && profile != null) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.s10),
+              child: Divider(height: 1, color: AppColors.outline),
+            ),
+            Text(
+              "You're not ranked yet — finish a session to appear here.",
+              style: AppTextStyles.bodySmall,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LeaderboardRow extends StatelessWidget {
+  const _LeaderboardRow({
+    required this.rank,
+    required this.name,
+    required this.xp,
+    this.medalColor,
+    this.highlighted = false,
+  });
+
+  final int rank;
+  final String name;
+  final int xp;
+  final Color? medalColor;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: highlighted
+          ? const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s10, vertical: AppSpacing.s8)
+          : EdgeInsets.zero,
+      decoration: highlighted
+          ? BoxDecoration(
+              color: AppColors.brandSoft,
+              borderRadius: AppRadius.chipRadius,
+            )
+          : null,
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: medalColor ?? AppColors.transparent,
+              shape: BoxShape.circle,
+              border: medalColor == null
+                  ? Border.all(color: AppColors.outline, width: 2)
+                  : null,
+            ),
+            child: Text(
+              '$rank',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: medalColor != null
+                    ? AppColors.inkOnDark
+                    : AppColors.inkSoft,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s10),
+          Expanded(
+            child: Text(
+              name,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: highlighted ? AppColors.ink : AppColors.inkMuted,
+                fontWeight: highlighted ? FontWeight.w800 : FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text('$xp XP', style: AppTextStyles.labelSmall),
         ],
       ),
     );
@@ -882,22 +1081,26 @@ class _RecentActivity extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return Column(
-        children: List.generate(
-          3,
-          (i) => Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.s12),
-            child: ChunkyCard(
-              padding: const EdgeInsets.all(AppSpacing.s14),
-              child: Row(
-                children: const [
-                  SkeletonBox(width: 40, height: 40),
-                  SizedBox(width: AppSpacing.s12),
-                  Expanded(child: SkeletonBox(height: 16)),
-                ],
+      // One card holding three skeleton rows, not three skeleton cards.
+      return ChunkyCard(
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            for (var i = 0; i < 3; i++) ...[
+              const Padding(
+                padding: EdgeInsets.all(AppSpacing.s14),
+                child: Row(
+                  children: [
+                    SkeletonBox(width: 40, height: 40),
+                    SizedBox(width: AppSpacing.s12),
+                    Expanded(child: SkeletonBox(height: 16)),
+                  ],
+                ),
               ),
-            ),
-          ),
+              if (i < 2)
+                const Divider(height: 1, color: AppColors.outline, indent: 66),
+            ],
+          ],
         ),
       );
     }
@@ -915,18 +1118,23 @@ class _RecentActivity extends StatelessWidget {
       );
     }
 
+    // One card, each session a row inside it separated by a hairline — three
+    // fewer hard-shadowed boxes stacked on the page than before.
     final recent = sessions.take(3).toList();
-    return Column(
-      children: [
-        for (var i = 0; i < recent.length; i++)
-          FadeInUp(
-            delay: AppMotion.staggerFor(i),
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+    return ChunkyCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          for (var i = 0; i < recent.length; i++) ...[
+            FadeInUp(
+              delay: AppMotion.staggerFor(i),
               child: _SessionRow(session: recent[i]),
             ),
-          ),
-      ],
+            if (i < recent.length - 1)
+              const Divider(height: 1, color: AppColors.outline, indent: 66),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -973,7 +1181,7 @@ class _SessionRow extends StatelessWidget {
     final score = _score;
     final tint = score != null ? AppColors.forScore(score) : AppColors.inkSoft;
 
-    return ChunkyCard(
+    return Padding(
       padding: const EdgeInsets.all(AppSpacing.s14),
       child: Row(
         children: [

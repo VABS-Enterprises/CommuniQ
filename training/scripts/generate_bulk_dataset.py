@@ -337,7 +337,7 @@ def main() -> None:
     p.add_argument(
         "--model",
         default=None,
-        help="Model ID (default: llama-3.3-70b-versatile for groq, gpt-4o-mini for openai)",
+        help="Model ID (default: openai/gpt-oss-120b for groq, gpt-4o-mini for openai)",
     )
     p.add_argument(
         "--delay",
@@ -362,7 +362,7 @@ def main() -> None:
         if not api_key:
             raise SystemExit("Set GROQ_API_KEY environment variable")
         client = Groq(api_key=api_key)
-        model = args.model or "llama-3.3-70b-versatile"
+        model = args.model or "openai/gpt-oss-120b"  # llama-3.3-70b-versatile was removed from Groq's catalog
         call_fn = lambda prompt, idx: call_groq(client, model, prompt)
     else:
         try:

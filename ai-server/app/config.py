@@ -15,11 +15,12 @@ load_dotenv(dotenv_path=_ENV_PATH)
 class Settings:
     groq_api_key: str = os.getenv("GROQ_API_KEY", "")
     port: int = int(os.getenv("PORT", "8000"))
-    # Groq retired the llama-3.1-* models; requests for them now fail with
-    # model_not_found, which took down every evaluation path in the app.
-    # openai/gpt-oss-20b is the current Groq-hosted equivalent and returns
-    # the strict JSON these evaluators parse.
-    llm_model: str = os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
+    # llama-3.1-8b-instant was removed from Groq's model catalog (confirmed via
+    # a live /models call). qwen/qwen3.8-27b was benchmarked against the actual
+    # roleplay voice-mode prompt on 2026-09-02: fastest (~0.36s) and the only
+    # candidate that both followed the "short reply + one question" instruction
+    # and didn't leak <think> reasoning tokens into the spoken output.
+    llm_model: str = os.getenv("LLM_MODEL", "qwen/qwen3.8-27b")
 
     # ── Environment ────────────────────────────────────────────────────────────
     # "development" (default) | "production"
@@ -76,9 +77,13 @@ class Settings:
     # ── Evaluation backend ────────────────────────────────────────────────────
     # Used exclusively by /session/evaluate.
     # Defaults to groq because evaluation needs stronger reasoning than
-    # conversation turns — keep this on 8B even when turns use a local 3B model.
+    # conversation turns — keep this here even when turns use a local model.
+    # openai/gpt-oss-120b benchmarked 2026-09-02 against the real evaluator
+    # prompt: reliably valid JSON and caught more filler words than smaller
+    # candidates (qwen3.8-27b, gpt-oss-20b) — worth the extra ~1s since this
+    # runs once after a session ends, not on the live conversation path.
     eval_llm_backend: str = os.getenv("EVAL_LLM_BACKEND", "groq").strip().lower()
-    eval_llm_model: str = os.getenv("EVAL_LLM_MODEL", "openai/gpt-oss-20b")
+    eval_llm_model: str = os.getenv("EVAL_LLM_MODEL", "openai/gpt-oss-120b")
 
     # ── Local STT (ASR_BACKEND=local) ─────────────────────────────────────────
     # Whisper model size: "tiny" | "base" | "small" | "medium" | "large-v3"

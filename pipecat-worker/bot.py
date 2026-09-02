@@ -8,7 +8,7 @@ Pipeline (LiveKit live-voice mode):
     → GroqSTTService                (Whisper-large-v3-turbo via Groq cloud)
     → UserTranscriptCapture         (stores user transcript + sends to Flutter)
     → LLMUserAggregator             (adds transcription to chat context)
-    → GroqLLMService                (openai/gpt-oss-20b)
+    → GroqLLMService                (llama-3.1-8b-instant)
     → AiTranscriptPoster            (aggregates AI text, POSTs turn to Node,
                                      sends transcript + ai_done to Flutter)
     → EdgeTTSService                (Microsoft Edge TTS — free, no rate limits)
@@ -70,6 +70,7 @@ from pipecat.turns.user_stop.turn_analyzer_user_turn_stop_strategy import TurnAn
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from pipecat.services.groq.llm import GroqLLMService
 from pipecat.services.groq.stt import GroqSTTService
+from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
 from pipecat.transports.livekit.transport import LiveKitParams, LiveKitTransport
@@ -724,8 +725,7 @@ async def run_bot(
     llm = GroqLLMService(
         api_key=api_key,
         settings=GroqLLMService.Settings(
-            # Groq retired llama-3.1-*; see ai-server/app/config.py.
-            model=os.getenv("GROQ_LLM_MODEL", "openai/gpt-oss-20b"),
+            model="llama-3.1-8b-instant",
             # 320 tokens allows ~4 spoken sentences on a detailed answer
             # while the voice_suffix instruction prevents unnecessary padding
             # on short user inputs.

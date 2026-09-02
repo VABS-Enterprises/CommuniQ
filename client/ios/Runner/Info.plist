@@ -4,6 +4,8 @@
 	<dict>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>CommuniQ needs microphone access to record your voice during conversation practice sessions.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>CommuniQ needs camera access for real-time visual communication, gaze, and eye-contact analysis.</string>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>CFBundleDevelopmentRegion</key>

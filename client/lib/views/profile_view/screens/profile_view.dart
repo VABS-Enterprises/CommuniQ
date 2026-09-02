@@ -3,7 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:communiq/common_widgets/chunky_button.dart';
+import 'package:communiq/common_widgets/chunky_card.dart';
+import 'package:communiq/common_widgets/icon_tile.dart';
+import 'package:communiq/common_widgets/playful_background.dart';
+import 'package:communiq/common_widgets/section_header.dart';
+import 'package:communiq/common_widgets/state_views.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/constants/app_text_styles.dart';
+import 'package:communiq/core/constants/radius.dart';
+import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/core/services/session_service.dart';
@@ -11,8 +20,6 @@ import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/models/user_profile.dart';
 import 'package:communiq/views/premium_view/screens/premium_screen.dart';
-import 'package:communiq/common_widgets/sky_campus_background.dart';
-import 'package:communiq/common_widgets/icon_tile.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -120,9 +127,9 @@ class _ProfileViewState extends State<ProfileView> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Log Out',
-                style: TextStyle(
-                    color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            child: Text('Log Out',
+                style: AppTextStyles.labelMedium
+                    .copyWith(color: AppColors.error)),
           ),
         ],
       ),
@@ -183,71 +190,78 @@ class _ProfileViewState extends State<ProfileView> {
 
   @override
   Widget build(BuildContext context) {
-    return SkyCampusBackground(
+    return PlayfulBackground(
+      seed: 2,
       child: Scaffold(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         body: SafeArea(
           child: _loading
               ? const Center(
                   child:
                       CircularProgressIndicator(color: AppColors.brand))
               : _error
-                  ? _buildError()
+                  ? ErrorStateView(
+                      title: 'Could not load profile',
+                      message:
+                          'Your account may not exist yet, or the server is unreachable.',
+                      onRetry: () => _load(forceRefresh: true),
+                    )
                   : RefreshIndicator(
                       onRefresh: () => _load(forceRefresh: true),
                       color: AppColors.brand,
                       backgroundColor: AppColors.surface,
-                      child: CustomScrollView(
+                      child: ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        slivers: [
-                          // ── Hero Header ─────────────────────────────────
-                          SliverToBoxAdapter(child: _ProfileHeroHeader(profile: _profile)),
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.page,
+                          AppSpacing.s12,
+                          AppSpacing.page,
+                          AppSpacing.navClearance,
+                        ),
+                        children: [
+                          _ProfileHeroHeader(profile: _profile),
+                          const SizedBox(height: AppSpacing.section),
 
-                          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                          if (_profile?.isPremium != true) ...[
+                            _PremiumBanner(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const PremiumScreen()),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.section),
+                          ],
 
-                          // ── Premium Banner (if not premium) ─────────────
-                          if (_profile?.isPremium != true)
-                            SliverToBoxAdapter(
-                                child: _PremiumBanner(
-                                    onTap: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                const PremiumScreen())))),
+                          if (_onboarding != null) ...[
+                            _OnboardingSection(onboarding: _onboarding!),
+                            const SizedBox(height: AppSpacing.section),
+                          ],
 
-                          // ── Onboarding Preferences ──────────────────────
-                          if (_onboarding != null)
-                            SliverToBoxAdapter(
-                                child: _OnboardingSection(
-                                    onboarding: _onboarding!)),
-
-                          // ── Account Section ─────────────────────────────
-                          SliverToBoxAdapter(
-                              child: _buildSection('Account', [
-                            _buildTile(
-                              Icons.person_outline_rounded,
-                              'Display Name',
+                          _buildSection('Account', [
+                            _Tile(
+                              icon: Icons.person_outline_rounded,
+                              title: 'Display Name',
                               subtitle: _profile?.name ?? '—',
                             ),
-                            _buildTile(
-                              Icons.email_outlined,
-                              'Email',
+                            _Tile(
+                              icon: Icons.email_outlined,
+                              title: 'Email',
                               subtitle: _profile?.email ?? '—',
                               onTap: () {
-                                Clipboard.setData(ClipboardData(
-                                    text: _profile?.email ?? ''));
+                                Clipboard.setData(
+                                    ClipboardData(text: _profile?.email ?? ''));
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content:
-                                          Text('Email copied to clipboard')),
+                                      content: Text('Email copied to clipboard')),
                                 );
                               },
                             ),
-                            _buildTile(
-                              _profile?.isPremium == true
+                            _Tile(
+                              icon: _profile?.isPremium == true
                                   ? Icons.workspace_premium_rounded
                                   : Icons.stars_outlined,
-                              'Plan',
+                              title: 'Plan',
                               subtitle: _profile?.isPremium == true
                                   ? 'Premium'
                                   : 'Free (Tap to upgrade)',
@@ -256,30 +270,28 @@ class _ProfileViewState extends State<ProfileView> {
                                   : AppColors.brand,
                               onTap: _profile?.isPremium == true
                                   ? null
-                                  : () {
-                                      Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (_) =>
-                                                  const PremiumScreen()));
-                                    },
+                                  : () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const PremiumScreen()),
+                                      ),
                             ),
-                          ])),
+                          ]),
 
-                          // ── Privacy ──────────────────────────────────────
-                          SliverToBoxAdapter(
-                              child: _buildSection('Privacy', [
-                            _buildSwitchTile(
-                              Icons.model_training_rounded,
-                              'Improve CommuniQ with my sessions',
-                              subtitle: 'Lets your anonymised session data help train '
-                                  'future models. You can turn this off anytime without '
-                                  'losing access to any feature.',
+                          _buildSection('Privacy', [
+                            _SwitchTile(
+                              icon: Icons.model_training_rounded,
+                              title: 'Improve CommuniQ with my sessions',
+                              subtitle:
+                                  'Lets your anonymised session data help train '
+                                  'future models. You can turn this off anytime '
+                                  'without losing access to any feature.',
                               value: _trainingOptedIn,
                               updating: _trainingConsentUpdating,
                               onChanged: _updateTrainingConsent,
                             ),
-                          ])),
+                          ]),
 
                           // ── Legal ───────────────────────────────────────
                           SliverToBoxAdapter(
@@ -337,10 +349,35 @@ class _ProfileViewState extends State<ProfileView> {
                                 ),
                               ),
                             ),
-                          ),
+                            _Tile(
+                              icon: Icons.privacy_tip_outlined,
+                              title: 'Privacy Policy',
+                              onTap: () =>
+                                  _showInfoDialog('Privacy Policy', _kPrivacy),
+                            ),
+                          ]),
 
-                          const SliverToBoxAdapter(
-                              child: SizedBox(height: 80)),
+                          _buildSection('App', [
+                            const _Tile(
+                              icon: Icons.info_outline_rounded,
+                              title: 'App Version',
+                              subtitle: '1.0.0 (build 1)',
+                            ),
+                            _Tile(
+                              icon: Icons.help_outline_rounded,
+                              title: 'Help & Support',
+                              onTap: () => _showInfoDialog('Help & Support',
+                                  'For support, reach us at support@communiq.app'),
+                            ),
+                          ]),
+
+                          const SizedBox(height: AppSpacing.s8),
+                          ChunkyButton(
+                            label: 'Log Out',
+                            icon: Icons.logout_rounded,
+                            variant: ChunkyButtonVariant.danger,
+                            onPressed: _handleLogout,
+                          ),
                         ],
                       ),
                     ),
@@ -421,7 +458,7 @@ class _ProfileViewState extends State<ProfileView> {
   Widget _buildSection(String title, List<Widget> tiles) {
     if (tiles.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+      padding: const EdgeInsets.only(bottom: AppSpacing.section),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -454,19 +491,33 @@ class _ProfileViewState extends State<ProfileView> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
         ],
       ),
     );
   }
+}
 
-  Widget _buildTile(
-    IconData icon,
-    String title, {
-    String? subtitle,
-    VoidCallback? onTap,
-    Color? trailingColor,
-  }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared row widgets
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Tile extends StatelessWidget {
+  const _Tile({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+    this.iconColor,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
     return ListTile(
       leading: IconTile(size: 34, icon: icon),
       title: Text(title,
@@ -484,18 +535,30 @@ class _ProfileViewState extends State<ProfileView> {
       onTap: onTap,
       dense: true,
       contentPadding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          const EdgeInsets.symmetric(horizontal: AppSpacing.s14, vertical: 4),
     );
   }
+}
 
-  Widget _buildSwitchTile(
-    IconData icon,
-    String title, {
-    required String subtitle,
-    required bool value,
-    required bool updating,
-    required ValueChanged<bool> onChanged,
-  }) {
+class _SwitchTile extends StatelessWidget {
+  const _SwitchTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.updating,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final bool updating;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
     return ListTile(
       leading: IconTile(size: 34, icon: icon),
       title: Text(title,
@@ -516,7 +579,8 @@ class _ProfileViewState extends State<ProfileView> {
               activeColor: AppColors.brand,
               onChanged: onChanged,
             ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.s14, vertical: 6),
     );
   }
 }
@@ -549,8 +613,8 @@ class _ProfileHeroHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Stack(
+            clipBehavior: Clip.none,
             children: [
               // Avatar with level badge overlay
               Stack(
@@ -655,48 +719,65 @@ class _ProfileHeroHeader extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(width: AppSpacing.s16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  name,
+                  style: AppTextStyles.headlineSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  email,
+                  style: AppTextStyles.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.s10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    CountBadge(label: levelLabel, icon: Icons.military_tech_rounded),
+                    if (isPremium)
+                      const CountBadge(
+                        label: 'Premium',
+                        color: AppColors.sun,
+                        icon: Icons.workspace_premium_rounded,
+                      )
+                    else
+                      const CountBadge(
+                        label: 'Free Plan',
+                        color: AppColors.inkSoft,
+                        icon: Icons.stars_outlined,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _Chip extends StatelessWidget {
-  final String label;
-  final Color color;
-  final IconData icon;
-  final Color? textColor;
+class _InitialAvatar extends StatelessWidget {
+  const _InitialAvatar({required this.name});
 
-  const _Chip({
-    required this.label,
-    required this.color,
-    required this.icon,
-    this.textColor,
-  });
+  final String name;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: textColor ?? color, size: 11),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: textColor ?? color,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+    return Center(
+      child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : 'U',
+        style: AppTextStyles.displaySmall.copyWith(color: AppColors.inkOnDark),
       ),
     );
   }
@@ -758,7 +839,9 @@ class _PremiumBanner extends StatelessWidget {
                   color: AppColors.inkOnDark70),
             ],
           ),
-        ),
+          Icon(Icons.chevron_right_rounded,
+              color: AppColors.inkOnDark.withValues(alpha: 0.85)),
+        ],
       ),
     );
   }
@@ -826,10 +909,10 @@ class _OnboardingSection extends StatelessWidget {
                     ),
                 ],
               ],
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -846,18 +929,18 @@ class _OnboardingSection extends StatelessWidget {
             const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       );
 
-  Widget _chipTile(IconData icon, String title, List<String> items) =>
-      Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+  Widget _chipTile(IconData icon, String title, List<String> items) => Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s14, vertical: AppSpacing.s10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            IconTile(size: 34, icon: icon),
-            const SizedBox(width: 12),
+            IconTile(size: 40, icon: icon),
+            const SizedBox(width: AppSpacing.s12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(title,
                       style: const TextStyle(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:communiq/core/constants/app_colors.dart';
-import 'package:communiq/core/constants/app_text_styles.dart';
 import 'package:communiq/core/constants/motion.dart';
 import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/core/constants/shadows.dart';
@@ -12,17 +11,25 @@ class NavDestination {
     required this.icon,
     required this.activeIcon,
     required this.label,
+    this.isBranch = true,
   });
 
   final IconData icon;
   final IconData activeIcon;
   final String label;
+
+  /// True for the four go_router shell branches (Home/Learn/Practise/You),
+  /// which track [PlayfulNavBar.currentIndex] and can show as selected.
+  /// False for items — like Contest — that simply push a route on top of
+  /// the current tab instead of switching branches, so they never light up.
+  final bool isBranch;
 }
 
 /// The app's bottom navigation: a floating pill with a hard shadow.
 ///
-/// The selected tab expands into a tinted lozenge and reveals its label, so
-/// the current location is legible without relying on colour alone.
+/// Icon-only — the selected tab sits in a tinted lozenge and its icon
+/// switches to the filled/active glyph, so the current location is legible
+/// from the icon and colour alone, without a label crowding the bar.
 class PlayfulNavBar extends StatelessWidget {
   const PlayfulNavBar({
     super.key,
@@ -50,11 +57,28 @@ class PlayfulNavBar extends StatelessWidget {
       label: 'Practise',
     ),
     NavDestination(
+      icon: Icons.emoji_events_outlined,
+      activeIcon: Icons.emoji_events_rounded,
+      label: 'Contest',
+      isBranch: false,
+    ),
+    NavDestination(
       icon: Icons.person_outline_rounded,
       activeIcon: Icons.person_rounded,
       label: 'You',
     ),
   ];
+
+  /// Maps a position in [destinations] to its go_router shell branch index,
+  /// skipping non-branch entries (Contest). Only meaningful when
+  /// `destinations[destinationIndex].isBranch` is true.
+  static int branchIndexFor(int destinationIndex) {
+    var branch = -1;
+    for (var i = 0; i <= destinationIndex; i++) {
+      if (destinations[i].isBranch) branch++;
+    }
+    return branch;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +106,8 @@ class PlayfulNavBar extends StatelessWidget {
               for (var i = 0; i < destinations.length; i++)
                 _NavItem(
                   destination: destinations[i],
-                  selected: currentIndex == i,
+                  selected: destinations[i].isBranch &&
+                      branchIndexFor(i) == currentIndex,
                   onTap: () => onTap(i),
                 ),
             ],
@@ -118,8 +143,9 @@ class _NavItem extends StatelessWidget {
         child: AnimatedContainer(
           duration: AppMotion.settle,
           curve: AppMotion.pop,
+          width: 50,
           height: 46,
-          padding: EdgeInsets.symmetric(horizontal: selected ? 14 : 16),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected
                 ? Color.alphaBlend(
@@ -129,47 +155,20 @@ class _NavItem extends StatelessWidget {
                 : AppColors.transparent,
             borderRadius: AppRadius.pillRadius,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // A small pop on selection makes the tab change feel physical.
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 1, end: selected ? 1.12 : 1),
-                duration: AppMotion.spring,
-                curve: AppMotion.springCurve,
-                builder: (context, scale, child) => Transform.scale(
-                  scale: scale,
-                  child: child,
-                ),
-                child: Icon(
-                  selected ? destination.activeIcon : destination.icon,
-                  size: 25,
-                  color: selected ? tint : AppColors.inkSoft,
-                ),
-              ),
-              // The label only exists for the selected tab; animating its
-              // width keeps the other tabs from jumping as it appears.
-              ClipRect(
-                child: AnimatedAlign(
-                  duration: AppMotion.settle,
-                  curve: AppMotion.ease,
-                  alignment: Alignment.centerLeft,
-                  widthFactor: selected ? 1 : 0,
-                  child: AnimatedOpacity(
-                    duration: AppMotion.quick,
-                    opacity: selected ? 1 : 0,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: Text(
-                        destination.label,
-                        maxLines: 1,
-                        style: AppTextStyles.labelMedium.copyWith(color: tint),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          // A small pop on selection makes the tab change feel physical.
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 1, end: selected ? 1.12 : 1),
+            duration: AppMotion.spring,
+            curve: AppMotion.springCurve,
+            builder: (context, scale, child) => Transform.scale(
+              scale: scale,
+              child: child,
+            ),
+            child: Icon(
+              selected ? destination.activeIcon : destination.icon,
+              size: 25,
+              color: selected ? tint : AppColors.inkSoft,
+            ),
           ),
         ),
       ),

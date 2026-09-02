@@ -10,9 +10,6 @@ import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/models/communiq_level.dart';
 import 'package:communiq/models/contest_models.dart';
 import 'package:communiq/models/onboarding_data.dart';
-import 'package:communiq/models/feedback_config.dart';
-import 'package:communiq/models/roleplay_config.dart';
-import 'package:communiq/models/session_result_model.dart';
 
 import 'package:communiq/views/auth/screens/login_screen.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
@@ -45,8 +42,6 @@ import 'package:communiq/views/onboarding/screens/welcome_screen.dart';
 import 'package:communiq/views/premium_view/screens/premium_screen.dart';
 import 'package:communiq/views/profile_view/screens/profile_view.dart';
 import 'package:communiq/views/roleplay_view/screens/all_scenarios_page.dart';
-import 'package:communiq/views/roleplay_view/screens/roleplay_conversation_screen.dart';
-import 'package:communiq/views/roleplay_view/screens/roleplay_feedback_screen.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_view.dart';
 import 'package:communiq/views/roleplay_view/screens/setup_scenario_page.dart';
 
@@ -283,37 +278,13 @@ GoRouter createRouter({bool gallery = false}) {
         parentNavigatorKey: _rootKey,
         builder: (_, __) => const AllScenariosPage(),
       ),
-      GoRoute(
-        path: AppRoutes.roleplayConversation,
-        parentNavigatorKey: _rootKey,
-        builder: (_, state) {
-          final args = state.extra! as ConversationArgs;
-          return RoleplayConversationScreen(
-            config: args.config,
-            sessionId: args.sessionId,
-            isOnboarding: args.isOnboarding,
-            levelId: args.levelId,
-          );
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.roleplayFeedback,
-        parentNavigatorKey: _rootKey,
-        builder: (_, state) {
-          final args = state.extra! as FeedbackArgs;
-          return RoleplayFeedbackScreen(
-            config: args.config,
-            report: args.report,
-            conversationHistory: args.conversationHistory,
-            isOnboarding: args.isOnboarding,
-            xpAwarded: args.xpAwarded,
-            newLevel: args.newLevel,
-            leveledUp: args.leveledUp,
-            newBadges: args.newBadges,
-            newStreak: args.newStreak,
-          );
-        },
-      ),
+      // Conversation and feedback are reached via raw Navigator pushes from
+      // SetupScenarioPage / RoleplayConversationScreen, not via go_router —
+      // both screens need the full session/report objects those raw pushes
+      // carry, which don't round-trip through a route's `extra` cleanly.
+      // A go_router `roleplayConversation`/`roleplayFeedback` pair used to
+      // live here but was never actually reached by that live flow — a
+      // second, dead navigation path for the same two screens.
 
       GoRoute(
         path: AppRoutes.contest,
@@ -384,40 +355,3 @@ class LearningSessionArgs {
   final int initialCoins;
 }
 
-class ConversationArgs {
-  const ConversationArgs({
-    required this.config,
-    this.sessionId = 'demo',
-    this.isOnboarding = false,
-    this.levelId,
-  });
-
-  final RoleplayConfig config;
-  final String sessionId;
-  final bool isOnboarding;
-  final int? levelId;
-}
-
-class FeedbackArgs {
-  const FeedbackArgs({
-    required this.config,
-    this.report,
-    this.conversationHistory = const [],
-    this.isOnboarding = false,
-    this.xpAwarded = 0,
-    this.newLevel = 1,
-    this.leveledUp = false,
-    this.newBadges = const [],
-    this.newStreak = 0,
-  });
-
-  final FeedbackConfig config;
-  final SessionReport? report;
-  final List<Map<String, String>> conversationHistory;
-  final bool isOnboarding;
-  final int xpAwarded;
-  final int newLevel;
-  final bool leveledUp;
-  final List<String> newBadges;
-  final int newStreak;
-}

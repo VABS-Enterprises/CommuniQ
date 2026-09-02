@@ -41,8 +41,6 @@ abstract final class AppRoutes {
   static const learningSession = '/learning/session';
   static const roleplaySetup = '/roleplay/setup';
   static const roleplayScenarios = '/roleplay/scenarios';
-  static const roleplayConversation = '/roleplay/conversation';
-  static const roleplayFeedback = '/roleplay/feedback';
   static const sessionReport = '/session-report';
 
   static const contest = '/contest';

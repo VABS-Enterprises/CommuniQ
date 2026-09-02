@@ -13,17 +13,23 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/routes/app_router.dart';
 import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/services/api_service.dart';
+import 'package:communiq/core/services/gaze_detector_service.dart';
 import 'package:communiq/core/services/live_voice_service.dart';
 import 'package:communiq/core/services/session_service.dart';
+import 'package:communiq/core/services/visual_analysis_calculator.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/roleplay_config.dart';
 import 'package:communiq/models/session_result_model.dart'
     show TurnTranscript, TurnAudioChunk, TurnDone, TurnStreamError;
+import 'package:communiq/models/visual_analysis_models.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_feedback_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -116,6 +122,96 @@ class _RoleplayConversationScreenState
   bool _sttAvailable = false;
   // Live partial transcript shown while the user speaks.
   String _liveTranscript = '';
+
+  // ─── Camera Visual Analysis ──────────────────────────────────────────────────
+  CameraController? _cameraController;
+  CameraDescription? _frontCamera;
+  GazeDetectorService? _gazeService;
+  bool _isCameraEnabled = false;
+  bool _isCameraInitializing = false;
+  VisionFrameResult? _latestVisionFrame;
+  final List<VisionFrameResult> _visionFrames = [];
+
+  Future<void> _toggleCameraTracking() async {
+    if (_isCameraEnabled) {
+      _disableCameraTracking();
+    } else {
+      await _enableCameraTracking();
+    }
+  }
+
+  Future<void> _enableCameraTracking() async {
+    setState(() => _isCameraInitializing = true);
+    final status = await Permission.camera.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        setState(() => _isCameraInitializing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Camera permission required for eye-contact tracking')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final cameras = await availableCameras();
+      final front = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.isNotEmpty ? cameras.first : throw Exception('No camera'),
+      );
+
+      _frontCamera = front;
+      _gazeService ??= GazeDetectorService();
+
+      final controller = CameraController(
+        front,
+        ResolutionPreset.medium,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.nv21,
+      );
+
+      await controller.initialize();
+      if (!mounted) return;
+
+      setState(() {
+        _cameraController = controller;
+        _isCameraEnabled = true;
+        _isCameraInitializing = false;
+      });
+
+      await controller.startImageStream((image) async {
+        if (!mounted || !_isCameraEnabled || _gazeService == null || _frontCamera == null) return;
+        if (_gazeService!.isProcessing) return;
+
+        final res = await _gazeService!.processFrame(
+          cameraImage: image,
+          cameraDescription: _frontCamera!,
+        );
+
+        if (res != null && mounted) {
+          setState(() => _latestVisionFrame = res);
+          _visionFrames.add(res);
+        }
+      });
+    } catch (e) {
+      debugPrint('[RoleplayScreen] Camera error: $e');
+      if (mounted) {
+        setState(() => _isCameraInitializing = false);
+      }
+    }
+  }
+
+  void _disableCameraTracking() {
+    _cameraController?.stopImageStream().catchError((_) {});
+    _cameraController?.dispose();
+    _cameraController = null;
+    if (mounted) {
+      setState(() {
+        _isCameraEnabled = false;
+        _latestVisionFrame = null;
+      });
+    }
+  }
 
   /// True when running without a real session (onboarding demo, no auth).
   bool get _isDemoMode =>
@@ -245,6 +341,9 @@ class _RoleplayConversationScreenState
   void dispose() {
     debugPrint(
         '🎙 [Conversation] Screen disposed — session=${widget.sessionId}');
+    _cameraController?.stopImageStream().catchError((_) {});
+    _cameraController?.dispose();
+    _gazeService?.dispose();
     _cancelLocalKaraoke();
     _sessionTimer?.cancel();
     _amplitudeTimer?.cancel();
@@ -1242,6 +1341,15 @@ class _RoleplayConversationScreenState
       _cardAnimKey++;
     });
 
+    // ── Compute Visual Session Result if Camera Eye-Tracking was enabled ──────
+    VisionSessionResult? visualResult;
+    if (_isCameraEnabled && _visionFrames.isNotEmpty) {
+      visualResult = VisualAnalysisCalculator.calculateSessionResult(
+        frames: List.from(_visionFrames),
+        totalDuration: Duration(seconds: _secondsElapsed > 0 ? _secondsElapsed : 10),
+      );
+    }
+
     // ── Demo mode ──────────────────────────────────────────────────────────────
     if (_isDemoMode) {
       await Future.delayed(const Duration(seconds: 2));
@@ -1283,6 +1391,7 @@ class _RoleplayConversationScreenState
                 'Add one specific detail about your work to make it memorable.',
               ],
             ),
+            visualResult: visualResult,
             conversationHistory: _conversationHistory.isNotEmpty
                 ? List.from(_conversationHistory)
                 : const [
@@ -1519,6 +1628,60 @@ class _RoleplayConversationScreenState
                 ],
               ),
             ),
+            if (_isCameraEnabled && _cameraController != null && _cameraController!.value.isInitialized)
+              Positioned(
+                top: 75,
+                right: 16,
+                width: 105,
+                height: 140,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: (_latestVisionFrame?.eyeContact == EyeContactState.yes
+                          ? AppColors.emerald
+                          : AppColors.primary),
+                      width: 2,
+                    ),
+                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8)],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CameraPreview(_cameraController!),
+                        Positioned(
+                          bottom: 4,
+                          left: 4,
+                          right: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.75),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              _latestVisionFrame?.eyeContact == EyeContactState.yes
+                                  ? '👁 Eye Contact'
+                                  : 'Looking Away',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: _latestVisionFrame?.eyeContact == EyeContactState.yes
+                                    ? AppColors.emerald
+                                    : AppColors.warning,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -1594,7 +1757,37 @@ class _RoleplayConversationScreenState
               ),
             ],
           ),
-          _buildTimerPill(),
+          Row(
+            children: [
+              IconButton(
+                tooltip: _isCameraEnabled ? 'Disable Eye-Contact Camera' : 'Enable Eye-Contact Camera',
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: _isCameraEnabled ? AppColors.primary.withValues(alpha: 0.3) : const Color(0xFF141D2C),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _isCameraEnabled ? AppColors.primary : AppColors.border,
+                    ),
+                  ),
+                  child: _isCameraInitializing
+                      ? const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryLight),
+                        )
+                      : Icon(
+                          _isCameraEnabled ? Icons.videocam_rounded : Icons.videocam_outlined,
+                          color: _isCameraEnabled ? AppColors.primaryLight : AppColors.textSecondary,
+                          size: 18,
+                        ),
+                ),
+                onPressed: _toggleCameraTracking,
+              ),
+              const SizedBox(width: 6),
+              _buildTimerPill(),
+            ],
+          ),
         ],
       ),
     );

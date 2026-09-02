@@ -52,7 +52,8 @@ Get a free Groq key at https://console.groq.com (generous free tier).
 
 ### Run the generator
 ```bash
-# Generate 200 sessions (~15-20 min, uses llama-3.3-70b-versatile on Groq)
+# Generate 200 sessions (~15-20 min, uses openai/gpt-oss-120b on Groq by default —
+# llama-3.3-70b-versatile was removed from Groq's catalog; pass --model to override)
 python training/scripts/generate_bulk_dataset.py \
   --count 200 \
   --output training/data/sessions_bulk.json
@@ -76,6 +77,12 @@ Each session has **5 user quality profiles** (excellent → poor) so the model l
 ---
 
 ## Step 2 — Convert to ChatML JSONL
+
+**Important**: `firestore_turns_to_chatml.py` intentionally does NOT prepend a
+`[scenarioType:...]` tag to the system prompt (an earlier version of this
+script did). Production (`server/src/controllers/sessionController.js`'s
+`buildFinalPrompt`) never sends that tag, so training with it would teach the
+model to rely on a cue it will never see at inference time.
 
 Merge the bulk sessions with the existing spectrum sessions and convert:
 
@@ -210,7 +217,7 @@ Record these for reproducibility:
 | Base model | `meta-llama/Meta-Llama-3.1-8B-Instruct` |
 | Dataset hash | `sha256sum training/data/chatml_scrubbed.jsonl` |
 | Train examples | (count) |
-| Epochs | 2 |
+| Epochs | 3 |
 | LoRA r / alpha | 16 / 16 |
 | Final train loss | (from Colab output) |
 | Adapter path | `MyDrive/communiq/lora_output/` |
