@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communiq/common_widgets/chunky_button.dart';
+import 'package:communiq/common_widgets/chunky_card.dart';
+import 'package:communiq/common_widgets/icon_tile.dart';
+import 'package:communiq/common_widgets/mascot/mascot.dart';
+import 'package:communiq/common_widgets/playful_background.dart';
+import 'package:communiq/common_widgets/section_header.dart';
+import 'package:communiq/common_widgets/state_views.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/app_text_styles.dart';
+import 'package:communiq/core/constants/motion.dart';
+import 'package:communiq/core/constants/radius.dart';
+import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/data/scenario_presets.dart';
 import 'package:communiq/core/routes/app_router.dart';
 import 'package:communiq/core/routes/app_routes.dart';
@@ -220,101 +230,62 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Option picker
+  // ─────────────────────────────────────────────────────────────────────────
+
   void _showPicker(
     String title,
     List<String> options,
     String current,
     ValueChanged<String> onSelect,
   ) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
+      backgroundColor: AppColors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.sheet),
+          ),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.s20,
+          AppSpacing.s12,
+          AppSpacing.s20,
+          AppSpacing.s24 + MediaQuery.of(sheetContext).padding.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 5,
                 decoration: BoxDecoration(
                   color: AppColors.outline,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              const SizedBox(height: 24),
-              Text(
-                title,
-                style: AppTextStyles.titleLarge.copyWith(
-                  color: AppColors.ink,
-                  fontWeight: FontWeight.w700,
-                ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+            Text(title, style: AppTextStyles.headlineSmall),
+            const SizedBox(height: AppSpacing.s16),
+            for (final option in options)
+              _PickerRow(
+                label: option,
+                selected: option == current,
+                onTap: () {
+                  onSelect(option);
+                  // The sheet is its own imperative route, so it pops with its
+                  // own context — not the page's.
+                  Navigator.pop(sheetContext);
+                },
               ),
-              const SizedBox(height: 28),
-              ...options.asMap().entries.map((e) {
-                final isSelected = e.value == current;
-                return Padding(
-                  padding: EdgeInsets.only(
-                      bottom: e.key < options.length - 1 ? 12 : 0),
-                  child: GestureDetector(
-                    onTap: () {
-                      onSelect(e.value);
-                      context.pop();
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 16, horizontal: 20),
-                      decoration: BoxDecoration(
-                        gradient: isSelected
-                            ? LinearGradient(
-                                colors: [
-                                  AppColors.brand,
-                                  AppColors.brandLight
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
-                        color: isSelected ? null : AppColors.bg,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.brandLight
-                              : AppColors.outline,
-                          width: isSelected ? 1.5 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            e.value,
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              color: isSelected
-                                  ? AppColors.inkOnDark
-                                  : AppColors.ink,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                          if (isSelected)
-                            const Icon(Icons.check_rounded,
-                                color: AppColors.inkOnDark, size: 22),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -326,35 +297,63 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+    return PlayfulBackground(
+      seed: 4,
+      child: Scaffold(
+        backgroundColor: AppColors.transparent,
+        body: SafeArea(
+          bottom: false,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
-              _buildHeader(),
-              const SizedBox(height: 28),
-              if (_mode == _Mode.custom) ...[
-                _buildCustomInput(),
-                const SizedBox(height: 32),
-              ],
-              _buildSectionTitle('Configuration'),
-              const SizedBox(height: 16),
-              _buildConfigGrid(),
-              const SizedBox(height: 28),
-              _buildSectionTitle('AI Personality'),
-              const SizedBox(height: 12),
-              _buildTraitChips(),
-              const SizedBox(height: 28),
-              _buildBackstoryField(),
-              const SizedBox(height: 28),
-              _buildSummaryCard(),
-              const SizedBox(height: 28),
-              _buildStartButton(),
-              const SizedBox(height: 36),
+              _header(),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.page,
+                    AppSpacing.s4,
+                    AppSpacing.page,
+                    AppSpacing.s24,
+                  ),
+                  children: [
+                    FadeInUp(child: _scenarioCard()),
+                    const SizedBox(height: AppSpacing.section),
+                    FadeInUp(
+                      delay: AppMotion.staggerFor(1),
+                      child: const SectionHeader(
+                        eyebrow: 'WHO YOU PRACTISE WITH',
+                        title: 'The other person',
+                      ),
+                    ),
+                    FadeInUp(
+                      delay: AppMotion.staggerFor(2),
+                      child: _configList(),
+                    ),
+                    const SizedBox(height: AppSpacing.section),
+                    FadeInUp(
+                      delay: AppMotion.staggerFor(3),
+                      child: const SectionHeader(
+                        eyebrow: 'HOW THEY BEHAVE',
+                        title: 'Personality',
+                      ),
+                    ),
+                    FadeInUp(
+                      delay: AppMotion.staggerFor(4),
+                      child: _traitChips(),
+                    ),
+                    const SizedBox(height: AppSpacing.section),
+                    FadeInUp(
+                      delay: AppMotion.staggerFor(5),
+                      child: _backstoryCard(),
+                    ),
+                    const SizedBox(height: AppSpacing.s20),
+                    FadeInUp(
+                      delay: AppMotion.staggerFor(6),
+                      child: _summaryCard(),
+                    ),
+                  ],
+                ),
+              ),
+              _footer(),
             ],
           ),
         ),
@@ -362,303 +361,145 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Section builders
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Header ────────────────────────────────────────────────────────────────
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: () => context.pop(),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.bgSunk,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.outline),
-            ),
-            child: const Center(
-              child: Icon(Icons.arrow_back_ios_new_rounded,
-                  color: AppColors.ink, size: 17),
+  Widget _header() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.page,
+        AppSpacing.s8,
+        AppSpacing.page,
+        AppSpacing.s12,
+      ),
+      child: Row(
+        children: [
+          _CircleIconButton(
+            icon: Icons.arrow_back_rounded,
+            semanticLabel: 'Back',
+            onTap: () => context.pop(),
+          ),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('SET THE SCENE', style: AppTextStyles.eyebrow),
+                const SizedBox(height: 2),
+                Text('Before you speak', style: AppTextStyles.displaySmall),
+              ],
             ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Setup Scenario',
-              style: AppTextStyles.headlineSmall.copyWith(
-                letterSpacing: -0.3,
-              ),
-            ),
-            const Text(
-              'Configure your practice session',
-              style: TextStyle(
-                color: AppColors.inkSoft,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildScenarioImage(String asset) {
-    return Container(
-      width: double.infinity,
-      height: 180,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.outline, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.brand.withValues(alpha: 0.1),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
+          const Mascot(mood: MascotMood.thinking, size: 52),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: Stack(
-          fit: StackFit.expand,
+    );
+  }
+
+  // ── The scenario itself ───────────────────────────────────────────────────
+
+  Widget _scenarioCard() {
+    final preset = _selectedPreset;
+    if (_mode == _Mode.preset && preset != null) {
+      return ChunkyCard(
+        accent: AppColors.brand,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Image.asset(asset, fit: BoxFit.cover),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.6),
-                  ],
+            Row(
+              children: [
+                IconTile(icon: preset.icon, color: AppColors.brand, size: 46),
+                const SizedBox(width: AppSpacing.s12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(preset.title, style: AppTextStyles.titleLarge),
+                      const SizedBox(height: 2),
+                      Text(preset.subtitle, style: AppTextStyles.bodySmall),
+                    ],
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.s14),
+            // A preset is a starting point, not a cage — swapping to a custom
+            // scenario keeps whatever configuration is already chosen.
+            GestureDetector(
+              onTap: () => setState(() {
+                _mode = _Mode.custom;
+                _selectedPreset = null;
+              }),
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.edit_rounded,
+                      size: 15, color: AppColors.brand),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Write my own scenario instead',
+                    style: AppTextStyles.labelMedium
+                        .copyWith(color: AppColors.brand),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildCustomInput() {
-    final isEmpty = _scenarioController.text.trim().isEmpty;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Describe Your Scenario'),
-        const SizedBox(height: 14),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isEmpty
-                  ? AppColors.outline
-                  : AppColors.brandLight.withValues(alpha: 0.4),
-              width: isEmpty ? 1 : 1.5,
-            ),
-          ),
-          child: TextField(
-            controller: _scenarioController,
-            onChanged: (_) => setState(() {}),
-            maxLines: 5,
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.ink,
-              height: 1.5,
-            ),
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.all(18),
-              hintText:
-                  'e.g. "I want to practice negotiating my salary with my manager after completing a successful project..."',
-              hintStyle: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.inkSoft,
-                height: 1.5,
-              ),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Padding(
-          padding: const EdgeInsets.only(left: 4),
-          child: Text(
-            isEmpty
-                ? 'Required — describe the conversation you want to practice'
-                : '✓ Scenario described',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: isEmpty ? AppColors.inkSoft : AppColors.success,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildConfigGrid() {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 14,
-      mainAxisSpacing: 14,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.75,
-      children: [
-        _ConfigCard(
-          label: 'AI Persona',
-          value: _persona,
-          onTap: () => _showPicker('AI Persona', _personas, _persona,
-              (v) => setState(() => _persona = v)),
-        ),
-        _ConfigCard(
-          label: 'Tone',
-          value: _tone,
-          onTap: () => _showPicker('Conversation Tone', _tones, _tone,
-              (v) => setState(() => _tone = v)),
-        ),
-        _ConfigCard(
-          label: 'Level',
-          value: _level,
-          onTap: () => _showPicker('Difficulty Level', _levels, _level,
-              (v) => setState(() => _level = v)),
-        ),
-        _ConfigCard(
-          label: 'Your Role',
-          value: _role,
-          onTap: () => _showPicker(
-              'Your Role', _roles, _role, (v) => setState(() => _role = v)),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTraitChips() {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: _traitOptions.map((trait) {
-        final isSelected = _traits == trait;
-        return GestureDetector(
-          onTap: () => setState(() => _traits = trait),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            decoration: BoxDecoration(
-              gradient: isSelected
-                  ? LinearGradient(
-                      colors: [AppColors.brand, AppColors.brandLight],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: isSelected ? null : AppColors.surface,
-              borderRadius: BorderRadius.circular(50),
-              border: Border.all(
-                color: isSelected ? AppColors.brandLight : AppColors.outline,
-                width: isSelected ? 1.5 : 1,
-              ),
-            ),
-            child: Text(
-              trait,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: isSelected ? AppColors.inkOnDark : AppColors.inkMuted,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildBackstoryField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            _buildSectionTitle('Backstory'),
-            const SizedBox(width: 8),
-            Text(
-              '(Optional)',
-              style:
-                  AppTextStyles.labelSmall.copyWith(color: AppColors.inkSoft),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.outline),
-          ),
-          child: TextField(
-            controller: _backstoryController,
-            maxLines: 2,
-            style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.ink,
-              height: 1.4,
-            ),
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.all(16),
-              hintText:
-                  'Extra context for the AI (e.g. "I have 3 years of experience...")',
-              hintStyle:
-                  AppTextStyles.bodyMedium.copyWith(color: AppColors.inkSoft),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.brand.withValues(alpha: 0.10),
-            AppColors.brandLight.withValues(alpha: 0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.brandLight.withValues(alpha: 0.22),
-          width: 1.2,
-        ),
-      ),
+    return ChunkyCard(
+      accent: AppColors.brand,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Summary',
-            style: AppTextStyles.labelLarge.copyWith(
-              color: AppColors.brandLight,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              const IconTile(
+                  icon: Icons.tune_rounded, color: AppColors.brand, size: 46),
+              const SizedBox(width: AppSpacing.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Your scenario', style: AppTextStyles.titleLarge),
+                    const SizedBox(height: 2),
+                    Text('Describe the conversation you want to practise',
+                        style: AppTextStyles.bodySmall),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            _generateSummary(),
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.inkMuted,
-              height: 1.6,
+          const SizedBox(height: AppSpacing.s14),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.bgSunk,
+              borderRadius: AppRadius.chipRadius,
+              border: Border.all(color: AppColors.outline, width: 2),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s12,
+              vertical: AppSpacing.s4,
+            ),
+            child: TextField(
+              controller: _scenarioController,
+              maxLines: 4,
+              minLines: 3,
+              style: AppTextStyles.bodyLarge,
+              textCapitalization: TextCapitalization.sentences,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText:
+                    'e.g. Asking my manager for a raise after a strong quarter',
+                hintStyle:
+                    AppTextStyles.bodyMedium.copyWith(color: AppColors.inkSoft),
+              ),
             ),
           ),
         ],
@@ -666,163 +507,349 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
     );
   }
 
-  Widget _buildStartButton() {
-    final active = _canStart && !_isStarting;
-    return GestureDetector(
-      onTap: active ? _startRoleplay : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        height: 60,
-        decoration: BoxDecoration(
-          gradient: active
-              ? LinearGradient(
-                  colors: [
-                    AppColors.brandDark,
-                    AppColors.brand,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: active ? null : AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: active
-                ? AppColors.brand.withValues(alpha: 0.4)
-                : AppColors.outline,
+  // ── Configuration ─────────────────────────────────────────────────────────
+
+  Widget _configList() {
+    return Column(
+      children: [
+        _ConfigRow(
+          icon: Icons.person_rounded,
+          label: 'AI persona',
+          value: _persona,
+          onTap: () => _showPicker('AI persona', _personas, _persona,
+              (v) => setState(() => _persona = v)),
+        ),
+        _ConfigRow(
+          icon: Icons.graphic_eq_rounded,
+          label: 'Tone',
+          value: _tone,
+          onTap: () => _showPicker(
+              'Tone', _tones, _tone, (v) => setState(() => _tone = v)),
+        ),
+        _ConfigRow(
+          icon: Icons.speed_rounded,
+          label: 'Difficulty',
+          value: _level,
+          onTap: () => _showPicker(
+              'Difficulty', _levels, _level, (v) => setState(() => _level = v)),
+        ),
+        _ConfigRow(
+          icon: Icons.badge_rounded,
+          label: 'Your role',
+          value: _role,
+          onTap: () => _showPicker(
+              'Your role', _roles, _role, (v) => setState(() => _role = v)),
+        ),
+      ],
+    );
+  }
+
+  Widget _traitChips() {
+    return Wrap(
+      spacing: AppSpacing.s10,
+      runSpacing: AppSpacing.s10,
+      children: [
+        for (final trait in _traitOptions)
+          _TraitChip(
+            label: trait,
+            selected: _traits == trait,
+            onTap: () => setState(() => _traits = trait),
           ),
-          boxShadow: null,
-        ),
-        child: Center(
-          child: _isStarting
-              ? Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: AppColors.inkOnDark, strokeWidth: 2.5),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Starting...',
-                      style: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.inkOnDark, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                )
-              : Text(
-                  'Start Roleplay',
-                  style: AppTextStyles.titleMedium.copyWith(
-                    color: active ? AppColors.inkOnDark : AppColors.inkSoft,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-        ),
+      ],
+    );
+  }
+
+  // ── Backstory ─────────────────────────────────────────────────────────────
+
+  Widget _backstoryCard() {
+    return ChunkyCard(
+      fill: AppColors.surfaceAlt,
+      accent: AppColors.sun,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('BACKSTORY',
+                  style:
+                      AppTextStyles.eyebrow.copyWith(color: AppColors.sunDark)),
+              const SizedBox(width: AppSpacing.s6),
+              Text('optional',
+                  style: AppTextStyles.labelSmall
+                      .copyWith(color: AppColors.inkSoft)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          Text(
+            'Anything the AI should already know about you or the situation.',
+            style: AppTextStyles.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          TextField(
+            controller: _backstoryController,
+            maxLines: 3,
+            minLines: 2,
+            style: AppTextStyles.bodyMedium,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: AppColors.surface,
+              hintText: "e.g. I've been in this role for three years",
+              hintStyle:
+                  AppTextStyles.bodySmall.copyWith(color: AppColors.inkSoft),
+              border: OutlineInputBorder(
+                borderRadius: AppRadius.chipRadius,
+                borderSide: const BorderSide(color: AppColors.outline, width: 2),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: AppRadius.chipRadius,
+                borderSide: const BorderSide(color: AppColors.outline, width: 2),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: AppRadius.chipRadius,
+                borderSide: const BorderSide(color: AppColors.brand, width: 2),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String text) {
-    return Row(
-      children: [
-        Container(
-          width: 3,
-          height: 16,
-          decoration: BoxDecoration(
-            color: AppColors.brand,
-            borderRadius: BorderRadius.circular(2),
+  // ── Summary ───────────────────────────────────────────────────────────────
+
+  Widget _summaryCard() {
+    return ChunkyCard(
+      fill: AppColors.brandSoft,
+      borderColor: AppColors.brand,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Mascot(mood: MascotMood.proud, size: 46, animate: false),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('HERE IS THE PLAN',
+                    style: AppTextStyles.eyebrow
+                        .copyWith(color: AppColors.brandDark)),
+                const SizedBox(height: AppSpacing.s6),
+                Text(_generateSummary(),
+                    style: AppTextStyles.bodyMedium.copyWith(height: 1.5)),
+              ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+
+  Widget _footer() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.page,
+        AppSpacing.s12,
+        AppSpacing.page,
+        AppSpacing.s12,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.outline, width: 2)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!_canStart) ...[
+              Text(
+                'Describe your scenario to continue',
+                style:
+                    AppTextStyles.bodySmall.copyWith(color: AppColors.inkSoft),
+              ),
+              const SizedBox(height: AppSpacing.s8),
+            ],
+            ChunkyButton(
+              label: 'Start roleplay',
+              icon: Icons.mic_rounded,
+              expand: true,
+              loading: _isStarting,
+              onPressed: _canStart && !_isStarting ? _startRoleplay : null,
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Text(
-          text,
-          style: AppTextStyles.titleLarge.copyWith(
-            color: AppColors.ink,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.2,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
-// -----------------------------------------------------------------------------
-// Config card widget
-// -----------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Pieces
+// ─────────────────────────────────────────────────────────────────────────────
 
-class _ConfigCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-
-  const _ConfigCard({
+/// One tappable configuration row: icon, what it sets, and what it is set to.
+///
+/// Replaces a 2x2 grid of cards that showed a small label above a large value.
+/// A vertical list reads in one pass and leaves room for the value to be a full
+/// phrase — "You as Candidate" was being squeezed into half the screen width.
+class _ConfigRow extends StatelessWidget {
+  const _ConfigRow({
+    required this.icon,
     required this.label,
     required this.value,
     required this.onTap,
   });
 
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return ChunkyCard(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.brand.withValues(alpha: 0.12)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.brand.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      margin: const EdgeInsets.only(bottom: AppSpacing.item),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s14,
+        vertical: AppSpacing.s12,
+      ),
+      child: Row(
+        children: [
+          IconTile(icon: icon, color: AppColors.brand, size: 40),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  label,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.inkSoft,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: AppColors.brand.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Icon(Icons.expand_more_rounded,
-                      color: AppColors.brandLight, size: 14),
-                ),
+                Text(label, style: AppTextStyles.labelSmall),
+                const SizedBox(height: 2),
+                Text(value, style: AppTextStyles.titleMedium),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.ink,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          ),
+          const Icon(Icons.expand_more_rounded,
+              color: AppColors.inkSoft, size: 22),
+        ],
+      ),
+    );
+  }
+}
+
+class _TraitChip extends StatelessWidget {
+  const _TraitChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: AppMotion.quick,
+          curve: AppMotion.ease,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s16,
+            vertical: AppSpacing.s10,
+          ),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.brand : AppColors.surface,
+            borderRadius: AppRadius.pillRadius,
+            border: Border.all(
+              color: selected ? AppColors.brand : AppColors.outline,
+              width: 2,
             ),
-          ],
+          ),
+          child: Text(
+            label,
+            style: AppTextStyles.labelLarge.copyWith(
+              color: selected ? AppColors.inkOnDark : AppColors.inkMuted,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PickerRow extends StatelessWidget {
+  const _PickerRow({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChunkyCard(
+      onTap: onTap,
+      selected: selected,
+      accent: AppColors.brand,
+      margin: const EdgeInsets.only(bottom: AppSpacing.item),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s16,
+        vertical: AppSpacing.s14,
+      ),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: AppTextStyles.titleMedium)),
+          if (selected)
+            const Icon(Icons.check_circle_rounded,
+                color: AppColors.brand, size: 22),
+        ],
+      ),
+    );
+  }
+}
+
+class _CircleIconButton extends StatelessWidget {
+  const _CircleIconButton({
+    required this.icon,
+    required this.onTap,
+    required this.semanticLabel,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String semanticLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.outline, width: 2),
+          ),
+          child: Icon(icon, size: 20, color: AppColors.ink),
         ),
       ),
     );
