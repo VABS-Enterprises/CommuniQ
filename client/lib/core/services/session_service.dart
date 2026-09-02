@@ -9,6 +9,7 @@ import 'package:communiq/models/scenario_model.dart';
 import 'package:communiq/models/session_result_model.dart'
     show OpeningResult, SessionEndResult, TurnResult;
 import 'package:communiq/models/user_profile.dart';
+import 'package:communiq/models/visual_analysis_models.dart';
 
 /// Handles all session-related API calls to the Node backend.
 class SessionService {
@@ -364,5 +365,48 @@ class SessionService {
       return 'Cannot reach the server. Check your connection.';
     }
     return fallback;
+  }
+
+  /// Evaluates computer vision metrics via AI LLM and persists report to Firestore under the user's account.
+  Future<List<VisualInsight>?> evaluateAndSaveVisualReport(VisionSessionResult result) async {
+    try {
+      final payload = {
+        'visualEngagementScore': result.visualEngagementScore,
+        'overallPostureScore': result.overallPostureScore,
+        'eyeContactPercentage': result.eyeContactPercentage,
+        'gazeStabilityPercentage': result.gazeStabilityPercentage,
+        'spineAlignmentPercentage': result.spineAlignmentPercentage,
+        'shoulderSymmetryPercentage': result.shoulderSymmetryPercentage,
+        'chestOpennessPercentage': result.chestOpennessPercentage,
+        'headTiltStabilityPercentage': result.headTiltStabilityPercentage,
+        'handMovementPercentage': result.handMovementPercentage,
+        'gestureScore': result.gestureScore,
+      };
+
+      final response = await _dio.post('/user/visual-reports', data: payload);
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>?;
+        final insightsList = data?['insights'] as List?;
+        if (insightsList != null && insightsList.isNotEmpty) {
+          return insightsList.map((item) {
+            InsightType type = InsightType.suggestion;
+            final typeStr = (item['type'] ?? 'suggestion').toString().toLowerCase();
+            if (typeStr == 'positive') {
+              type = InsightType.positive;
+            } else if (typeStr == 'warning') {
+              type = InsightType.warning;
+            }
+            return VisualInsight(
+              type: type,
+              title: item['title'] ?? 'AI Executive Coaching Tip',
+              description: item['description'] ?? 'Keep practicing your posture.',
+            );
+          }).toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('[SessionService] evaluateAndSaveVisualReport error: $e');
+    }
+    return null;
   }
 }

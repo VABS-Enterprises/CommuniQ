@@ -59,7 +59,7 @@ class Settings:
     # candidates (qwen3.8-27b, gpt-oss-20b) — worth the extra ~1s since this
     # runs once after a session ends, not on the live conversation path.
     eval_llm_backend: str = os.getenv("EVAL_LLM_BACKEND", "groq").strip().lower()
-    eval_llm_model: str = os.getenv("EVAL_LLM_MODEL", "openai/gpt-oss-120b")
+    eval_llm_model: str = os.getenv("EVAL_LLM_MODEL", "qwen/qwen3.8-27b")
 
     # ── Local STT (ASR_BACKEND=local) ─────────────────────────────────────────
     # Whisper model size: "tiny" | "base" | "small" | "medium" | "large-v3"

@@ -1,5 +1,7 @@
-const { updateUser, getUserById } = require('../services/firestoreService');
+const firestoreService = require('../services/firestoreService');
+const { updateUser, getUserById } = firestoreService;
 const { FieldValue } = require('firebase-admin/firestore');
+const fastApiService = require('../services/fastApiService');
 
 const MAX_NAME_LENGTH = 100;
 
@@ -16,10 +18,6 @@ async function getProfile(req, res) {
 }
 
 // PATCH /user/profile
-// Note: the legacy `learning_progress` (array) field this endpoint used to accept
-// was removed — it collided in name with `learningProgress` (object), the
-// server-authoritative field now owned exclusively by the learning module
-// (routes/learning.js). The client no longer sends it (grading moved server-side).
 async function updateProfile(req, res) {
   const userId = req.uid;
   const { name } = req.body;
@@ -51,20 +49,18 @@ async function updateProfile(req, res) {
 }
 
 // PATCH /user/training-consent
-// Data-governance / opt-out control (paper §3.6): lets a user opt in/out of
-// their session data being used for future model training. Non-blocking —
-// opting out does not remove access to any platform feature.
 async function updateTrainingConsent(req, res) {
   const userId = req.uid;
   const { optedIn } = req.body;
 
   if (typeof optedIn !== 'boolean') {
-    return res.status(400).json({ error: 'optedIn (boolean) is required' });
+    return res.status(400).json({ error: 'optedIn must be a boolean' });
   }
 
   try {
     await updateUser(userId, {
-      trainingConsent: { optedIn, updatedAt: FieldValue.serverTimestamp() },
+      'trainingConsent.optedIn': optedIn,
+      'trainingConsent.updatedAt': FieldValue.serverTimestamp(),
     });
     return res.status(200).json({ trainingConsent: { optedIn } });
   } catch (err) {
@@ -74,10 +70,6 @@ async function updateTrainingConsent(req, res) {
 }
 
 // GET /user/evaluation-profile
-// Returns the calling user's own longitudinal evaluation-model state
-// (skillHistory, scenario category counts) plus their most recent report's
-// adaptive block — for a future "why did I get this score" transparency UI,
-// and for manual QA of the self-learning evaluation model.
 async function getEvaluationProfile(req, res) {
   try {
     const user = await getUserById(req.uid);
@@ -93,4 +85,55 @@ async function getEvaluationProfile(req, res) {
   }
 }
 
-module.exports = { getProfile, updateProfile, updateTrainingConsent, getEvaluationProfile };
+async function saveVisualReport(req, res) {
+  try {
+    const userId = req.uid;
+    const reportData = req.body;
+
+    // Call fastApiService to query Python ai-server Groq LLM model
+    try {
+      const aiResponse = await fastApiService.evaluateVisual({
+        eyeContactPercentage: reportData.eyeContactPercentage || 0,
+        gazeStabilityPercentage: reportData.gazeStabilityPercentage || 0,
+        spineAlignmentPercentage: reportData.spineAlignmentPercentage || 0,
+        shoulderSymmetryPercentage: reportData.shoulderSymmetryPercentage || 0,
+        chestOpennessPercentage: reportData.chestOpennessPercentage || 0,
+        headTiltStabilityPercentage: reportData.headTiltStabilityPercentage || 0,
+        handMovementPercentage: reportData.handMovementPercentage || 0,
+        overallPostureScore: reportData.overallPostureScore || 0,
+      });
+
+      if (aiResponse && Array.isArray(aiResponse.insights) && aiResponse.insights.length > 0) {
+        reportData.insights = aiResponse.insights;
+      }
+    } catch (aiErr) {
+      console.warn('[saveVisualReport] AI evaluation fallback used:', aiErr.message);
+    }
+
+    const saved = await firestoreService.saveVisualReport(userId, reportData);
+    return res.status(201).json({ success: true, report: saved, insights: reportData.insights });
+  } catch (err) {
+    console.error('saveVisualReport error:', err.message);
+    return res.status(500).json({ error: 'Could not save visual report to Firestore' });
+  }
+}
+
+async function getVisualReports(req, res) {
+  try {
+    const userId = req.uid;
+    const reports = await firestoreService.getUserVisualReports(userId);
+    return res.status(200).json({ reports });
+  } catch (err) {
+    console.error('getVisualReports error:', err.message);
+    return res.status(500).json({ error: 'Could not fetch visual reports' });
+  }
+}
+
+module.exports = {
+  getProfile,
+  updateProfile,
+  updateTrainingConsent,
+  getEvaluationProfile,
+  saveVisualReport,
+  getVisualReports,
+};

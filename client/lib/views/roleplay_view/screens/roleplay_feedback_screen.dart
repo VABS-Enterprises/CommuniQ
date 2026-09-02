@@ -614,9 +614,16 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               ),
               Expanded(
                 child: _buildVisualStatItem(
-                  'Head Forward',
-                  '${res.headOrientationPercentage.round()}%',
+                  'Upright Posture',
+                  '${res.spineAlignmentPercentage.round()}%',
                   AppColors.emerald,
+                ),
+              ),
+              Expanded(
+                child: _buildVisualStatItem(
+                  'Gestures',
+                  '${res.handMovementPercentage.round()}%',
+                  AppColors.gold,
                 ),
               ),
             ],

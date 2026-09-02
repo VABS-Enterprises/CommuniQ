@@ -150,3 +150,27 @@ class ContestEvaluateResponse(BaseModel):
     strengths: list[str]         # exactly 2 items
     improvements: list[str]      # exactly 2 items
     feedback: str
+
+
+# ─── Visual Analysis Evaluation ───────────────────────────────────────────────
+
+class VisualInsightSchema(BaseModel):
+    type: str  # "positive" | "suggestion" | "warning"
+    title: str
+    description: str
+
+
+class VisualEvaluateRequest(BaseModel):
+    eyeContactPercentage: float
+    gazeStabilityPercentage: float
+    spineAlignmentPercentage: float
+    shoulderSymmetryPercentage: float
+    chestOpennessPercentage: float
+    headTiltStabilityPercentage: float
+    handMovementPercentage: float
+    overallPostureScore: int
+
+
+class VisualEvaluateResponse(BaseModel):
+    insights: list[VisualInsightSchema]
+

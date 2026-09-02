@@ -35,6 +35,9 @@ from app.schemas.evaluate import (
     LearningEvaluateResponse,
     RoleplayEvaluateRequest,
     RoleplayEvaluateResponse,
+    VisualEvaluateRequest,
+    VisualEvaluateResponse,
+    VisualInsightSchema,
 )
 from app.services import llm_facade
 from app.services.evaluator import (
@@ -271,3 +274,88 @@ async def evaluate_contest(
         improvements=result["improvements"],
         feedback=result["feedback"],
     )
+
+
+# ─── POST /evaluate/visual ────────────────────────────────────────────────────
+
+@router.post("/visual", response_model=VisualEvaluateResponse)
+async def evaluate_visual(
+    req: VisualEvaluateRequest,
+    groq: Optional[AsyncGroq] = Depends(get_groq_client),
+):
+    """
+    Evaluate computer vision visual analysis metrics using LLM to generate AI coaching insights.
+    """
+    logger.info("Visual evaluation start — score=%d posture=%d", req.overallPostureScore, req.spineAlignmentPercentage)
+
+    system_prompt = (
+        "You are an elite, world-class executive communication, body language, and posture coach for CommuniQ.\n"
+        "Analyze the speaker's exact 5 computer vision posture metrics (Spine Alignment, Shoulder Balance, Chest Openness, Head Tilt, Gesture Expressiveness) and Eye Contact.\n"
+        "Give 3 professional, highly custom, encouraging advice points on how they can improve or maintain their delivery based directly on these specific numbers.\n"
+        "Output ONLY a raw JSON object with key 'insights' matching this schema:\n"
+        "{\n"
+        '  "insights": [\n'
+        '    {"type": "positive"|"suggestion"|"warning", "title": "<Catchy 3-5 Word Professional Title>", "description": "<2-3 sentence expert coaching feedback tailored specifically to their numerical scores>"}\n'
+        '  ]\n'
+        "}\n"
+    )
+
+    user_msg = (
+        f"Metrics:\n"
+        f"- Eye Contact: {req.eyeContactPercentage:.1f}%\n"
+        f"- Gaze Stability: {req.gazeStabilityPercentage:.1f}%\n"
+        f"- Spine & Head Alignment: {req.spineAlignmentPercentage:.1f}%\n"
+        f"- Shoulder Level Balance: {req.shoulderSymmetryPercentage:.1f}%\n"
+        f"- Chest Openness: {req.chestOpennessPercentage:.1f}%\n"
+        f"- Head Tilt Stability: {req.headTiltStabilityPercentage:.1f}%\n"
+        f"- Hand Gestures: {req.handMovementPercentage:.1f}%\n"
+        f"- Overall Posture Score: {req.overallPostureScore}/100"
+    )
+
+    try:
+        response = await llm_facade.eval_chat_completion(
+            groq,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_msg},
+            ],
+            max_tokens=512,
+            temperature=0.3,
+            timeout=15,
+        )
+        raw = response.choices[0].message.content or ""
+        import json
+        clean = raw.strip()
+        if clean.startswith("```json"):
+            clean = clean[7:]
+        if clean.startswith("```"):
+            clean = clean[3:]
+        if clean.endswith("```"):
+            clean = clean[:-3]
+        data = json.loads(clean.strip())
+        insights_data = [
+            VisualInsightSchema(
+                type=item.get("type", "suggestion"),
+                title=item.get("title", "AI Vision Insight"),
+                description=item.get("description", "Keep practicing your delivery."),
+            )
+            for item in data.get("insights", [])
+        ]
+        return VisualEvaluateResponse(insights=insights_data)
+    except Exception as e:
+        logger.warning("AI Visual evaluation fallback used: %s", e)
+        # Dynamic rule fallback
+        fallback = []
+        if req.eyeContactPercentage >= 70:
+            fallback.append(VisualInsightSchema(type="positive", title="Strong Eye Focus", description="You maintained solid camera engagement throughout."))
+        else:
+            fallback.append(VisualInsightSchema(type="suggestion", title="Camera Eye Focus", description="Focus slightly longer toward the camera while speaking."))
+
+        if req.spineAlignmentPercentage >= 75:
+            fallback.append(VisualInsightSchema(type="positive", title="Upright Spine Alignment", description="Great vertical composure with zero slouching."))
+        else:
+            fallback.append(VisualInsightSchema(type="suggestion", title="Spine Alignment Tip", description="Keep your chin up and shoulders square while presenting."))
+
+        fallback.append(VisualInsightSchema(type="positive", title="Dynamic Presentation", description="Natural body language presence maintained overall."))
+        return VisualEvaluateResponse(insights=fallback)
+

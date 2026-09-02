@@ -1085,7 +1085,6 @@ class _RoleplayConversationScreenState
     if (_isCameraEnabled && _visionFrames.isNotEmpty) {
       visualResult = VisualAnalysisCalculator.calculateSessionResult(
         frames: List.from(_visionFrames),
-        totalDuration: Duration(seconds: _secondsElapsed > 0 ? _secondsElapsed : 10),
       );
     }
 

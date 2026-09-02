@@ -4,7 +4,7 @@ const FormData = require('form-data');
 // When deployed on Render, FASTAPI_URL comes from a `fromService` reference
 // which returns only the hostname (e.g. "communiq-ai-server.onrender.com")
 // without a protocol. Ensure we always have a full URL.
-const _rawFastApiUrl = process.env.FASTAPI_URL || 'http://localhost:8000';
+const _rawFastApiUrl = (process.env.FASTAPI_URL || 'http://127.0.0.1:8000').replace('localhost', '127.0.0.1');
 const FASTAPI_URL = _rawFastApiUrl.startsWith('http')
   ? _rawFastApiUrl
   : `https://${_rawFastApiUrl}`;
@@ -226,6 +226,20 @@ async function transcribeAudio(audioBuffer, filename) {
   }
 }
 
+async function evaluateVisual(metrics) {
+  try {
+    const response = await axios.post(
+      `${FASTAPI_URL}/evaluate/visual`,
+      metrics,
+      { headers: _aiHeaders({ 'Content-Type': 'application/json' }), timeout: 15000 }
+    );
+    return response.data;
+  } catch (err) {
+    console.error('[fastApiService] evaluateVisual error:', err.message);
+    return null;
+  }
+}
+
 module.exports = {
   sendTurnToFastApi,
   sendOpeningToFastApi,
@@ -233,4 +247,5 @@ module.exports = {
   evaluateLearningAnswer,
   evaluateContestAnswer,
   transcribeAudio,
+  evaluateVisual,
 };
