@@ -179,12 +179,19 @@ async function sessionOpening(req, res) {
     // Pass the opening AI line so Pipecat seeds its LLM context with it —
     // this prevents the bot from re-introducing itself on the first user turn.
     // No-op when LIVEKIT_ENABLED=false (classic HTTP mode).
-    await livekit.dispatchAgent(sessionId, finalSystemPrompt, aiReply);
+    const agentDispatched = await livekit.dispatchAgent(
+      sessionId, finalSystemPrompt, aiReply,
+    );
 
     return res.status(200).json({
       aiReply,
       aiAudioBase64,
-      liveVoiceEnabled: livekit.ENABLED,
+      // Only true when an agent is actually in the room. This used to report
+      // livekit.ENABLED — i.e. "LiveKit is configured" — so a failed dispatch
+      // still told the client to go live-voice, and live-voice does not run
+      // the file recorder. The result was a dead conversation: the mic opened,
+      // recorded nothing, and no turn was ever sent.
+      liveVoiceEnabled: agentDispatched,
     });
   } catch (err) {
     console.error('sessionOpening error:', err.message);

@@ -869,12 +869,14 @@ class _RoleplayConversationScreenState
   Future<void> _playBase64Audio(String base64Audio) async {
     if (base64Audio.isEmpty) {
       debugPrint('🔇 [Conversation] No AI audio returned — skipping playback');
+      _audioFinishHandled = false;
       _startTimerIfNotStarted();
       await _onAudioFinished();
       return;
     }
     if (_isMuted) {
       debugPrint('🔇 [Conversation] Muted — skipping AI audio playback');
+      _audioFinishHandled = false;
       _startTimerIfNotStarted();
       await _onAudioFinished();
       return;
@@ -891,6 +893,7 @@ class _RoleplayConversationScreenState
       await file.writeAsBytes(bytes);
       debugPrint(
           '🔊 [Conversation] Playing AI audio (${bytes.length}B)...');
+      _audioFinishHandled = false;
       await _audioPlayer.setFilePath(filePath);
       await _audioPlayer.play();
     } catch (e) {
@@ -898,6 +901,14 @@ class _RoleplayConversationScreenState
       await _onAudioFinished();
     }
   }
+
+  /// Guards [_onAudioFinished] against running twice for one clip.
+  ///
+  /// The player's completed event can fire more than once, and the method is
+  /// also invoked directly on the error paths. A second run re-entered
+  /// _startMic after live voice had connected, flipping the mic into the
+  /// no-file-recorder branch and silently ending the conversation.
+  bool _audioFinishHandled = false;
 
   void _onPlayerStateChange(PlayerState state) {
     if (state.processingState == ProcessingState.completed) {
@@ -910,6 +921,11 @@ class _RoleplayConversationScreenState
 
   Future<void> _onAudioFinished() async {
     if (!mounted) return;
+    if (_audioFinishHandled) {
+      debugPrint('🔊 [Conversation] Ignoring duplicate audio-finished event');
+      return;
+    }
+    _audioFinishHandled = true;
     switch (_aiPlaybackStage) {
       case _AiPlaybackStage.afterOpening:
         _aiPlaybackStage = _AiPlaybackStage.none;
