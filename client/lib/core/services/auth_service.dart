@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
@@ -130,14 +131,18 @@ class AuthService {
           'accessToken: ${accessToken != null}, idToken: ${idToken != null}');
 
       if (accessToken == null || idToken == null) {
-        debugPrint('[Google Auth] Step 2: ❌ TOKENS ARE NULL!');
-        debugPrint('[Google Auth]   → This means SHA-1 fingerprint is NOT registered');
-        debugPrint('[Google Auth]   → in Firebase Console for package com.vabs.communiq');
-        debugPrint('[Google Auth]   → Fix: Firebase Console → Project Settings →');
-        debugPrint('[Google Auth]   →      Android app → Add fingerprint');
-        debugPrint('[Google Auth]   →      SHA-1: 30:D5:49:BA:E5:8C:F1:F6:4D:06:00:22:7C:92:33:E1:69:89:AF:3E');
+        debugPrint('[Google Auth] Step 2: ❌ TOKENS ARE NULL');
+        debugPrint('[Google Auth]   → The signing certificate of THIS build is not');
+        debugPrint('[Google Auth]   → registered in Firebase for com.vabs.communiq.');
+        debugPrint('[Google Auth]   → Print the one actually in use with:');
+        debugPrint('[Google Auth]   →   ./gradlew signingReport');
+        debugPrint('[Google Auth]   → then add it under Firebase Console →');
+        debugPrint('[Google Auth]   →   Project Settings → Android app → Add fingerprint,');
+        debugPrint('[Google Auth]   → and re-download google-services.json.');
         throw Exception(
-            'Google authentication tokens missing. SHA-1 fingerprint not registered in Firebase.');
+            "This build's signing certificate isn't registered in Firebase. "
+            'Run ./gradlew signingReport and add that SHA-1 to the Firebase '
+            'console.');
       }
 
       debugPrint('[Google Auth] Step 3: Signing in to Firebase...');
@@ -168,16 +173,61 @@ class AuthService {
       debugPrint('[Google Auth] ❌ FirebaseAuthException');
       debugPrint('[Google Auth]   code:    ${e.code}');
       debugPrint('[Google Auth]   message: ${e.message}');
-      if (e.code == 'sign_in_failed' || e.code == 'sign-in-failed') {
-        debugPrint('[Google Auth]   CAUSE: Missing SHA-1 in Firebase Console');
-        debugPrint('[Google Auth]   SHA-1: 30:D5:49:BA:E5:8C:F1:F6:4D:06:00:22:7C:92:33:E1:69:89:AF:3E');
-      }
       throw _handleFirebaseError(e);
+    } on PlatformException catch (e) {
+      debugPrint('[Google Auth] ❌ PlatformException');
+      debugPrint('[Google Auth]   code:    ${e.code}');
+      debugPrint('[Google Auth]   message: ${e.message}');
+      throw googleSignInErrorFor(e);
     } catch (e) {
       if (e is CancelledException) rethrow;
       debugPrint('[Google Auth] ❌ Unexpected error: $e');
       throw Exception('Google Sign-In failed. Please try again.');
     }
+  }
+
+  /// Turns a Google Play Services failure into something the user can act on.
+  ///
+  /// Every one of these used to collapse into "Google Sign-In failed. Please
+  /// try again." — which is wrong for most of them: a device with no network,
+  /// or a build whose certificate isn't registered, will fail identically on
+  /// every retry, so "try again" sends the user in a loop and hides the cause.
+  /// The GMS status code is the only thing that distinguishes them, and it is
+  /// carried in the message as "ApiException: <code>".
+  @visibleForTesting
+  static Exception googleSignInErrorFor(PlatformException e) {
+    final detail = '${e.code} ${e.message ?? ''}';
+    final status = RegExp(r'ApiException:\s*(\d+)').firstMatch(detail)?.group(1);
+
+    // The picker was dismissed — not an error worth showing.
+    if (status == '12501' || e.code == 'sign_in_canceled') {
+      return const CancelledException();
+    }
+
+    switch (status) {
+      case '7': // NETWORK_ERROR
+        return Exception(
+            "Can't reach Google — check your internet connection.");
+      case '10': // DEVELOPER_ERROR — signing cert / OAuth client mismatch
+        return Exception(
+            "This build isn't registered for Google Sign-In. Run "
+            './gradlew signingReport and add that SHA-1 to the Firebase '
+            'console.');
+      case '12502': // SIGN_IN_CURRENTLY_IN_PROGRESS
+        return Exception('A sign-in is already in progress.');
+      case '12500': // SIGN_IN_FAILED — usually a Play Services problem
+        return Exception(
+            'Google Sign-In could not complete. Make sure Google Play '
+            'services is up to date.');
+      case '8': // INTERNAL_ERROR
+        return Exception('Google had an internal error. Try again shortly.');
+    }
+
+    if (e.code == 'network_error') {
+      return Exception(
+          "Can't reach Google — check your internet connection.");
+    }
+    return Exception('Google Sign-In failed. Please try again.');
   }
 
   /// Signs the user out from both Firebase and Google, and clears the local

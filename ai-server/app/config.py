@@ -1,8 +1,15 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+# Anchor the .env lookup to the ai-server directory rather than the process's
+# working directory. Bare load_dotenv() searches upward from CWD, so starting
+# uvicorn from the repo root silently found no file and every key came back
+# empty — the app then failed much later with a confusing "GROQ_API_KEY is not
+# set", even though the key was sitting in ai-server/.env the whole time.
+_ENV_PATH = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=_ENV_PATH)
 
 
 class Settings:
@@ -49,6 +56,23 @@ class Settings:
     asr_backend: str = os.getenv("ASR_BACKEND", "groq").strip().lower()
     llm_backend: str = os.getenv("LLM_BACKEND", "groq").strip().lower()
     tts_backend: str = os.getenv("TTS_BACKEND", "edge").strip().lower()
+
+    # ── Reasoning models ──────────────────────────────────────────────────────
+    # Groq's gpt-oss family are *reasoning* models: they spend tokens thinking
+    # before they answer, and that thinking is billed against max_tokens. With
+    # a small budget the whole allowance goes on reasoning and the reply comes
+    # back EMPTY with finish_reason="length" — which took down every
+    # conversation turn in the app (opening asked for 80 tokens; 78 of them
+    # went to reasoning).
+    #
+    # "low" keeps the thinking to ~10-15 tokens, which is what short
+    # conversational replies need. Raise to "medium"/"high" for harder
+    # evaluation work if answers get shallow.
+    llm_reasoning_effort: str = os.getenv("LLM_REASONING_EFFORT", "low").strip().lower()
+
+    # Floor applied to any reasoning-model request, so a caller asking for a
+    # short reply still leaves room for the thinking that precedes it.
+    reasoning_token_floor: int = int(os.getenv("REASONING_TOKEN_FLOOR", "512"))
 
     # ── Evaluation backend ────────────────────────────────────────────────────
     # Used exclusively by /session/evaluate.
@@ -182,6 +206,13 @@ class Settings:
             raise RuntimeError(
                 f"ASR_BACKEND={self.asr_backend!r} is not recognised. "
                 f"Choose one of: {', '.join(sorted(valid_asr))}"
+            )
+
+        valid_effort = {"low", "medium", "high"}
+        if self.llm_reasoning_effort not in valid_effort:
+            raise RuntimeError(
+                f"LLM_REASONING_EFFORT={self.llm_reasoning_effort!r} is not recognised. "
+                f"Choose one of: {', '.join(sorted(valid_effort))}"
             )
 
         valid_tts = {"groq", "edge", "local"}

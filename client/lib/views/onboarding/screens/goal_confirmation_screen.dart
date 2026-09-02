@@ -26,35 +26,30 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
       tagline: 'Stop second-guessing every word you say',
       icon: Icons.emoji_events_rounded,
       accent: Color(0xFFF59E0B),
-      gradient: [Color(0xFF221A0C), Color(0xFF0D1525)],
     ),
     _Goal(
       label: 'Clarity',
       tagline: 'Say exactly what you mean, every single time',
       icon: Icons.record_voice_over_rounded,
       accent: Color(0xFF38BDF8),
-      gradient: [Color(0xFF0C2233), Color(0xFF0D1525)],
     ),
     _Goal(
       label: 'Tough Conversations',
       tagline: 'Face the hard talks without backing down',
       icon: Icons.shield_rounded,
       accent: Color(0xFF818CF8),
-      gradient: [Color(0xFF130D2E), Color(0xFF0D1525)],
     ),
     _Goal(
       label: 'Public Speaking',
       tagline: 'Command attention the moment you start',
       icon: Icons.mic_external_on_rounded,
       accent: Color(0xFF5B52F0),
-      gradient: [Color(0xFF0F0C2A), Color(0xFF0D1525)],
     ),
     _Goal(
       label: 'Persuasion',
       tagline: 'Get people to genuinely believe in your ideas',
       icon: Icons.handshake_rounded,
       accent: Color(0xFF10B981),
-      gradient: [Color(0xFF0C221A), Color(0xFF0D1525)],
     ),
   ];
 
@@ -95,7 +90,7 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: OnboardingBackground(
         child: SafeArea(
           child: Padding(
@@ -113,7 +108,7 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
                 const Text(
                   'One last thing —',
                   style: TextStyle(
-                    color: AppColors.primaryLight,
+                    color: AppColors.brandLight,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.2,
@@ -123,7 +118,7 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
                 const Text(
                   'What matters\nmost to you?',
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.ink,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                     height: 1.2,
@@ -134,7 +129,7 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
                 const Text(
                   "Pick all that apply — we'll build your plan around them",
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.inkMuted,
                     fontSize: 14,
                     height: 1.5,
                   ),
@@ -227,13 +222,13 @@ class _GoalCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.cardSurface,
+              ? AppColors.brand.withValues(alpha: 0.08)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
-                ? AppColors.primaryLight.withValues(alpha: 0.55)
-                : AppColors.cardBorder,
+                ? AppColors.brandLight.withValues(alpha: 0.55)
+                : AppColors.outline,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -245,13 +240,13 @@ class _GoalCard extends StatelessWidget {
               height: 42,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.18)
-                    : const Color(0xFF131D2E),
+                    ? AppColors.brand.withValues(alpha: 0.18)
+                    : AppColors.bgSunk,
                 borderRadius: BorderRadius.circular(11),
               ),
               child: Icon(
                 goal.icon,
-                color: isSelected ? AppColors.primaryLight : AppColors.textMuted,
+                color: isSelected ? AppColors.brandLight : AppColors.inkSoft,
                 size: 20,
               ),
             ),
@@ -264,8 +259,8 @@ class _GoalCard extends StatelessWidget {
                     goal.label,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
+                          ? AppColors.ink
+                          : AppColors.inkMuted,
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                       letterSpacing: 0.1,
@@ -276,8 +271,8 @@ class _GoalCard extends StatelessWidget {
                     goal.tagline,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.textSecondary
-                          : AppColors.textMuted,
+                          ? AppColors.inkMuted
+                          : AppColors.inkSoft,
                       fontSize: 12.5,
                       height: 1.45,
                     ),
@@ -292,15 +287,15 @@ class _GoalCard extends StatelessWidget {
               height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                color: isSelected ? AppColors.brand : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.cardBorder,
+                  color: isSelected ? AppColors.brand : AppColors.outline,
                   width: 1.5,
                 ),
               ),
               child: isSelected
                   ? const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 13)
+                      color: AppColors.inkOnDark, size: 13)
                   : null,
             ),
           ],
@@ -315,12 +310,10 @@ class _Goal {
   final String tagline;
   final IconData icon;
   final Color accent;
-  final List<Color> gradient;
   const _Goal({
     required this.label,
     required this.tagline,
     required this.icon,
     required this.accent,
-    required this.gradient,
   });
 }

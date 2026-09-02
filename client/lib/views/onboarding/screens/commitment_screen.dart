@@ -86,7 +86,7 @@ class _CommitmentScreenState extends State<CommitmentScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: OnboardingBackground(
         child: SafeArea(
           child: Padding(
@@ -118,7 +118,7 @@ class _CommitmentScreenState extends State<CommitmentScreen>
                       Text(
                         'Now make it stick.',
                         style: TextStyle(
-                          color: AppColors.primaryLight,
+                          color: AppColors.brandLight,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
@@ -128,7 +128,7 @@ class _CommitmentScreenState extends State<CommitmentScreen>
                       Text(
                         'How many days\ncan you practise?',
                         style: TextStyle(
-                          color: AppColors.textPrimary,
+                          color: AppColors.ink,
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
                           height: 1.2,
@@ -139,7 +139,7 @@ class _CommitmentScreenState extends State<CommitmentScreen>
                       Text(
                         'People who set a schedule are 3× more likely\nto reach their communication goals.',
                         style: TextStyle(
-                          color: AppColors.textSecondary,
+                          color: AppColors.inkMuted,
                           fontSize: 14,
                           height: 1.55,
                         ),
@@ -192,7 +192,7 @@ class _CommitmentScreenState extends State<CommitmentScreen>
                       child: Text(
                         _motivationalLine(),
                         style: const TextStyle(
-                          color: AppColors.textMuted,
+                          color: AppColors.inkSoft,
                           fontSize: 13.5,
                           fontStyle: FontStyle.italic,
                         ),
@@ -244,13 +244,13 @@ class _CommitmentScreenState extends State<CommitmentScreen>
       width: 38,
       height: 38,
       decoration: BoxDecoration(
-        color: AppColors.cardSurface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: AppColors.cardBorder, width: 1),
+        border: Border.all(color: AppColors.outline, width: 1),
       ),
       child: const Icon(
         Icons.arrow_back_ios_new_rounded,
-        color: AppColors.textSecondary,
+        color: AppColors.inkMuted,
         size: 16,
       ),
     );
@@ -282,13 +282,13 @@ class _OptionCard extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.cardSurface,
+              ? AppColors.brand.withValues(alpha: 0.08)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isSelected
-                ? AppColors.primaryLight.withValues(alpha: 0.55)
-                : AppColors.cardBorder,
+                ? AppColors.brandLight.withValues(alpha: 0.55)
+                : AppColors.outline,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -301,14 +301,14 @@ class _OptionCard extends StatelessWidget {
               height: 46,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.18)
-                    : const Color(0xFF131D2E),
+                    ? AppColors.brand.withValues(alpha: 0.18)
+                    : AppColors.bgSunk,
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Icon(
                 option.icon,
                 color:
-                    isSelected ? AppColors.primaryLight : AppColors.textMuted,
+                    isSelected ? AppColors.brandLight : AppColors.inkSoft,
                 size: 22,
               ),
             ),
@@ -326,8 +326,8 @@ class _OptionCard extends StatelessWidget {
                         option.label,
                         style: TextStyle(
                           color: isSelected
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary,
+                              ? AppColors.ink
+                              : AppColors.inkMuted,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
@@ -338,13 +338,13 @@ class _OptionCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.18),
+                            color: AppColors.brand.withValues(alpha: 0.18),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Text(
                             'Recommended',
                             style: TextStyle(
-                              color: AppColors.primaryLight,
+                              color: AppColors.brandLight,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                             ),
@@ -358,8 +358,8 @@ class _OptionCard extends StatelessWidget {
                     option.intensity,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.primaryLight.withValues(alpha: 0.8)
-                          : AppColors.textMuted,
+                          ? AppColors.brandLight.withValues(alpha: 0.8)
+                          : AppColors.inkSoft,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.2,
@@ -370,8 +370,8 @@ class _OptionCard extends StatelessWidget {
                     option.description,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.textSecondary
-                          : AppColors.textMuted,
+                          ? AppColors.inkMuted
+                          : AppColors.inkSoft,
                       fontSize: 12.5,
                       height: 1.45,
                     ),
@@ -389,15 +389,15 @@ class _OptionCard extends StatelessWidget {
               height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                color: isSelected ? AppColors.brand : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.cardBorder,
+                  color: isSelected ? AppColors.brand : AppColors.outline,
                   width: 1.5,
                 ),
               ),
               child: isSelected
                   ? const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 13)
+                      color: AppColors.inkOnDark, size: 13)
                   : null,
             ),
           ],

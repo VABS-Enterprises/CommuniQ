@@ -28,35 +28,30 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
       tagline: 'You choose words carefully, speak softly',
       icon: Icons.air_rounded,
       accent: Color(0xFF38BDF8),   // sky blue
-      gradient: [Color(0xFF0C2233), Color(0xFF0D1525)],
     ),
     _Style(
       label: 'Fast & Energetic',
       tagline: 'Your mind races and the words keep up',
       icon: Icons.bolt_rounded,
       accent: Color(0xFFF59E0B),   // amber
-      gradient: [Color(0xFF231A0C), Color(0xFF0D1525)],
     ),
     _Style(
       label: 'Confident & Direct',
       tagline: 'You say what you mean, no filler words',
       icon: Icons.arrow_forward_rounded,
       accent: Color(0xFF5B52F0),   // indigo
-      gradient: [Color(0xFF130D2E), Color(0xFF0D1525)],
     ),
     _Style(
       label: 'Hesitant & Unsure',
       tagline: 'You second-guess yourself before speaking',
       icon: Icons.help_outline_rounded,
       accent: Color(0xFFA78BFA),   // violet
-      gradient: [Color(0xFF1A0D2E), Color(0xFF0D1525)],
     ),
     _Style(
       label: 'Friendly & Casual',
       tagline: 'Easy-going, warm and approachable tone',
       icon: Icons.tag_faces_rounded,
       accent: Color(0xFF10B981),   // emerald
-      gradient: [Color(0xFF0C2218), Color(0xFF0D1525)],
     ),
   ];
 
@@ -88,7 +83,7 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       resizeToAvoidBottomInset: true,
       body: OnboardingBackground(
         child: SafeArea(
@@ -106,7 +101,7 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
                 const Text(
                   'How do you naturally\nspeak?',
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.ink,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                     height: 1.2,
@@ -117,7 +112,7 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
                 const Text(
                   'Pick the closest match — be honest!',
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.inkMuted,
                     fontSize: 14,
                     height: 1.5,
                   ),
@@ -167,19 +162,19 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 250),
                           decoration: BoxDecoration(
-                            color: AppColors.cardSurface,
+                            color: AppColors.surface,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: _noteFocused
-                                  ? AppColors.primary.withValues(alpha: 0.6)
-                                  : AppColors.cardBorder,
+                                  ? AppColors.brand.withValues(alpha: 0.6)
+                                  : AppColors.outline,
                               width: _noteFocused ? 1.5 : 1,
                             ),
                           ),
                           child: TextField(
                             controller: _noteController,
                             style: const TextStyle(
-                              color: AppColors.textPrimary,
+                              color: AppColors.ink,
                               fontSize: 14,
                               height: 1.55,
                             ),
@@ -188,7 +183,7 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
                               hintText:
                                   'Anything specific you want to improve? (optional)',
                               hintStyle: TextStyle(
-                                  color: AppColors.textMuted, fontSize: 14),
+                                  color: AppColors.inkSoft, fontSize: 14),
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.all(16),
                             ),
@@ -258,13 +253,13 @@ class _StyleCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.cardSurface,
+              ? AppColors.brand.withValues(alpha: 0.08)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
-                ? AppColors.primaryLight.withValues(alpha: 0.55)
-                : AppColors.cardBorder,
+                ? AppColors.brandLight.withValues(alpha: 0.55)
+                : AppColors.outline,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -277,13 +272,13 @@ class _StyleCard extends StatelessWidget {
               height: 42,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.18)
-                    : const Color(0xFF131D2E),
+                    ? AppColors.brand.withValues(alpha: 0.18)
+                    : AppColors.bgSunk,
                 borderRadius: BorderRadius.circular(11),
               ),
               child: Icon(
                 style.icon,
-                color: isSelected ? AppColors.primaryLight : AppColors.textMuted,
+                color: isSelected ? AppColors.brandLight : AppColors.inkSoft,
                 size: 20,
               ),
             ),
@@ -298,8 +293,8 @@ class _StyleCard extends StatelessWidget {
                     style.label,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
+                          ? AppColors.ink
+                          : AppColors.inkMuted,
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                       letterSpacing: 0.1,
@@ -310,8 +305,8 @@ class _StyleCard extends StatelessWidget {
                     style.tagline,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.textSecondary
-                          : AppColors.textMuted,
+                          ? AppColors.inkMuted
+                          : AppColors.inkSoft,
                       fontSize: 12.5,
                       height: 1.45,
                     ),
@@ -329,15 +324,15 @@ class _StyleCard extends StatelessWidget {
               height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                color: isSelected ? AppColors.brand : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.cardBorder,
+                  color: isSelected ? AppColors.brand : AppColors.outline,
                   width: 1.5,
                 ),
               ),
               child: isSelected
                   ? const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 13)
+                      color: AppColors.inkOnDark, size: 13)
                   : null,
             ),
           ],
@@ -352,12 +347,10 @@ class _Style {
   final String tagline;
   final IconData icon;
   final Color accent;
-  final List<Color> gradient;
   const _Style({
     required this.label,
     required this.tagline,
     required this.icon,
     required this.accent,
-    required this.gradient,
   });
 }

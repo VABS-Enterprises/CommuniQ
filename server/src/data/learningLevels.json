@@ -5,1489 +5,1500 @@
   "journeys": [
     {
       "id": 1,
-      "title": "Core Human Interaction",
-      "level_range": "1-10"
-    },
-    {
-      "id": 1,
-      "title": "Everyday Conversations"
+      "title": "Everyday Conversations",
+      "subtitle": "Start, hold and end a conversation",
+      "emoji": "💬",
+      "level_range": "1-5",
+      "start_level": 1,
+      "end_level": 5
     },
     {
       "id": 2,
-      "title": "Expressing Yourself"
+      "title": "Speaking Up",
+      "subtitle": "Say the thing you mean to say",
+      "emoji": "📣",
+      "level_range": "6-10",
+      "start_level": 6,
+      "end_level": 10
     },
     {
       "id": 3,
-      "title": "Workplace Basics"
+      "title": "At Work",
+      "subtitle": "Be clear, be trusted, be useful",
+      "emoji": "💼",
+      "level_range": "11-15",
+      "start_level": 11,
+      "end_level": 15
     },
     {
       "id": 4,
-      "title": "Active Listening & Empathy"
-    },
-    {
-      "id": 5,
-      "title": "Navigating Disagreements"
+      "title": "Hard Conversations",
+      "subtitle": "Stay steady when it matters most",
+      "emoji": "🔥",
+      "level_range": "16-20",
+      "start_level": 16,
+      "end_level": 20
     }
   ],
   "levels": [
     {
       "id": 1,
       "journey_id": 1,
-      "journey_title": "Core Human Interaction",
-      "title": "Saying No Without Hurting Someone",
-      "scenario": "Your friend texts you in the evening asking if you can help them finish an assignment tonight. You are tired, have your own work, but still want to maintain the relationship.",
+      "journey_title": "Everyday Conversations",
+      "title": "Breaking the Ice",
+      "emoji": "👋",
+      "skill": "Opening",
+      "difficulty": "beginner",
+      "goal": "Start a conversation with someone you don't know, without it feeling forced.",
+      "scenario": "You're early to a workshop. One other person is already there, scrolling on their phone. You'll both be sitting here for ten minutes.",
+      "teaching": {
+        "idea": "A good opener is easy to answer. Comment on something you both share right now, then leave a clear opening for them to speak.",
+        "points": [
+          "Shared context beats clever. The room, the wait, the event — you're both already in it.",
+          "Ask something open. 'What brought you here?' gives them room; 'Nice weather?' gives them a dead end.",
+          "One question, then stop. Stacking three questions makes it an interview."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Which response handles the situation most effectively?",
-          "correct_option": "I’d really like to help, but I’ve got some pending work tonight. Could we plan for tomorrow instead?",
+          "question": "Which opener is most likely to actually start a conversation?",
+          "correct_option": "Have you done one of these workshops before? I'm trying to work out how much I should be taking notes.",
           "incorrect_options": [
-            "I’m a bit tied up tonight, maybe later.",
-            "I don’t think I’ll be able to help today.",
-            "Tonight’s a bit difficult for me."
+            "Hi, I'm here for the workshop too.",
+            "Sorry to bother you — are you busy?",
+            "Crazy how expensive parking is around here, right?"
           ],
-          "correct_feedback": "Balances willingness, clarity, and offers an alternative.",
-          "incorrect_feedback": "These responses are polite but vague or incomplete."
+          "correct_feedback": "It uses shared context and ends on an open question, so they have something specific and easy to answer.",
+          "incorrect_feedback": "That either states the obvious, asks permission to speak, or reaches for an unrelated topic — all of which are easy to answer with one word and let the conversation die."
         },
         {
           "step": 2,
-          "question": "Which response may create uncertainty or confusion?",
-          "correct_option": "I might not be available tonight.",
+          "question": "You open with a question and they give a short answer: 'Yeah, my second one.' What's the best next move?",
+          "correct_option": "Ask what made them come back — a short answer isn't a rejection, it's just a short answer.",
           "incorrect_options": [
-            "I won’t be able to help today, let’s connect tomorrow.",
-            "I have some work lined up this evening.",
-            "I’d prefer to help you tomorrow if that works."
+            "Apologise for interrupting and go back to your phone.",
+            "Fill the silence by talking about yourself for a while.",
+            "Immediately ask three more questions so the pause doesn't return."
           ],
-          "correct_feedback": "Uncertain wording creates ambiguity.",
-          "incorrect_feedback": "These options communicate clearly."
+          "correct_feedback": "Short answers usually mean 'I need a reason to say more.' Following their thread gives them one.",
+          "incorrect_feedback": "Retreating, monologuing, or interrogating all read the short answer as a verdict. It usually isn't one."
         },
         {
           "step": 3,
-          "question": "Which response is polite but slightly incomplete?",
-          "correct_option": "I don’t think I can manage it today, sorry.",
+          "question": "What is the actual problem with opening 'Sorry to bother you — are you busy?'",
+          "correct_option": "It asks them to grant permission before you've given them any reason to, so the easiest answer is no.",
           "incorrect_options": [
-            "I’d love to help, maybe tomorrow?",
-            "I have commitments, can we do it later?",
-            "I can help tomorrow instead."
+            "It's too informal for a professional setting.",
+            "It's too long to say out loud comfortably.",
+            "It reveals that you're nervous, which is always a mistake."
           ],
-          "correct_feedback": "It lacks a forward path.",
-          "incorrect_feedback": "These provide continuation or clarity."
+          "correct_feedback": "Exactly — you've made 'no' the path of least resistance. Lead with the thing you actually want to say instead.",
+          "incorrect_feedback": "Formality, length and nerves aren't the issue. The issue is that it hands them an easy exit before the conversation has started."
         },
         {
           "step": 4,
-          "question": "Which response best shows empathy while setting a boundary?",
-          "correct_option": "I get that you need help, and I’d usually jump in, but I have something pending tonight—can we look at it tomorrow?",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Opening with a strong opinion about something controversial to seem interesting.",
           "incorrect_options": [
-            "I won’t be able to help.",
-            "That sounds urgent but I’m busy.",
-            "I can’t do this today."
+            "Mentioning something in the room you both just noticed.",
+            "Saying your name early so they don't have to ask.",
+            "Letting a couple of seconds of silence sit before you speak."
           ],
-          "correct_feedback": "Combines empathy, clarity, and an alternative.",
-          "incorrect_feedback": "These lack emotional balance."
-        },
-        {
-          "step": 5,
-          "question": "Which response could feel slightly dismissive?",
-          "correct_option": "I’m busy.",
-          "incorrect_options": [
-            "Tonight might not work for me.",
-            "I won’t be able to help today.",
-            "I have things to finish tonight."
-          ],
-          "correct_feedback": "Too short and lacks empathy.",
-          "incorrect_feedback": "These are more considerate."
+          "correct_feedback": "Right. A strong opinion asks a stranger to take a side before there's any trust to absorb the disagreement.",
+          "incorrect_feedback": "That one's fine, actually. Shared observations, offering your name, and tolerating a short silence all help an opening land."
         }
       ],
       "response": {
-        "prompt": "After a long day, your friend asks for help immediately. Write a short response (1–2 sentences) that is polite, clear, and empathetic.",
-        "success_feedback": "Great response! You balanced clarity, empathy, and tone effectively."
+        "prompt": "You're waiting at the coffee station and a colleague from another team is waiting too. Write your opening line, in one or two sentences.",
+        "success_feedback": "Nice — that gives them something specific and easy to pick up."
       }
     },
     {
       "id": 2,
       "journey_id": 1,
-      "journey_title": "Core Human Interaction",
-      "title": "Handling Criticism in a Meeting",
-      "scenario": "You’re presenting an idea in a team meeting when a colleague says: 'I’m not sure this approach is very practical.' You feel your idea does make sense, but you also don’t want to sound defensive or dismissive.",
+      "journey_title": "Everyday Conversations",
+      "title": "Joining a Group Mid-Conversation",
+      "emoji": "🫂",
+      "skill": "Reading the room",
+      "difficulty": "beginner",
+      "goal": "Enter a conversation that's already running without hijacking it.",
+      "scenario": "At a team lunch, three people are mid-discussion about a show you've also watched. There's an empty chair beside them.",
+      "teaching": {
+        "idea": "Join the conversation that exists — don't start a new one. Listen first, then add to the current thread.",
+        "points": [
+          "Arrive quietly. Sit, listen for a beat, and let them notice you naturally.",
+          "Add, don't redirect. Your first contribution should build on what was just said.",
+          "Wait for a real gap. Cutting in mid-sentence marks you as someone who wasn't listening."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Which response handles the situation most effectively?",
-          "correct_option": "That’s fair—maybe I didn’t explain it clearly. Let me walk through the logic again.",
+          "question": "You sit down. They're mid-sentence about the finale. What do you do first?",
+          "correct_option": "Listen for a bit, then add a reaction to the specific point they just made.",
           "incorrect_options": [
-            "I see your point, but I think it can still work if we execute it properly.",
-            "I think it is practical, we just need to consider the bigger picture.",
-            "I understand your concern, though I believe this approach addresses the key issue we discussed earlier."
+            "Announce that you've seen it too, so they know you can join in.",
+            "Wait silently until someone directly asks for your opinion.",
+            "Mention a different show you liked better."
           ],
-          "correct_feedback": "Reduces tension, takes ownership, and regains control.",
-          "incorrect_feedback": "These shift too quickly into defending."
+          "correct_feedback": "Listening first tells you what the conversation is actually about, so your first line fits it.",
+          "incorrect_feedback": "Announcing yourself, waiting to be invited, or switching shows all treat the group as an audience rather than a conversation in progress."
         },
         {
           "step": 2,
-          "question": "Which response may create subtle defensiveness?",
-          "correct_option": "I see your point, but I think it can still work.",
+          "question": "Which contribution keeps the thread alive rather than ending it?",
+          "correct_option": "'That ending bothered me too — I couldn't work out if we were meant to trust him.'",
           "incorrect_options": [
-            "That’s a valid concern—let me explain how I was thinking about it.",
-            "I get what you mean, maybe I didn’t frame it well.",
-            "That’s helpful—let me clarify a bit."
+            "'Yeah, agreed.'",
+            "'Actually, I think you've misread that whole scene.'",
+            "'Anyway, has everyone seen the schedule for next week?'"
           ],
-          "correct_feedback": "'But' cancels acknowledgment.",
-          "incorrect_feedback": "These maintain openness."
+          "correct_feedback": "It agrees, adds something new, and leaves an open question hanging for someone else to take.",
+          "incorrect_feedback": "Bare agreement adds nothing, flat contradiction puts someone on the defensive, and a topic change ends the thread outright."
         },
         {
           "step": 3,
-          "question": "Which response is polite but slightly weak?",
-          "correct_option": "Maybe I didn’t explain it well.",
+          "question": "Nobody has looked at you yet. What does that most likely mean?",
+          "correct_option": "They're absorbed in the topic — it's usually not about you, and a well-placed comment will bring you in.",
           "incorrect_options": [
-            "Let me walk through my reasoning again.",
-            "I think there might be a misunderstanding.",
-            "Happy to clarify how I approached this."
+            "You're not welcome and should quietly leave.",
+            "You need to speak louder to establish your presence.",
+            "You should tap someone's shoulder to be acknowledged."
           ],
-          "correct_feedback": "Uncertainty reduces confidence.",
-          "incorrect_feedback": "Others maintain ownership."
+          "correct_feedback": "Right. Absorption looks a lot like exclusion from the outside, and it usually isn't.",
+          "incorrect_feedback": "Leaving, raising your volume, or physically interrupting all read a normal, focused conversation as a rejection."
         },
         {
           "step": 4,
-          "question": "Which response shows best confidence without being dismissive?",
-          "correct_option": "I understand your concern—here’s how I was thinking about it.",
+          "question": "Which is the misstep when joining a group?",
+          "correct_option": "Asking them to catch you up from the beginning.",
           "incorrect_options": [
-            "I think it still works.",
-            "That’s not necessarily true.",
-            "Let’s just go with this approach."
+            "Picking up the thread from where you came in.",
+            "Making eye contact with whoever is speaking.",
+            "Letting the current speaker finish before you say anything."
           ],
-          "correct_feedback": "Balanced acknowledgment and confidence.",
-          "incorrect_feedback": "Others are shallow or dismissive."
-        },
-        {
-          "step": 5,
-          "question": "Which response feels slightly dismissive?",
-          "correct_option": "That’s not necessarily true.",
-          "incorrect_options": [
-            "I see what you mean.",
-            "Let’s explore that further.",
-            "That’s an interesting point."
-          ],
-          "correct_feedback": "Directly challenges the person.",
-          "incorrect_feedback": "Others keep discussion open."
+          "correct_feedback": "Right — 'start over for me' makes four people rewind for one. Catch up from context instead.",
+          "incorrect_feedback": "That one helps. Joining mid-thread, looking at the speaker, and letting them finish are all how you enter cleanly."
         }
       ],
       "response": {
-        "prompt": "Write a 1–2 sentence response that maintains confidence and keeps the discussion constructive.",
-        "success_feedback": "Excellent—strong balance of confidence and collaboration."
+        "prompt": "Two colleagues are discussing a project problem you know something about. Write the first thing you'd say as you join.",
+        "success_feedback": "Good — that builds on their thread instead of restarting it."
       }
     },
     {
       "id": 3,
       "journey_id": 1,
-      "journey_title": "Core Human Interaction",
-      "title": "Joining a Group Conversation",
-      "scenario": "You’re at a social event where a group is already in conversation and laughing. You want to join naturally without interrupting awkwardly.",
+      "journey_title": "Everyday Conversations",
+      "title": "Keeping a Conversation Alive",
+      "emoji": "🔥",
+      "skill": "Momentum",
+      "difficulty": "beginner",
+      "goal": "Rescue a conversation that's running out of air.",
+      "scenario": "You're ten minutes into talking with someone new. The easy topics are used up, and the pauses are getting longer.",
+      "teaching": {
+        "idea": "Conversations die from closed questions and unclaimed threads. Reopen by asking about the person, not the topic.",
+        "points": [
+          "Trade facts for stories. 'How long have you worked there?' closes; 'How did you end up there?' opens.",
+          "Pick up dropped threads. People mention things they'd happily say more about, then move on. Go back.",
+          "Offer something of your own. Questions alone start to feel like a form."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Which response handles the situation most effectively?",
-          "correct_option": "That sounds interesting—mind if I join?",
+          "question": "The conversation is stalling. Which question is most likely to revive it?",
+          "correct_option": "'You mentioned you moved here last year — how has that been?'",
           "incorrect_options": [
-            "Hey, what are you guys talking about?",
-            "Hi… can I sit here?",
-            "Wait silently and smile"
+            "'So... what else is new?'",
+            "'Do you like living here?'",
+            "'How long have you been in the city?'"
           ],
-          "correct_feedback": "Acknowledges + asks smoothly.",
-          "incorrect_feedback": "Others are abrupt, hesitant, or passive."
+          "correct_feedback": "It picks up a thread they already offered and asks for the experience, not a fact.",
+          "incorrect_feedback": "That's either too open to answer, or closed enough to be finished in one word. Neither gives them anywhere to go."
         },
         {
           "step": 2,
-          "question": "Which response may feel slightly intrusive?",
-          "correct_option": "Hey, what are you guys talking about?",
+          "question": "What's the underlying reason 'Do you like living here?' tends to stall?",
+          "correct_option": "It can be fully answered with 'yes', which puts the work of continuing straight back on you.",
           "incorrect_options": [
-            "Mind if I join?",
-            "That sounds fun—what’s going on?",
-            "Can I join you guys?"
+            "It's too personal for someone you've just met.",
+            "It suggests you weren't listening earlier.",
+            "It's a topic most people find boring."
           ],
-          "correct_feedback": "Jumps in without easing.",
-          "incorrect_feedback": "Others ease into flow."
+          "correct_feedback": "Exactly. Closed questions hand the conversation back to you every single time.",
+          "incorrect_feedback": "It isn't intrusive, inattentive or dull — it's just answerable in one word, which is the whole problem."
         },
         {
           "step": 3,
-          "question": "Which response is polite but low-confidence?",
-          "correct_option": "Hi… can I sit here?",
+          "question": "They give a genuinely interesting answer. What's the strongest follow-up?",
+          "correct_option": "Ask about the part that surprised you most in what they just said.",
           "incorrect_options": [
-            "Mind if I join?",
-            "That sounds interesting—can I join?",
-            "Hey, what are you discussing?"
+            "Match it with a longer story of your own.",
+            "Say 'that's interesting' and move to a new question.",
+            "Summarise their answer back to them to show you listened."
           ],
-          "correct_feedback": "Hesitation reduces presence.",
-          "incorrect_feedback": "Others are more confident."
+          "correct_feedback": "Following your genuine curiosity keeps you on a live thread rather than starting a cold one.",
+          "incorrect_feedback": "Topping their story, moving on, or reflecting it back all abandon the thread just as it got interesting."
         },
         {
           "step": 4,
-          "question": "Which shows best social awareness?",
-          "correct_option": "That sounds interesting—what happened?",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Treating every silence as a problem you have to fill immediately.",
           "incorrect_options": [
-            "What are you talking about?",
-            "I’ll just join you guys.",
-            "Interrupt mid-sentence"
+            "Sharing a short version of your own experience after they share theirs.",
+            "Letting a topic end and naming that you're curious about something else.",
+            "Asking a follow-up about something they said five minutes ago."
           ],
-          "correct_feedback": "Builds naturally.",
-          "incorrect_feedback": "Others disrupt flow."
-        },
-        {
-          "step": 5,
-          "question": "Which feels disengaged?",
-          "correct_option": "Yeah okay.",
-          "incorrect_options": [
-            "That’s interesting.",
-            "Oh nice.",
-            "Sounds fun."
-          ],
-          "correct_feedback": "Low effort response.",
-          "incorrect_feedback": "Others show engagement."
+          "correct_feedback": "Right. Rushing to fill every pause creates pressure — a few seconds of quiet is normal and often productive.",
+          "incorrect_feedback": "That one works. Reciprocating, changing topic openly, and returning to earlier threads all keep things moving."
         }
       ],
       "response": {
-        "prompt": "Join the group naturally in 1–2 sentences.",
-        "success_feedback": "Nice—this felt natural and socially aware."
+        "prompt": "Someone tells you they recently switched careers. Write a follow-up question that would get a real story rather than a fact.",
+        "success_feedback": "That's an opener — it asks for the experience, not the data."
       }
     },
     {
       "id": 4,
       "journey_id": 1,
-      "journey_title": "Core Human Interaction",
-      "title": "Handling Interruptions",
-      "scenario": "You’re explaining something important when someone interrupts you mid-sentence.",
+      "journey_title": "Everyday Conversations",
+      "title": "Ending a Conversation Gracefully",
+      "emoji": "🚪",
+      "skill": "Closing",
+      "difficulty": "beginner",
+      "goal": "Leave a conversation without making the other person feel dropped.",
+      "scenario": "You've been talking to someone at an event for a while. You want to meet other people, but they're still going and you don't want to be rude.",
+      "teaching": {
+        "idea": "A clean exit has three beats: signal, appreciate, leave. The mistake is skipping the middle one.",
+        "points": [
+          "Signal before you go. 'I should go find the team' warns them the conversation is closing.",
+          "Say what you valued. One specific thing, not a generic 'nice talking to you'.",
+          "Then actually leave. Hovering after you've said goodbye is the awkward part, not the goodbye."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Most effective?",
-          "correct_option": "Yeah, that’s a good point—let me just finish what I was saying.",
+          "question": "Which exit leaves the best impression?",
+          "correct_option": "'I'm going to go say hello to a few people before this wraps up — but I really liked what you said about switching teams. Glad we talked.'",
           "incorrect_options": [
-            "Let me finish.",
-            "Stop interrupting.",
-            "Stay silent"
+            "'Anyway, I should let you go.'",
+            "'Sorry, I have to run.'",
+            "'Well, this has been great!'"
           ],
-          "correct_feedback": "Balances acknowledgment and control.",
-          "incorrect_feedback": "Others are aggressive or passive."
+          "correct_feedback": "It signals the exit, names something specific you valued, and closes warmly. All three beats.",
+          "incorrect_feedback": "That closes the conversation but skips the appreciation, so it reads as an escape rather than an ending."
         },
         {
           "step": 2,
-          "question": "Slightly aggressive?",
-          "correct_option": "Let me finish.",
+          "question": "What's subtly off about 'I should let you go'?",
+          "correct_option": "It frames your exit as them wanting to leave, which is a small piece of dishonesty they can usually feel.",
           "incorrect_options": [
-            "Just one second—I’ll finish this thought.",
-            "That’s interesting—let me complete this first.",
-            "I’ll wrap up quickly."
+            "It's too abrupt for a long conversation.",
+            "It's overly formal for a casual event.",
+            "It doesn't give a specific reason for leaving."
           ],
-          "correct_feedback": "Too direct.",
-          "incorrect_feedback": "Others soften tone."
+          "correct_feedback": "Right — you're attributing your desire to them. Owning it is warmer, not colder.",
+          "incorrect_feedback": "It's not the abruptness, the register, or the missing reason. It's that it quietly puts your choice on them."
         },
         {
           "step": 3,
-          "question": "Too passive?",
-          "correct_option": "Stop talking entirely.",
+          "question": "You've said goodbye but you're both walking the same direction. What's the best move?",
+          "correct_option": "Acknowledge it lightly and keep chatting until your paths actually split.",
           "incorrect_options": [
-            "Let me finish this.",
-            "Just one sec.",
-            "I’ll complete this."
+            "Walk in silence to avoid restarting the conversation.",
+            "Take a longer route so the goodbye stays clean.",
+            "Repeat the goodbye when you finally separate."
           ],
-          "correct_feedback": "Loses control.",
-          "incorrect_feedback": "Others maintain control."
+          "correct_feedback": "Naming the small awkwardness dissolves it. Pretending it isn't happening is what makes it heavy.",
+          "incorrect_feedback": "Silence, detours and repeated goodbyes all treat a tiny bit of awkwardness as a crisis."
         },
         {
           "step": 4,
-          "question": "Best EI?",
-          "correct_option": "That’s interesting—just to complete what I was saying…",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Inventing an urgent reason you need to leave.",
           "incorrect_options": [
-            "Wait.",
-            "No, let me talk.",
-            "That’s not what I meant."
+            "Saying plainly that you want to meet a few more people.",
+            "Suggesting a specific way to continue the conversation later.",
+            "Ending while the conversation is still enjoyable."
           ],
-          "correct_feedback": "Acknowledges and continues.",
-          "incorrect_feedback": "Others lack balance."
-        },
-        {
-          "step": 5,
-          "question": "Dismissive?",
-          "correct_option": "Whatever.",
-          "incorrect_options": [
-            "Let me finish.",
-            "Hold on.",
-            "One sec."
-          ],
-          "correct_feedback": "Signals disengagement.",
-          "incorrect_feedback": "Others remain respectful."
+          "correct_feedback": "Right. Invented excuses are unnecessary and tend to show — 'I want to circulate' is a perfectly acceptable reason.",
+          "incorrect_feedback": "That one's good. Honesty, a concrete follow-up, and leaving on a high note all make for a clean exit."
         }
       ],
       "response": {
-        "prompt": "Respond to interruption and continue your point in 1–2 sentences.",
-        "success_feedback": "Strong composure and assertiveness."
+        "prompt": "You've been talking to someone for fifteen minutes and want to move on. Write your exit line.",
+        "success_feedback": "Clean — it signals, appreciates, and closes without an excuse."
       }
     },
     {
       "id": 5,
       "journey_id": 1,
-      "journey_title": "Core Human Interaction",
-      "title": "Ending a Conversation Smoothly",
-      "scenario": "You’ve been having a good conversation, but now you need to leave.",
+      "journey_title": "Everyday Conversations",
+      "title": "Responding to Good News",
+      "emoji": "🎉",
+      "skill": "Warmth",
+      "difficulty": "beginner",
+      "goal": "React to someone's win in a way that makes them feel genuinely celebrated.",
+      "scenario": "A friend messages: 'I got the job!' It's a role they've been chasing for months.",
+      "teaching": {
+        "idea": "How you respond to good news matters more for a relationship than how you respond to bad news. Amplify it — don't deflate or redirect it.",
+        "points": [
+          "React first, ask second. The reaction is the gift; questions come after.",
+          "Be specific about them. Name the effort you watched them put in.",
+          "Don't attach caveats. 'Congrats — is the pay better?' turns a celebration into a review."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Most effective?",
-          "correct_option": "This was great talking—I should get going now.",
+          "question": "Which response best amplifies their news?",
+          "correct_option": "'YES! You've been working toward this for months — I'm so happy for you. Tell me everything.'",
           "incorrect_options": [
-            "Okay bye.",
-            "Walk away silently",
-            "I have to leave."
+            "'Congrats! Is the salary any better than the last one?'",
+            "'Nice one. I knew you'd get it.'",
+            "'Congratulations — well deserved.'"
           ],
-          "correct_feedback": "Warm + clear.",
-          "incorrect_feedback": "Others abrupt."
+          "correct_feedback": "Genuine reaction, specific recognition of their effort, and an invitation to say more.",
+          "incorrect_feedback": "That's polite, but it either adds a caveat, makes it sound inevitable, or stays generic enough to be a form letter."
         },
         {
           "step": 2,
-          "question": "Slightly abrupt?",
-          "correct_option": "Okay bye.",
+          "question": "What's the problem with 'I knew you'd get it'?",
+          "correct_option": "It quietly erases how hard the thing was, and how uncertain it felt to them.",
           "incorrect_options": [
-            "Nice talking to you—I’ll head out.",
-            "I should get going.",
-            "Let’s catch up again."
+            "It sounds sarcastic in most contexts.",
+            "It makes the conversation about your judgement.",
+            "It's too short to count as a real response."
           ],
-          "correct_feedback": "Too abrupt.",
-          "incorrect_feedback": "Others smoother."
+          "correct_feedback": "Right. It's meant as a compliment, but it flattens months of genuine difficulty into a foregone conclusion.",
+          "incorrect_feedback": "It rarely reads as sarcastic or self-centred, and length isn't the issue — the issue is that it minimises the struggle."
         },
         {
           "step": 3,
-          "question": "Polite but incomplete?",
-          "correct_option": "I have to leave.",
+          "question": "They share good news that's smaller than yours from last week. What do you do?",
+          "correct_option": "Give it the full reaction it deserves on its own terms, without mentioning yours.",
           "incorrect_options": [
-            "This was great—I should go.",
-            "Enjoyed this.",
-            "Let’s connect again."
+            "Mention your news too, so you can celebrate together.",
+            "Keep the reaction modest so it stays proportionate.",
+            "Congratulate them and then ask how it compares to what they wanted."
           ],
-          "correct_feedback": "No warmth.",
-          "incorrect_feedback": "Others add closure."
+          "correct_feedback": "Their news isn't competing with yours. Comparison is exactly what deflates a celebration.",
+          "incorrect_feedback": "Bringing in your own news, rationing your enthusiasm, or inviting comparison all shift the spotlight off them."
         },
         {
           "step": 4,
-          "question": "Best EI?",
-          "correct_option": "I really enjoyed this—let’s catch up again.",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Immediately asking practical questions about logistics and next steps.",
           "incorrect_options": [
-            "I’m leaving.",
-            "Okay I’m done.",
-            "Bye."
+            "Asking them how it felt when they found out.",
+            "Sending a reaction quickly, even if it's short.",
+            "Offering to celebrate properly later."
           ],
-          "correct_feedback": "Warm + future connection.",
-          "incorrect_feedback": "Others flat."
-        },
-        {
-          "step": 5,
-          "question": "Dismissive?",
-          "correct_option": "I gotta go.",
-          "incorrect_options": [
-            "Nice talking to you.",
-            "Catch up later.",
-            "Let’s connect."
-          ],
-          "correct_feedback": "Cold tone.",
-          "incorrect_feedback": "Others respectful."
+          "correct_feedback": "Right. Logistics are real, but leading with them turns a celebration into a planning meeting.",
+          "incorrect_feedback": "That one lands well. Asking about the feeling, responding fast, and offering to celebrate all amplify the moment."
         }
       ],
       "response": {
-        "prompt": "Exit naturally in 1–2 sentences.",
-        "success_feedback": "Smooth and respectful closing."
+        "prompt": "A friend texts that they've finally finished a project they've struggled with for a year. Write your reply.",
+        "success_feedback": "That celebrates them specifically — no caveats, no redirect."
       }
     },
     {
       "id": 6,
-      "journey_id": 1,
-      "journey_title": "Core Human Interaction",
-      "title": "Giving Honest Feedback",
-      "scenario": "A friend shares their work proudly, but it needs improvement.",
-      "mcqs": [
-        {
-          "step": 1,
-          "question": "Most effective?",
-          "correct_option": "I like the idea—maybe we can refine a few parts.",
-          "incorrect_options": [
-            "It’s okay but needs work.",
-            "This isn’t strong.",
-            "Looks good."
-          ],
-          "correct_feedback": "Balanced honesty.",
-          "incorrect_feedback": "Others harsh or avoidant."
-        },
-        {
-          "step": 2,
-          "question": "Slightly harsh?",
-          "correct_option": "This isn’t very strong.",
-          "incorrect_options": [
-            "Could improve a bit.",
-            "We can refine areas.",
-            "Nice start—tweak it."
-          ],
-          "correct_feedback": "Too blunt.",
-          "incorrect_feedback": "Others softer."
-        },
-        {
-          "step": 3,
-          "question": "Avoids responsibility?",
-          "correct_option": "Looks good.",
-          "incorrect_options": [
-            "Nice start—refine it.",
-            "Improve structure.",
-            "Has potential."
-          ],
-          "correct_feedback": "Avoids truth.",
-          "incorrect_feedback": "Others constructive."
-        },
-        {
-          "step": 4,
-          "question": "Best EI?",
-          "correct_option": "I like the direction—maybe improve flow a bit.",
-          "incorrect_options": [
-            "This needs fixing.",
-            "Not great.",
-            "Redo this."
-          ],
-          "correct_feedback": "Encouraging + helpful.",
-          "incorrect_feedback": "Others harsh."
-        },
-        {
-          "step": 5,
-          "question": "Dismissive?",
-          "correct_option": "Whatever.",
-          "incorrect_options": [
-            "Nice start.",
-            "Good effort.",
-            "Let’s improve."
-          ],
-          "correct_feedback": "Disengaged.",
-          "incorrect_feedback": "Others caring."
-        }
-      ],
-      "response": {
-        "prompt": "Give honest feedback in 1–2 sentences.",
-        "success_feedback": "Balanced and constructive feedback."
-      }
-    },
-    {
-      "id": 7,
-      "journey_id": 1,
-      "journey_title": "Core Human Interaction",
-      "title": "Handling Disagreement",
-      "scenario": "Someone strongly disagrees with your opinion.",
-      "mcqs": [
-        {
-          "step": 1,
-          "question": "Most effective?",
-          "correct_option": "I see your point, though I’d look at it slightly differently.",
-          "incorrect_options": [
-            "You’re wrong.",
-            "No.",
-            "That’s incorrect."
-          ],
-          "correct_feedback": "Respectful disagreement.",
-          "incorrect_feedback": "Others confrontational."
-        },
-        {
-          "step": 2,
-          "question": "Confrontational?",
-          "correct_option": "You’re wrong.",
-          "incorrect_options": [
-            "I see your view.",
-            "Interesting point.",
-            "Let’s explore both."
-          ],
-          "correct_feedback": "Direct attack.",
-          "incorrect_feedback": "Others balanced."
-        },
-        {
-          "step": 3,
-          "question": "Too passive?",
-          "correct_option": "Maybe you’re right.",
-          "incorrect_options": [
-            "I see it differently.",
-            "Here’s my view.",
-            "Compare both."
-          ],
-          "correct_feedback": "No stance.",
-          "incorrect_feedback": "Others contribute."
-        },
-        {
-          "step": 4,
-          "question": "Best EI?",
-          "correct_option": "That’s a fair point—here’s how I see it.",
-          "incorrect_options": [
-            "No.",
-            "Wrong.",
-            "Not true."
-          ],
-          "correct_feedback": "Balanced.",
-          "incorrect_feedback": "Others lack empathy."
-        },
-        {
-          "step": 5,
-          "question": "Dismissive?",
-          "correct_option": "Whatever.",
-          "incorrect_options": [
-            "Interesting point.",
-            "Let’s explore.",
-            "I think differently."
-          ],
-          "correct_feedback": "Shuts down.",
-          "incorrect_feedback": "Others engage."
-        }
-      ],
-      "response": {
-        "prompt": "Respond confidently but respectfully in 1–2 sentences.",
-        "success_feedback": "Strong respectful disagreement."
-      }
-    },
-    {
-      "id": 8,
-      "journey_id": 1,
-      "journey_title": "Core Human Interaction",
-      "title": "Following Up",
-      "scenario": "You sent a message 2 days ago but got no reply.",
-      "mcqs": [
-        {
-          "step": 1,
-          "question": "Most effective?",
-          "correct_option": "Hey, just checking in—did you get a chance to look at this?",
-          "incorrect_options": [
-            "Why no reply?",
-            "Hello??",
-            "Respond."
-          ],
-          "correct_feedback": "Polite nudge.",
-          "incorrect_feedback": "Others aggressive."
-        },
-        {
-          "step": 2,
-          "question": "Aggressive?",
-          "correct_option": "Why didn’t you reply?",
-          "incorrect_options": [
-            "Just checking.",
-            "Any update?",
-            "Following up."
-          ],
-          "correct_feedback": "Blaming tone.",
-          "incorrect_feedback": "Others polite."
-        },
-        {
-          "step": 3,
-          "question": "Too passive?",
-          "correct_option": "No follow-up at all.",
-          "incorrect_options": [
-            "Checking in.",
-            "Any update?",
-            "Following up."
-          ],
-          "correct_feedback": "No action.",
-          "incorrect_feedback": "Others effective."
-        },
-        {
-          "step": 4,
-          "question": "Best EI?",
-          "correct_option": "I know you might be busy—just following up.",
-          "incorrect_options": [
-            "Reply fast.",
-            "Still waiting.",
-            "Update?"
-          ],
-          "correct_feedback": "Empathy.",
-          "incorrect_feedback": "Others pushy."
-        },
-        {
-          "step": 5,
-          "question": "Impatient?",
-          "correct_option": "Hello??",
-          "incorrect_options": [
-            "Checking in.",
-            "Following up.",
-            "Any update?"
-          ],
-          "correct_feedback": "Impatient tone.",
-          "incorrect_feedback": "Others respectful."
-        }
-      ],
-      "response": {
-        "prompt": "Follow up politely in 1–2 sentences.",
-        "success_feedback": "Good balance of clarity and patience."
-      }
-    },
-    {
-      "id": 9,
-      "journey_id": 1,
-      "journey_title": "Core Human Interaction",
-      "title": "Responding to Late Reply",
-      "scenario": "Someone replies late and acts casual.",
-      "mcqs": [
-        {
-          "step": 1,
-          "question": "Most effective?",
-          "correct_option": "No worries—thanks for getting back!",
-          "incorrect_options": [
-            "Finally.",
-            "Took long.",
-            "Okay."
-          ],
-          "correct_feedback": "Graceful response.",
-          "incorrect_feedback": "Others confrontational."
-        },
-        {
-          "step": 2,
-          "question": "Passive-aggressive?",
-          "correct_option": "Took you long enough.",
-          "incorrect_options": [
-            "No worries.",
-            "Thanks.",
-            "Got it."
-          ],
-          "correct_feedback": "Hidden frustration.",
-          "incorrect_feedback": "Others neutral."
-        },
-        {
-          "step": 3,
-          "question": "Low effort?",
-          "correct_option": "Okay.",
-          "incorrect_options": [
-            "Thanks.",
-            "Got it.",
-            "No worries."
-          ],
-          "correct_feedback": "Too flat.",
-          "incorrect_feedback": "Others engaging."
-        },
-        {
-          "step": 4,
-          "question": "Best EI?",
-          "correct_option": "Appreciate the reply—here’s what I needed.",
-          "incorrect_options": [
-            "Why late?",
-            "Explain.",
-            "You ignored me."
-          ],
-          "correct_feedback": "Moves forward.",
-          "incorrect_feedback": "Others emotional."
-        },
-        {
-          "step": 5,
-          "question": "Dismissive?",
-          "correct_option": "K.",
-          "incorrect_options": [
-            "Thanks.",
-            "Got it.",
-            "Appreciate it."
-          ],
-          "correct_feedback": "Cold.",
-          "incorrect_feedback": "Others respectful."
-        }
-      ],
-      "response": {
-        "prompt": "Respond maturely in 1–2 sentences.",
-        "success_feedback": "Emotionally intelligent response."
-      }
-    },
-    {
-      "id": 10,
-      "journey_id": 1,
-      "journey_title": "Core Human Interaction",
-      "title": "Asking for Clarification",
-      "scenario": "You didn’t fully understand something explained to you.",
-      "mcqs": [
-        {
-          "step": 1,
-          "question": "Most effective?",
-          "correct_option": "Just to make sure I understood correctly…",
-          "incorrect_options": [
-            "What?",
-            "That doesn’t make sense.",
-            "Okay."
-          ],
-          "correct_feedback": "Polite clarification.",
-          "incorrect_feedback": "Others rude or passive."
-        },
-        {
-          "step": 2,
-          "question": "Rude?",
-          "correct_option": "What?",
-          "incorrect_options": [
-            "Explain again?",
-            "Didn’t catch that.",
-            "Clarify that part?"
-          ],
-          "correct_feedback": "Abrupt.",
-          "incorrect_feedback": "Others polite."
-        },
-        {
-          "step": 3,
-          "question": "Too passive?",
-          "correct_option": "Okay.",
-          "incorrect_options": [
-            "Clarify?",
-            "Explain again?",
-            "Help me understand."
-          ],
-          "correct_feedback": "No learning intent.",
-          "incorrect_feedback": "Others better."
-        },
-        {
-          "step": 4,
-          "question": "Best EI?",
-          "correct_option": "Could you clarify that part for me?",
-          "incorrect_options": [
-            "Makes no sense.",
-            "You’re confusing.",
-            "Explain properly."
-          ],
-          "correct_feedback": "Respectful learning.",
-          "incorrect_feedback": "Others harsh."
-        },
-        {
-          "step": 5,
-          "question": "Dismissive?",
-          "correct_option": "That makes no sense.",
-          "incorrect_options": [
-            "Didn’t get that.",
-            "Explain again?",
-            "Help me understand."
-          ],
-          "correct_feedback": "Blaming tone.",
-          "incorrect_feedback": "Others respectful."
-        }
-      ],
-      "response": {
-        "prompt": "Ask for clarification in 1–2 sentences.",
-        "success_feedback": "Clear and respectful curiosity."
-      }
-    },
-    {
-      "id": 11,
-      "journey_id": 1,
-      "journey_title": "Everyday Conversations",
-      "title": "Reviving a Dying Conversation",
-      "scenario": "You’re talking to someone new. The conversation slows down slightly, and there’s a small pause.",
+      "journey_id": 2,
+      "journey_title": "Speaking Up",
+      "title": "Saying No Without Guilt",
+      "emoji": "🙅",
+      "skill": "Boundaries",
+      "difficulty": "beginner",
+      "goal": "Turn someone down clearly while keeping the relationship intact.",
+      "scenario": "A friend texts at 9pm asking if you can help finish their assignment tonight. You're tired and have your own work, but you care about them.",
+      "teaching": {
+        "idea": "A good no has three parts: warmth, an unambiguous refusal, and a door left open. Most people deliver one or two and hope the rest is understood.",
+        "points": [
+          "Warmth first, so the no doesn't read as rejection of them.",
+          "Be unambiguous. 'Maybe', 'I'll try' and 'probably not' create a second conversation you'll have to have later.",
+          "Offer a real alternative, or none at all — never a fake one."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
           "question": "Which response handles this best?",
-          "correct_option": "That’s interesting—how did you get into that?",
+          "correct_option": "'I'd really like to help, but I've got my own deadline tonight. Could we do it tomorrow morning instead?'",
           "incorrect_options": [
-            "So… what else do you usually do?",
-            "Nice.",
-            "Yeah…"
+            "'I'm a bit tied up tonight, maybe later.'",
+            "'I don't think I'll be able to help today.'",
+            "'Sorry, I'm busy.'"
           ],
-          "correct_feedback": "Builds from context naturally and adds curiosity.",
-          "incorrect_feedback": "Others either restart awkwardly or reduce engagement."
+          "correct_feedback": "Warmth, a clear no with a reason, and a concrete alternative. All three parts.",
+          "incorrect_feedback": "That's either vague enough to leave them hoping, or clear but cold with no path forward."
         },
         {
           "step": 2,
-          "question": "Which feels slightly forced?",
-          "correct_option": "So… what else do you usually do?",
+          "question": "Why is 'maybe later' worse than a straight no?",
+          "correct_option": "It leaves them waiting on you, so they can't make other plans — the cost lands on them, not you.",
           "incorrect_options": [
-            "That’s interesting—how did that start?",
-            "What got you interested in that?",
-            "That sounds fun—how’s it been for you?"
+            "It's less polite than a direct refusal.",
+            "It makes you look indecisive to your friend.",
+            "It's too casual for a serious request."
           ],
-          "correct_feedback": "Feels like restarting instead of continuing.",
-          "incorrect_feedback": "Others extend flow naturally."
+          "correct_feedback": "Exactly. Vagueness feels kinder to say but is genuinely more expensive for the person receiving it.",
+          "incorrect_feedback": "It's not about politeness, image, or register. It's that the ambiguity transfers the cost onto them."
         },
         {
           "step": 3,
-          "question": "Which is polite but low engagement?",
-          "correct_option": "Nice.",
+          "question": "They push back: 'Come on, it'll only take an hour.' What now?",
+          "correct_option": "Hold the same answer warmly, without adding new justifications.",
           "incorrect_options": [
-            "That’s interesting.",
-            "Tell me more about that.",
-            "How did you get into it?"
+            "Give in, since it's only an hour and they're a friend.",
+            "Explain in more detail why you're too busy.",
+            "Say you'll see how you feel later."
           ],
-          "correct_feedback": "Acknowledges but doesn’t continue.",
-          "incorrect_feedback": "Others build momentum."
+          "correct_feedback": "Repeating the same answer calmly is the whole skill. Piling on reasons invites them to argue with each one.",
+          "incorrect_feedback": "Caving, over-explaining, or going vague all reopen a decision you've already made."
         },
         {
           "step": 4,
-          "question": "Which shows best conversational intelligence?",
-          "correct_option": "That sounds interesting—what’s been your experience with it?",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Apologising repeatedly across several messages.",
           "incorrect_options": [
-            "Okay.",
-            "Cool.",
-            "Nice."
+            "Saying no without giving a detailed reason.",
+            "Offering a specific alternative time.",
+            "Telling them you wish you could help, and meaning it."
           ],
-          "correct_feedback": "Adds depth and invites sharing.",
-          "incorrect_feedback": "Others are surface-level."
-        },
-        {
-          "step": 5,
-          "question": "Which feels subtly disengaged?",
-          "correct_option": "Yeah…",
-          "incorrect_options": [
-            "That’s interesting.",
-            "Tell me more.",
-            "How did that start?"
-          ],
-          "correct_feedback": "Signals low energy.",
-          "incorrect_feedback": "Others show interest."
+          "correct_feedback": "Right. Over-apologising signals you did something wrong, which invites them to keep pushing.",
+          "incorrect_feedback": "That one's healthy. A brief no, a concrete alternative, and genuine warmth are exactly right."
         }
       ],
       "response": {
-        "prompt": "Continue the conversation naturally in 1–2 sentences.",
-        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+        "prompt": "A colleague asks you to take on extra work this week when you're already at capacity. Write your reply.",
+        "success_feedback": "Warm, clear, and it doesn't leave them guessing."
+      }
+    },
+    {
+      "id": 7,
+      "journey_id": 2,
+      "journey_title": "Speaking Up",
+      "title": "Asking for What You Need",
+      "emoji": "🙋",
+      "skill": "Directness",
+      "difficulty": "beginner",
+      "goal": "Make a request that's easy to say yes to.",
+      "scenario": "You need a teammate to review your work by Thursday. They're busy, and last time you hinted at it, nothing happened.",
+      "teaching": {
+        "idea": "Hints are requests with the risk removed — and the clarity too. Name the thing, the size, and the deadline.",
+        "points": [
+          "Be specific about what you want. 'Some feedback' is unactionable; 'a look at section 3' is a task.",
+          "Say how big it is. People say no to unknown time commitments.",
+          "Give a real deadline and make it easy to decline."
+        ]
+      },
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Which request is easiest to say yes to?",
+          "correct_option": "'Could you review section 3 by Thursday? It's about 20 minutes. If you're stretched, tell me and I'll ask someone else.'",
+          "incorrect_options": [
+            "'Let me know if you get a chance to look at my draft sometime.'",
+            "'I really need someone to review this, it's getting urgent.'",
+            "'Are you busy this week?'"
+          ],
+          "correct_feedback": "Specific task, known size, real deadline, and a graceful exit. That's a request someone can actually answer.",
+          "incorrect_feedback": "That's either a hint with no deadline, pressure with no specifics, or a question that traps them before they know what they're agreeing to."
+        },
+        {
+          "step": 2,
+          "question": "Why does 'Are you busy this week?' backfire as an opener?",
+          "correct_option": "It asks them to commit before they know what they're committing to, so the safe answer is yes, I'm busy.",
+          "incorrect_options": [
+            "It's too personal a question for a work context.",
+            "It sounds like you're checking up on them.",
+            "It's too vague to be polite."
+          ],
+          "correct_feedback": "Right. Lead with the request; let them weigh the actual ask.",
+          "incorrect_feedback": "It isn't intrusive or impolite — it just makes them decide blind, and blind decisions default to no."
+        },
+        {
+          "step": 3,
+          "question": "Last time you hinted and nothing happened. What does that tell you?",
+          "correct_option": "The hint was probably never received as a request at all.",
+          "incorrect_options": [
+            "They're deprioritising you deliberately.",
+            "You need to escalate to their manager.",
+            "You should hint again, more strongly."
+          ],
+          "correct_feedback": "Most ignored hints were never decoded. Assume that first, before assuming intent.",
+          "incorrect_feedback": "Reading intent, escalating, or hinting harder all skip the simplest explanation: they didn't know you were asking."
+        },
+        {
+          "step": 4,
+          "question": "Which of these is the misstep?",
+          "correct_option": "Apologising for asking before you've made the request.",
+          "incorrect_options": [
+            "Saying exactly when you need it by.",
+            "Making it easy for them to say no.",
+            "Explaining briefly why it matters."
+          ],
+          "correct_feedback": "Right. Leading with an apology frames a reasonable request as an imposition, which makes it harder to grant.",
+          "incorrect_feedback": "That one strengthens the request. Deadlines, easy exits and brief context all help."
+        }
+      ],
+      "response": {
+        "prompt": "You need a colleague to send you data by Friday so you can finish a report. Write the message.",
+        "success_feedback": "Specific, sized, and easy to answer either way."
+      }
+    },
+    {
+      "id": 8,
+      "journey_id": 2,
+      "journey_title": "Speaking Up",
+      "title": "Asking for Clarification",
+      "emoji": "🤔",
+      "skill": "Curiosity",
+      "difficulty": "beginner",
+      "goal": "Admit you didn't follow something, without looking like you weren't paying attention.",
+      "scenario": "In a meeting, someone explains a process using three acronyms you don't know. Everyone else is nodding. They ask if that's clear.",
+      "teaching": {
+        "idea": "Asking a precise question makes you look engaged. Asking a vague one — or staying quiet — is what actually costs you.",
+        "points": [
+          "Name the exact point you lost. 'What does CRR stand for?' beats 'Sorry, I'm confused.'",
+          "Show what you did follow, so it's clear you were listening.",
+          "Ask in the room. The private follow-up costs everyone more time."
+        ]
+      },
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Which question makes you look most competent?",
+          "correct_option": "'I followed it up to the handoff — can you expand on what CRR means in this context?'",
+          "incorrect_options": [
+            "'Sorry, could you go over all that again?'",
+            "'I'll catch up with you after, I don't want to slow everyone down.'",
+            "'Yep, clear.'"
+          ],
+          "correct_feedback": "It proves you were tracking and pinpoints exactly what's missing. That reads as engaged, not lost.",
+          "incorrect_feedback": "That either asks for a full replay, defers the question at a cost to everyone, or hides the gap entirely."
+        },
+        {
+          "step": 2,
+          "question": "Everyone else is nodding. What's the most likely explanation?",
+          "correct_option": "Several of them are also unsure, and nodding is the lower-risk move.",
+          "incorrect_options": [
+            "You're the only one who didn't prepare.",
+            "The material is genuinely beyond your level.",
+            "They understood because they've been here longer, so asking would expose you."
+          ],
+          "correct_feedback": "Right. Rooms full of nodding usually contain several people in exactly your position.",
+          "incorrect_feedback": "Assuming you're uniquely behind is the standard mistake, and it's what keeps the question unasked."
+        },
+        {
+          "step": 3,
+          "question": "You ask, and the answer still doesn't land. What now?",
+          "correct_option": "Say what you understood back to them and ask them to correct it.",
+          "incorrect_options": [
+            "Thank them and move on, then work it out yourself later.",
+            "Ask them to explain it a third time.",
+            "Ask a different person in the room instead."
+          ],
+          "correct_feedback": "Reflecting your understanding back shows exactly where the gap is, so the next explanation can target it.",
+          "incorrect_feedback": "Retreating, repeating, or reassigning the question all leave the misunderstanding in place."
+        },
+        {
+          "step": 4,
+          "question": "Which of these is the misstep?",
+          "correct_option": "Prefacing your question with 'this is probably a stupid question, but...'",
+          "incorrect_options": [
+            "Asking about a term the moment it's used.",
+            "Writing the question down and asking at the next natural pause.",
+            "Saying which part you did follow before asking."
+          ],
+          "correct_feedback": "Right. That preface tells the room to discount you before you've even asked.",
+          "incorrect_feedback": "That's a good habit. Asking early, waiting for a pause, and anchoring in what you followed all work."
+        }
+      ],
+      "response": {
+        "prompt": "Someone explains a process and you lose the thread halfway. Write your question.",
+        "success_feedback": "Precise and confident — it locates the gap instead of hiding it."
+      }
+    },
+    {
+      "id": 9,
+      "journey_id": 2,
+      "journey_title": "Speaking Up",
+      "title": "Sharing an Opinion in a Group",
+      "emoji": "💭",
+      "skill": "Conviction",
+      "difficulty": "intermediate",
+      "goal": "Put a view into a room in a way that gets heard and considered.",
+      "scenario": "Your team is converging on an approach you think is a mistake. Two senior people have already backed it. You have about thirty seconds of attention if you speak now.",
+      "teaching": {
+        "idea": "An opinion lands when it's stated once, clearly, with the reason attached — and when you're visibly open to being wrong.",
+        "points": [
+          "Lead with the position, then the reason. Reason-first makes people wait for the point.",
+          "Strip the hedges. 'I might be wrong but maybe possibly' spends your credibility before you've spoken.",
+          "Name what would change your mind. That's what separates a view from a stance."
+        ]
+      },
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Which is the strongest way to open?",
+          "correct_option": "'I think we're underestimating the migration cost here — can I give you the two numbers that worry me?'",
+          "incorrect_options": [
+            "'I might be totally wrong here, and I know Sam and Priya have more context, but I sort of feel like maybe this isn't right?'",
+            "'This is a bad idea and I think we'll regret it.'",
+            "'I'll go along with it, but I want it noted that I had concerns.'"
+          ],
+          "correct_feedback": "Clear position, concrete reason, and an invitation to look at evidence together.",
+          "incorrect_feedback": "That's either buried under hedges, stated as a verdict with no reasoning, or withheld entirely as a hedge against being blamed later."
+        },
+        {
+          "step": 2,
+          "question": "What's actually wrong with stacking hedges before your point?",
+          "correct_option": "They train the room to discount whatever comes next, so your evidence arrives already devalued.",
+          "incorrect_options": [
+            "They make you sound inexperienced.",
+            "They take up time you don't have.",
+            "They're seen as insincere."
+          ],
+          "correct_feedback": "Right — you're pre-discounting your own argument, and the room takes the hint.",
+          "incorrect_feedback": "It's not really about how you sound or how long it takes. It's that hedges instruct people to weigh your point less."
+        },
+        {
+          "step": 3,
+          "question": "You make your point. Someone pushes back hard. What's the best response?",
+          "correct_option": "Ask what they're seeing that you're not, and mean it.",
+          "incorrect_options": [
+            "Restate your point more forcefully.",
+            "Back down to keep the peace.",
+            "Point out that you raised this concern earlier too."
+          ],
+          "correct_feedback": "Genuine curiosity either changes your mind or surfaces the real disagreement. Both are wins.",
+          "incorrect_feedback": "Escalating, folding, or scorekeeping all turn a disagreement about the work into a contest between people."
+        },
+        {
+          "step": 4,
+          "question": "Which of these is the misstep?",
+          "correct_option": "Agreeing in the room, then raising the same objection afterwards in private.",
+          "incorrect_options": [
+            "Saying your view once and then letting the group decide.",
+            "Naming the specific evidence that would change your mind.",
+            "Supporting the final decision even though you disagreed."
+          ],
+          "correct_feedback": "Right. That's the most damaging pattern here — it undermines a decision without ever testing your view.",
+          "incorrect_feedback": "That one's healthy. Saying it once, staying falsifiable, and committing after the decision are all good practice."
+        }
+      ],
+      "response": {
+        "prompt": "Your team is about to choose an approach you think is risky. Write what you'd say, in two or three sentences.",
+        "success_feedback": "Clear position, real reason, and open to being wrong."
+      }
+    },
+    {
+      "id": 10,
+      "journey_id": 2,
+      "journey_title": "Speaking Up",
+      "title": "Handling Interruptions",
+      "emoji": "✋",
+      "skill": "Holding ground",
+      "difficulty": "intermediate",
+      "goal": "Reclaim the floor when you're cut off, without making it a confrontation.",
+      "scenario": "You're halfway through explaining something in a meeting when a colleague talks over you and takes the topic somewhere else. It's the second time today.",
+      "teaching": {
+        "idea": "Reclaiming the floor works best when it's calm, brief, and about the content — not about the interruption.",
+        "points": [
+          "Use a neutral bridge. 'Let me finish that thought' is enough; it needs no accusation.",
+          "Don't relitigate the interruption in the moment. It costs more than the point you were making.",
+          "If it's a pattern, address it once, privately, and specifically."
+        ]
+      },
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "You've just been cut off. What's the best immediate move?",
+          "correct_option": "'Hold that thought — let me finish this one point and then I want to hear it.'",
+          "incorrect_options": [
+            "'You keep doing that.'",
+            "Let it go and hope you get another chance.",
+            "Talk louder over them until they stop."
+          ],
+          "correct_feedback": "Calm, brief, reclaims the floor, and signals you value their input too. No confrontation needed.",
+          "incorrect_feedback": "That either turns it into a personal confrontation mid-meeting, cedes the point entirely, or escalates into a volume contest."
+        },
+        {
+          "step": 2,
+          "question": "Why is calling out the pattern mid-meeting usually a bad move?",
+          "correct_option": "It shifts the room's attention from your point to the conflict, which costs you the thing you were trying to say.",
+          "incorrect_options": [
+            "It's unprofessional to raise interpersonal issues at work.",
+            "It will make the other person retaliate later.",
+            "Nobody else will have noticed, so you'll look oversensitive."
+          ],
+          "correct_feedback": "Exactly. You trade your argument for a side-argument, and you rarely win that trade in public.",
+          "incorrect_feedback": "It's not about professionalism, retaliation, or perception — it's that the conflict displaces your actual point."
+        },
+        {
+          "step": 3,
+          "question": "It's happened repeatedly over weeks. What's the right way to raise it?",
+          "correct_option": "Privately, once, with a specific example and what you'd like instead.",
+          "incorrect_options": [
+            "In the next meeting, so there are witnesses.",
+            "By interrupting them the same way, so they feel it.",
+            "By raising it with your manager first."
+          ],
+          "correct_feedback": "Private, specific and forward-looking is the version most likely to actually change the behaviour.",
+          "incorrect_feedback": "Public callouts, mirroring the behaviour, and escalating before talking to them all raise the stakes without raising the odds of change."
+        },
+        {
+          "step": 4,
+          "question": "Which of these is the misstep?",
+          "correct_option": "Trailing off and letting the new topic take over, then feeling resentful.",
+          "incorrect_options": [
+            "Finishing your sentence calmly and then yielding.",
+            "Asking the chair to come back to your point.",
+            "Noting your point in the chat so it isn't lost."
+          ],
+          "correct_feedback": "Right. Silent resentment is the costliest option — it changes nothing and compounds.",
+          "incorrect_feedback": "That one works. Finishing calmly, asking the chair, and capturing the point in writing all keep your contribution alive."
+        }
+      ],
+      "response": {
+        "prompt": "A colleague cuts you off mid-sentence in a meeting. Write what you'd say to reclaim the floor.",
+        "success_feedback": "Calm and brief — it reclaims the point without starting a fight."
+      }
+    },
+    {
+      "id": 11,
+      "journey_id": 3,
+      "journey_title": "At Work",
+      "title": "Introducing Yourself Professionally",
+      "emoji": "🪪",
+      "skill": "Positioning",
+      "difficulty": "intermediate",
+      "goal": "Say who you are in a way people remember and can use.",
+      "scenario": "You've joined a cross-team project call. The lead says: 'Let's go round — quick intros.' You have about fifteen seconds.",
+      "teaching": {
+        "idea": "A useful intro answers three things: who you are, what you're here to do, and what people can come to you for.",
+        "points": [
+          "Lead with your role in this project, not your job history.",
+          "Give people a hook — the thing they should ping you about.",
+          "Keep it to two sentences. Long intros get remembered as 'long'."
+        ]
+      },
+      "mcqs": [
+        {
+          "step": 1,
+          "question": "Which intro is most useful to the people listening?",
+          "correct_option": "'I'm Ana, I'm on the data side — I'm building the reporting for this project, so come to me if the numbers look wrong.'",
+          "incorrect_options": [
+            "'Hi, I'm Ana, I'm a senior analyst. I've been here three years, before that I was at a consultancy, and I studied statistics.'",
+            "'Ana, analytics. Nice to meet everyone.'",
+            "'I'm Ana and I'll be helping out wherever I'm needed on this one.'"
+          ],
+          "correct_feedback": "Name, role in this project, and a clear hook for when to contact you. That's everything the room needs.",
+          "incorrect_feedback": "That's either a career history nobody can act on, too sparse to be useful, or so vague that nobody knows when to come to you."
+        },
+        {
+          "step": 2,
+          "question": "Why does leading with your job history usually fall flat?",
+          "correct_option": "It answers a question nobody asked — the room needs to know what you'll do here, not where you've been.",
+          "incorrect_options": [
+            "It sounds arrogant.",
+            "It takes attention away from the project lead.",
+            "It's information they can find on the intranet."
+          ],
+          "correct_feedback": "Right. History is context; the room needs function.",
+          "incorrect_feedback": "It's not arrogance or etiquette — it's that it doesn't help anyone decide when to talk to you."
+        },
+        {
+          "step": 3,
+          "question": "Someone with a similar role introduces themselves right before you. What's the smart adjustment?",
+          "correct_option": "Name the distinction between you, so the room knows who to go to for what.",
+          "incorrect_options": [
+            "Keep your intro identical so you're seen as equals.",
+            "Shorten yours to avoid repetition.",
+            "Mention that you have more experience in the area."
+          ],
+          "correct_feedback": "Overlapping roles create confusion. Drawing the line is genuinely useful to everyone.",
+          "incorrect_feedback": "Matching, shrinking, or competing all leave the room unsure which of you to approach."
+        },
+        {
+          "step": 4,
+          "question": "Which of these is the misstep?",
+          "correct_option": "Undercutting yourself with 'I'm still pretty new to this, so bear with me.'",
+          "incorrect_options": [
+            "Saying what you're responsible for delivering.",
+            "Keeping it under twenty seconds.",
+            "Naming one specific thing people should contact you about."
+          ],
+          "correct_feedback": "Right. Pre-emptive apology sets a lower expectation than your work will actually deserve.",
+          "incorrect_feedback": "That one helps. Clear ownership, brevity, and a contact hook are the whole job."
+        }
+      ],
+      "response": {
+        "prompt": "You're joining a new project team. Write your fifteen-second introduction.",
+        "success_feedback": "Clear and usable — the room knows what you do and when to come to you."
       }
     },
     {
       "id": 12,
-      "journey_id": 2,
-      "journey_title": "Expressing Yourself",
-      "title": "Expressing an Opinion Thoughtfully",
-      "scenario": "In a group discussion, you want to share your view without sounding rigid.",
+      "journey_id": 3,
+      "journey_title": "At Work",
+      "title": "Explaining Something Complex",
+      "emoji": "🧩",
+      "skill": "Clarity",
+      "difficulty": "intermediate",
+      "goal": "Make something you understand well land with someone who doesn't.",
+      "scenario": "A stakeholder asks why the launch slipped by two weeks. The real reason is a chain of technical dependencies they have no background in.",
+      "teaching": {
+        "idea": "Start with the conclusion, then explain only as much as they need to trust it. Detail is not the same as clarity.",
+        "points": [
+          "Answer the question first. They asked why it slipped — say why, in one sentence.",
+          "Use one concrete comparison, not three abstract ones.",
+          "Stop and check. 'Does that hold together?' beats another paragraph."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Most effective response?",
-          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "question": "How should you open?",
+          "correct_option": "'It slipped because one system we depend on changed under us, and everything downstream had to be re-tested. Want the detail?'",
           "incorrect_options": [
-            "A response that is slightly defensive in tone",
-            "A response that is polite but vague",
-            "A response that is neutral but lacks direction"
+            "'So, to understand this properly, I need to walk you through how our pipeline is structured.'",
+            "'It's complicated — there were a lot of moving parts.'",
+            "'The auth service deprecated its v2 endpoints, which broke our token refresh, which cascaded into the sync layer.'"
           ],
-          "correct_feedback": "Balances clarity, tone, and intent.",
-          "incorrect_feedback": "Others miss subtle communication elements."
+          "correct_feedback": "Conclusion first, in plain language, with an offer of depth if they want it.",
+          "incorrect_feedback": "That either delays the answer behind a lecture, gives no answer at all, or leads with jargon they can't evaluate."
         },
         {
           "step": 2,
-          "question": "Which creates subtle friction?",
-          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "question": "What's the real cost of opening with 'let me walk you through the architecture'?",
+          "correct_option": "It makes them wait through material they didn't ask for to reach the answer they did.",
           "incorrect_options": [
-            "A response that keeps tone neutral",
-            "A response that acknowledges before replying",
-            "A response that invites discussion"
+            "It reveals that the problem was preventable.",
+            "It's condescending to a senior stakeholder.",
+            "It takes longer than they scheduled."
           ],
-          "correct_feedback": "Tone introduces friction.",
-          "incorrect_feedback": "Others maintain flow."
+          "correct_feedback": "Right. Background before conclusion is the single most common way clear people become unclear.",
+          "incorrect_feedback": "It isn't about blame, condescension, or the clock — it's about making them wait for the point."
         },
         {
           "step": 3,
-          "question": "Polite but weak?",
-          "correct_option": "A response that avoids taking a clear stance.",
+          "question": "They look unconvinced. What's the best move?",
+          "correct_option": "Ask which part isn't landing, and address only that.",
           "incorrect_options": [
-            "A response that adds direction",
-            "A response that clarifies intent",
-            "A response that provides next steps"
+            "Explain the whole thing again with more detail.",
+            "Add a second analogy on top of the first.",
+            "Offer to send a written document instead."
           ],
-          "correct_feedback": "Avoids ownership.",
-          "incorrect_feedback": "Others stronger."
+          "correct_feedback": "Targeting the actual gap is faster and more convincing than another full pass.",
+          "incorrect_feedback": "More detail, more analogies, or deferring to a document all add volume without finding the confusion."
         },
         {
           "step": 4,
-          "question": "Best emotional intelligence?",
-          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Simplifying so far that the explanation is no longer true.",
           "incorrect_options": [
-            "A factual response",
-            "A neutral response",
-            "A slightly reactive response"
+            "Using one comparison to something they already know.",
+            "Saying plainly which parts you're leaving out.",
+            "Checking their understanding halfway through."
           ],
-          "correct_feedback": "Empathy + clarity.",
-          "incorrect_feedback": "Others lack depth."
-        },
-        {
-          "step": 5,
-          "question": "Subtly dismissive?",
-          "correct_option": "A short minimal reply that closes conversation.",
-          "incorrect_options": [
-            "A warm response",
-            "A structured response",
-            "A thoughtful reply"
-          ],
-          "correct_feedback": "Feels cold.",
-          "incorrect_feedback": "Others maintain connection."
+          "correct_feedback": "Right. An explanation that's wrong is worse than one that's hard — they'll make decisions on it.",
+          "incorrect_feedback": "That one's good practice. Concrete comparisons, naming omissions, and checking in all aid clarity without sacrificing accuracy."
         }
       ],
       "response": {
-        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
-        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+        "prompt": "Explain to a non-technical stakeholder, in two or three sentences, why something you're working on is taking longer than planned.",
+        "success_feedback": "Conclusion first, plain language, and honest about the detail."
       }
     },
     {
       "id": 13,
       "journey_id": 3,
-      "journey_title": "Workplace Basics",
+      "journey_title": "At Work",
       "title": "Requesting a Deadline Extension",
-      "scenario": "You need more time but want to sound responsible.",
+      "emoji": "⏳",
+      "skill": "Negotiation",
+      "difficulty": "intermediate",
+      "goal": "Ask for more time in a way that builds trust instead of spending it.",
+      "scenario": "A deliverable is due Friday. You're going to need until Wednesday. You've known this was likely for about three days.",
+      "teaching": {
+        "idea": "The trust is won or lost on timing and specificity, not on the reason. Early and precise beats apologetic and vague.",
+        "points": [
+          "Tell them as soon as you know — the value of the warning decays fast.",
+          "Bring a new date you're confident in, not an open-ended request.",
+          "Say what they'll get on the original date, if anything."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Most effective response?",
-          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "question": "Which message handles this best?",
+          "correct_option": "'I won't have the full report by Friday — I need until Wednesday. I can give you the summary and the headline numbers on Friday so you're not blocked.'",
           "incorrect_options": [
-            "A response that is slightly defensive in tone",
-            "A response that is polite but vague",
-            "A response that is neutral but lacks direction"
+            "'Really sorry, things have been chaotic — is there any chance of a bit more time on this?'",
+            "'This is going to be late, I'll let you know when it's ready.'",
+            "'I can still hit Friday, it just might be a bit rough.'"
           ],
-          "correct_feedback": "Balances clarity, tone, and intent.",
-          "incorrect_feedback": "Others miss subtle communication elements."
+          "correct_feedback": "Clear new date, and a partial delivery that keeps them moving. That's a plan, not a request.",
+          "incorrect_feedback": "That's either vague about how much time, open-ended, or quietly trading quality for the date without telling them."
         },
         {
           "step": 2,
-          "question": "Which creates subtle friction?",
-          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "question": "You've known for three days. When should you have raised it?",
+          "correct_option": "Three days ago — a warning is worth the most when there's still time to react to it.",
           "incorrect_options": [
-            "A response that keeps tone neutral",
-            "A response that acknowledges before replying",
-            "A response that invites discussion"
+            "Now is fine, as long as it's before the deadline.",
+            "Once you're certain, to avoid raising a false alarm.",
+            "On Friday, alongside whatever you've completed."
           ],
-          "correct_feedback": "Tone introduces friction.",
-          "incorrect_feedback": "Others maintain flow."
+          "correct_feedback": "Right. Early warnings let them replan; late ones just inform them of a fact.",
+          "incorrect_feedback": "Waiting for certainty feels responsible but destroys the option value of the warning."
         },
         {
           "step": 3,
-          "question": "Polite but weak?",
-          "correct_option": "A response that avoids taking a clear stance.",
+          "question": "They say Wednesday doesn't work — they need something Friday. What's the best response?",
+          "correct_option": "Ask what they need it for, then propose the smallest version that serves that.",
           "incorrect_options": [
-            "A response that adds direction",
-            "A response that clarifies intent",
-            "A response that provides next steps"
+            "Agree to Friday and plan to work the weekend.",
+            "Hold firm on Wednesday since it's the realistic date.",
+            "Ask them to push back on whoever set the deadline."
           ],
-          "correct_feedback": "Avoids ownership.",
-          "incorrect_feedback": "Others stronger."
+          "correct_feedback": "Understanding the underlying need usually reveals a smaller deliverable that satisfies it.",
+          "incorrect_feedback": "Overcommitting, refusing outright, or redirecting the problem all skip the question that unlocks the compromise."
         },
         {
           "step": 4,
-          "question": "Best emotional intelligence?",
-          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Listing everything that went wrong to justify the delay.",
           "incorrect_options": [
-            "A factual response",
-            "A neutral response",
-            "A slightly reactive response"
+            "Proposing a specific new date.",
+            "Offering a partial deliverable on the original date.",
+            "Saying briefly what caused the slip."
           ],
-          "correct_feedback": "Empathy + clarity.",
-          "incorrect_feedback": "Others lack depth."
-        },
-        {
-          "step": 5,
-          "question": "Subtly dismissive?",
-          "correct_option": "A short minimal reply that closes conversation.",
-          "incorrect_options": [
-            "A warm response",
-            "A structured response",
-            "A thoughtful reply"
-          ],
-          "correct_feedback": "Feels cold.",
-          "incorrect_feedback": "Others maintain connection."
+          "correct_feedback": "Right. A brief cause is useful; a full catalogue reads as building a defence.",
+          "incorrect_feedback": "That one helps. Specific dates, partial delivery, and a short explanation are exactly what's needed."
         }
       ],
       "response": {
-        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
-        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+        "prompt": "You need three more days on a deliverable. Write the message to your manager.",
+        "success_feedback": "Early, specific, and it keeps them unblocked."
       }
     },
     {
       "id": 14,
-      "journey_id": 4,
-      "journey_title": "Active Listening & Empathy",
-      "title": "Responding to Emotional Distress",
-      "scenario": "A friend seems emotionally overwhelmed.",
+      "journey_id": 3,
+      "journey_title": "At Work",
+      "title": "Giving Honest Feedback",
+      "emoji": "🪞",
+      "skill": "Candour",
+      "difficulty": "intermediate",
+      "goal": "Tell someone something hard in a way they can actually use.",
+      "scenario": "A teammate's last two write-ups have been hard to follow, and it's costing the team time. They're proud of their writing.",
+      "teaching": {
+        "idea": "Useful feedback is specific, about behaviour rather than character, and includes what good would look like.",
+        "points": [
+          "Describe the observable thing, not the trait. 'The summary came after the detail' — not 'you're disorganised'.",
+          "Say the impact. That's what makes it worth acting on.",
+          "Offer the alternative. Feedback without a direction is just criticism."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Most effective response?",
-          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "question": "Which feedback is most usable?",
+          "correct_option": "'In the last two write-ups the conclusion came at the end, so people were skimming for it. Could you put the takeaway in the first two lines?'",
           "incorrect_options": [
-            "A response that is slightly defensive in tone",
-            "A response that is polite but vague",
-            "A response that is neutral but lacks direction"
+            "'Your writing has been a bit unclear lately — could you tighten it up?'",
+            "'I loved the depth of your last doc! Maybe just a touch shorter next time? Otherwise brilliant!'",
+            "'People are finding your docs hard to follow.'"
           ],
-          "correct_feedback": "Balances clarity, tone, and intent.",
-          "incorrect_feedback": "Others miss subtle communication elements."
+          "correct_feedback": "Specific observation, real impact, and a concrete alternative they can apply tomorrow.",
+          "incorrect_feedback": "That's either too vague to act on, buried under praise, or delivered as anonymous consensus they can't examine."
         },
         {
           "step": 2,
-          "question": "Which creates subtle friction?",
-          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "question": "What's wrong with 'people are finding your docs hard to follow'?",
+          "correct_option": "It hides behind an unnamed group, so they can't ask questions or judge how widespread it is.",
           "incorrect_options": [
-            "A response that keeps tone neutral",
-            "A response that acknowledges before replying",
-            "A response that invites discussion"
+            "It's too harsh for a first conversation.",
+            "It should have come from their manager instead.",
+            "It doesn't include any positive feedback."
           ],
-          "correct_feedback": "Tone introduces friction.",
-          "incorrect_feedback": "Others maintain flow."
+          "correct_feedback": "Right. Speak for yourself — 'I found' is both more honest and easier to respond to.",
+          "incorrect_feedback": "It's not harshness, hierarchy, or the missing praise. It's that anonymity makes the feedback unexaminable."
         },
         {
           "step": 3,
-          "question": "Polite but weak?",
-          "correct_option": "A response that avoids taking a clear stance.",
+          "question": "They get defensive: 'I put a lot of work into those.' What now?",
+          "correct_option": "Acknowledge the effort honestly, then restate the specific change you're asking for.",
           "incorrect_options": [
-            "A response that adds direction",
-            "A response that clarifies intent",
-            "A response that provides next steps"
+            "Soften the feedback so they feel better.",
+            "Point out that you're only trying to help.",
+            "Drop it and raise it another time."
           ],
-          "correct_feedback": "Avoids ownership.",
-          "incorrect_feedback": "Others stronger."
+          "correct_feedback": "Effort and impact are both real. Acknowledging one doesn't require withdrawing the other.",
+          "incorrect_feedback": "Retracting, defending your intent, or deferring all abandon the feedback at the moment it matters."
         },
         {
           "step": 4,
-          "question": "Best emotional intelligence?",
-          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Wrapping the criticism in praise on both sides so it's easier to hear.",
           "incorrect_options": [
-            "A factual response",
-            "A neutral response",
-            "A slightly reactive response"
+            "Giving the feedback privately.",
+            "Asking whether they want feedback before giving it.",
+            "Being specific about which document you mean."
           ],
-          "correct_feedback": "Empathy + clarity.",
-          "incorrect_feedback": "Others lack depth."
-        },
-        {
-          "step": 5,
-          "question": "Subtly dismissive?",
-          "correct_option": "A short minimal reply that closes conversation.",
-          "incorrect_options": [
-            "A warm response",
-            "A structured response",
-            "A thoughtful reply"
-          ],
-          "correct_feedback": "Feels cold.",
-          "incorrect_feedback": "Others maintain connection."
+          "correct_feedback": "Right — the sandwich usually means only the bread gets heard, and it teaches people to distrust your praise.",
+          "incorrect_feedback": "That one's good practice. Privacy, consent, and specificity all make feedback land better."
         }
       ],
       "response": {
-        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
-        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+        "prompt": "A teammate keeps sending updates too late for you to act on. Write the feedback you'd give them.",
+        "success_feedback": "Specific, about the behaviour, and it says what good looks like."
       }
     },
     {
       "id": 15,
       "journey_id": 3,
-      "journey_title": "Workplace Basics",
-      "title": "Admitting a Mistake",
-      "scenario": "You made a mistake affecting others.",
+      "journey_title": "At Work",
+      "title": "Owning a Mistake",
+      "emoji": "🧯",
+      "skill": "Accountability",
+      "difficulty": "intermediate",
+      "goal": "Admit an error in a way that rebuilds trust rather than draining it.",
+      "scenario": "You sent a client the wrong figures. They've already forwarded them internally. You noticed twenty minutes ago.",
+      "teaching": {
+        "idea": "Own it fast, state the impact plainly, and lead with the fix. Explanations come last, if at all.",
+        "points": [
+          "Say it before they find it. Discovery costs far more than disclosure.",
+          "No 'but'. The word deletes everything before it.",
+          "Bring the correction and the containment plan in the same message."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Most effective response?",
-          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "question": "Which message handles this best?",
+          "correct_option": "'I sent you the wrong figures this morning — the corrected version is attached. The Q3 total changes from 4.2 to 3.8. Happy to message anyone you forwarded it to directly.'",
           "incorrect_options": [
-            "A response that is slightly defensive in tone",
-            "A response that is polite but vague",
-            "A response that is neutral but lacks direction"
+            "'Apologies, there may have been an error in the earlier numbers — I'll look into it and come back to you.'",
+            "'Sorry about the figures, but the source data was updated late and I wasn't told.'",
+            "'Just flagging a small discrepancy in this morning's attachment.'"
           ],
-          "correct_feedback": "Balances clarity, tone, and intent.",
-          "incorrect_feedback": "Others miss subtle communication elements."
+          "correct_feedback": "Immediate, specific about what changed, and it comes with the fix and an offer to contain the spread.",
+          "incorrect_feedback": "That either delays the correction, attaches an excuse, or minimises an error the client has already circulated."
         },
         {
           "step": 2,
-          "question": "Which creates subtle friction?",
-          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "question": "Why does 'but the source data was updated late' weaken the apology?",
+          "correct_option": "It converts an apology into a defence, so the person hears the explanation and not the accountability.",
           "incorrect_options": [
-            "A response that keeps tone neutral",
-            "A response that acknowledges before replying",
-            "A response that invites discussion"
+            "It blames a colleague who isn't there to respond.",
+            "It's more detail than the client needs.",
+            "It suggests the mistake will happen again."
           ],
-          "correct_feedback": "Tone introduces friction.",
-          "incorrect_feedback": "Others maintain flow."
+          "correct_feedback": "Right. Causes matter, but attached to an apology with 'but', they cancel it.",
+          "incorrect_feedback": "The problem isn't the blame, the detail, or the implication — it's that 'but' turns the apology into a rebuttal."
         },
         {
           "step": 3,
-          "question": "Polite but weak?",
-          "correct_option": "A response that avoids taking a clear stance.",
+          "question": "They reply, clearly annoyed. What's the right response?",
+          "correct_option": "Accept the annoyance without defending, confirm the fix, and say what you're changing so it doesn't recur.",
           "incorrect_options": [
-            "A response that adds direction",
-            "A response that clarifies intent",
-            "A response that provides next steps"
+            "Apologise several more times.",
+            "Explain in detail how the error occurred.",
+            "Point out that you caught it quickly."
           ],
-          "correct_feedback": "Avoids ownership.",
-          "incorrect_feedback": "Others stronger."
+          "correct_feedback": "Absorbing the reaction and moving to prevention is what actually rebuilds confidence.",
+          "incorrect_feedback": "Repeated apologies, post-mortems they didn't ask for, and claiming credit for the catch all centre you rather than the fix."
         },
         {
           "step": 4,
-          "question": "Best emotional intelligence?",
-          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Waiting until you fully understand the cause before telling them.",
           "incorrect_options": [
-            "A factual response",
-            "A neutral response",
-            "A slightly reactive response"
+            "Telling them before you've worked out who's at fault.",
+            "Stating exactly which numbers changed.",
+            "Offering to contact the people they forwarded it to."
           ],
-          "correct_feedback": "Empathy + clarity.",
-          "incorrect_feedback": "Others lack depth."
-        },
-        {
-          "step": 5,
-          "question": "Subtly dismissive?",
-          "correct_option": "A short minimal reply that closes conversation.",
-          "incorrect_options": [
-            "A warm response",
-            "A structured response",
-            "A thoughtful reply"
-          ],
-          "correct_feedback": "Feels cold.",
-          "incorrect_feedback": "Others maintain connection."
+          "correct_feedback": "Right. The disclosure and the diagnosis are separate — send the first immediately, the second when you have it.",
+          "incorrect_feedback": "That one's correct behaviour. Speed, specificity, and containment are the three things that matter here."
         }
       ],
       "response": {
-        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
-        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+        "prompt": "You've made an error that affected someone else's work. Write the message owning it.",
+        "success_feedback": "Fast, specific, no 'but' — and it leads with the fix."
       }
     },
     {
       "id": 16,
-      "journey_id": 1,
-      "journey_title": "Everyday Conversations",
-      "title": "Responding to Good News",
-      "scenario": "A friend shares exciting news.",
+      "journey_id": 4,
+      "journey_title": "Hard Conversations",
+      "title": "Taking Criticism Well",
+      "emoji": "🎯",
+      "skill": "Composure",
+      "difficulty": "advanced",
+      "goal": "Receive hard feedback without getting defensive or collapsing.",
+      "scenario": "In a review, your manager says your work is solid but you're hard to work with when plans change. You feel the heat rise immediately.",
+      "teaching": {
+        "idea": "Your first job is to understand the feedback, not to evaluate it. Judgement can wait; the conversation can't.",
+        "points": [
+          "Buy a second. A breath, or 'let me think about that', costs nothing and prevents a lot.",
+          "Ask for an example before you respond to the claim.",
+          "You can disagree later. Arguing in the first thirty seconds guarantees you learn nothing."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Most effective response?",
-          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "question": "What's the best immediate response?",
+          "correct_option": "'That's hard to hear — can you give me a recent example so I can see what you're seeing?'",
           "incorrect_options": [
-            "A response that is slightly defensive in tone",
-            "A response that is polite but vague",
-            "A response that is neutral but lacks direction"
+            "'I think that's a bit unfair, I've been flexible on a lot of things.'",
+            "'You're right, I'm sorry, I'll work on it.'",
+            "'Okay. Noted.'"
           ],
-          "correct_feedback": "Balances clarity, tone, and intent.",
-          "incorrect_feedback": "Others miss subtle communication elements."
+          "correct_feedback": "It's honest about the impact, and it asks for the specific evidence you need to actually understand the claim.",
+          "incorrect_feedback": "That either defends before understanding, accepts before understanding, or shuts the conversation down entirely."
         },
         {
           "step": 2,
-          "question": "Which creates subtle friction?",
-          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "question": "Why is instantly agreeing almost as unhelpful as instantly disagreeing?",
+          "correct_option": "Both end the conversation before you've learned what the feedback actually refers to.",
           "incorrect_options": [
-            "A response that keeps tone neutral",
-            "A response that acknowledges before replying",
-            "A response that invites discussion"
+            "Agreeing makes you look weak in a review setting.",
+            "Agreeing commits you to changes you may not be able to make.",
+            "Agreeing suggests you already knew and did nothing."
           ],
-          "correct_feedback": "Tone introduces friction.",
-          "incorrect_feedback": "Others maintain flow."
+          "correct_feedback": "Right. Fast agreement is a way of ending discomfort, not a way of understanding.",
+          "incorrect_feedback": "It's not about looking weak or over-committing. It's that you close the topic before extracting anything useful from it."
         },
         {
           "step": 3,
-          "question": "Polite but weak?",
-          "correct_option": "A response that avoids taking a clear stance.",
+          "question": "They give an example and you genuinely think they've misread it. What now?",
+          "correct_option": "Say how you saw that moment, ask how it looked from their side, and treat the gap as the real subject.",
           "incorrect_options": [
-            "A response that adds direction",
-            "A response that clarifies intent",
-            "A response that provides next steps"
+            "Correct the record so the misunderstanding doesn't stand.",
+            "Accept it anyway to keep the review moving.",
+            "Ask for a different example that you might agree with."
           ],
-          "correct_feedback": "Avoids ownership.",
-          "incorrect_feedback": "Others stronger."
+          "correct_feedback": "The gap between intent and perception is usually the actual feedback. Explore it rather than resolving it too fast.",
+          "incorrect_feedback": "Correcting, conceding, or shopping for a better example all avoid the more useful conversation about the difference in perception."
         },
         {
           "step": 4,
-          "question": "Best emotional intelligence?",
-          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Explaining your intentions as a way of showing the criticism doesn't apply.",
           "incorrect_options": [
-            "A factual response",
-            "A neutral response",
-            "A slightly reactive response"
+            "Asking for time to think and returning to it later.",
+            "Taking notes during the conversation.",
+            "Asking what a better version would have looked like."
           ],
-          "correct_feedback": "Empathy + clarity.",
-          "incorrect_feedback": "Others lack depth."
-        },
-        {
-          "step": 5,
-          "question": "Subtly dismissive?",
-          "correct_option": "A short minimal reply that closes conversation.",
-          "incorrect_options": [
-            "A warm response",
-            "A structured response",
-            "A thoughtful reply"
-          ],
-          "correct_feedback": "Feels cold.",
-          "incorrect_feedback": "Others maintain connection."
+          "correct_feedback": "Right. Your intentions were never in question — the effect was. Intent doesn't rebut impact.",
+          "incorrect_feedback": "That one's constructive. Taking time, taking notes, and asking for the better version all help you use the feedback."
         }
       ],
       "response": {
-        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
-        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+        "prompt": "Someone tells you that you've been dismissive in meetings. Write your first response.",
+        "success_feedback": "Composed and curious — it opens the conversation instead of closing it."
       }
     },
     {
       "id": 17,
-      "journey_id": 2,
-      "journey_title": "Expressing Yourself",
-      "title": "Explaining an Idea Clearly",
-      "scenario": "You need to explain something clearly.",
+      "journey_id": 4,
+      "journey_title": "Hard Conversations",
+      "title": "Disagreeing Without Damage",
+      "emoji": "⚖️",
+      "skill": "Respectful conflict",
+      "difficulty": "advanced",
+      "goal": "Hold a real disagreement without turning it into a rift.",
+      "scenario": "A colleague you like and work with daily is pushing a plan you think will fail. They've clearly invested in it.",
+      "teaching": {
+        "idea": "Disagree with the idea, out loud, while making it obvious you're still on their side. Separate the two explicitly.",
+        "points": [
+          "Say what you agree with first — genuinely, not as a technique.",
+          "Attack the plan's weakest assumption, not their judgement.",
+          "Keep the relationship visible: 'I want this to work' is not a throwaway line."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Most effective response?",
-          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "question": "Which framing holds the disagreement without damaging the relationship?",
+          "correct_option": "'I think the goal is right. Where I get stuck is the assumption that we'll get sign-off in two weeks — everything downstream depends on that. What happens if it takes six?'",
           "incorrect_options": [
-            "A response that is slightly defensive in tone",
-            "A response that is polite but vague",
-            "A response that is neutral but lacks direction"
+            "'I don't think this is going to work, honestly.'",
+            "'It's a great plan, I just have a few tiny concerns.'",
+            "'You know this space better than me, so I'll defer — but I'm not sure.'"
           ],
-          "correct_feedback": "Balances clarity, tone, and intent.",
-          "incorrect_feedback": "Others miss subtle communication elements."
+          "correct_feedback": "Shared goal, one specific assumption challenged, and a concrete question. The disagreement is real and safe.",
+          "incorrect_feedback": "That's either a verdict with no reasoning, a concern minimised into invisibility, or a deferral that leaves the doubt hanging without testing it."
         },
         {
           "step": 2,
-          "question": "Which creates subtle friction?",
-          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "question": "Why is 'I just have a few tiny concerns' a weak move here?",
+          "correct_option": "It shrinks a real objection until it can be safely ignored, so the risk stays unexamined.",
           "incorrect_options": [
-            "A response that keeps tone neutral",
-            "A response that acknowledges before replying",
-            "A response that invites discussion"
+            "It's dishonest about your true feelings.",
+            "It makes you sound unsure of yourself.",
+            "It invites them to dismiss you personally."
           ],
-          "correct_feedback": "Tone introduces friction.",
-          "incorrect_feedback": "Others maintain flow."
+          "correct_feedback": "Right. Understating a genuine risk protects the moment and endangers the project.",
+          "incorrect_feedback": "The cost isn't really about honesty or confidence — it's that a minimised concern doesn't get addressed."
         },
         {
           "step": 3,
-          "question": "Polite but weak?",
-          "correct_option": "A response that avoids taking a clear stance.",
+          "question": "They take it personally and get quiet. What's the best response?",
+          "correct_option": "Name what's happening and reaffirm the relationship directly, then offer to continue later.",
           "incorrect_options": [
-            "A response that adds direction",
-            "A response that clarifies intent",
-            "A response that provides next steps"
+            "Push on with the argument while you have the opening.",
+            "Withdraw the objection to repair the mood.",
+            "Change the subject and come back to it in the next meeting."
           ],
-          "correct_feedback": "Avoids ownership.",
-          "incorrect_feedback": "Others stronger."
+          "correct_feedback": "Addressing the rupture directly is what keeps the disagreement from becoming a rift.",
+          "incorrect_feedback": "Pressing on, retracting, or quietly avoiding it all leave the relational damage unrepaired."
         },
         {
           "step": 4,
-          "question": "Best emotional intelligence?",
-          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Bringing up a past project of theirs that also went wrong.",
           "incorrect_options": [
-            "A factual response",
-            "A neutral response",
-            "A slightly reactive response"
+            "Asking what evidence would tell them the plan isn't working.",
+            "Agreeing to support the plan if they still choose it.",
+            "Putting your concern in writing so it's on record fairly."
           ],
-          "correct_feedback": "Empathy + clarity.",
-          "incorrect_feedback": "Others lack depth."
-        },
-        {
-          "step": 5,
-          "question": "Subtly dismissive?",
-          "correct_option": "A short minimal reply that closes conversation.",
-          "incorrect_options": [
-            "A warm response",
-            "A structured response",
-            "A thoughtful reply"
-          ],
-          "correct_feedback": "Feels cold.",
-          "incorrect_feedback": "Others maintain connection."
+          "correct_feedback": "Right. Pattern-matching to past failures moves the conversation from this plan to their competence.",
+          "incorrect_feedback": "That one's fine. Defining falsification criteria, committing to the outcome, and documenting fairly all keep it professional."
         }
       ],
       "response": {
-        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
-        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+        "prompt": "A colleague proposes an approach you think will fail. Write how you'd raise your disagreement.",
+        "success_feedback": "Direct about the idea, warm about the person — the disagreement stays safe."
       }
     },
     {
       "id": 18,
       "journey_id": 4,
-      "journey_title": "Active Listening & Empathy",
-      "title": "Comforting Someone",
-      "scenario": "Someone feels disappointed.",
+      "journey_title": "Hard Conversations",
+      "title": "Supporting Someone in Distress",
+      "emoji": "🤲",
+      "skill": "Empathy",
+      "difficulty": "advanced",
+      "goal": "Be genuinely useful to someone having a hard time.",
+      "scenario": "A close friend calls, upset. Their relationship has ended and they're not really making sense yet.",
+      "teaching": {
+        "idea": "Most distress calls are a request to be heard, not to be helped. Solve only when asked.",
+        "points": [
+          "Reflect before you respond. Showing you heard it is the support.",
+          "Don't compare. 'The same thing happened to me' moves the spotlight.",
+          "Ask what they need. Listening and advice are different jobs."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Most effective response?",
-          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "question": "What's the most supportive first response?",
+          "correct_option": "'That sounds awful. I'm here — do you want to talk it through, or do you just want company right now?'",
           "incorrect_options": [
-            "A response that is slightly defensive in tone",
-            "A response that is polite but vague",
-            "A response that is neutral but lacks direction"
+            "'Honestly, you're better off. They weren't right for you anyway.'",
+            "'Okay, first thing — have you thought about what you'll do about the flat?'",
+            "'I know exactly how you feel, the same thing happened to me last year.'"
           ],
-          "correct_feedback": "Balances clarity, tone, and intent.",
-          "incorrect_feedback": "Others miss subtle communication elements."
+          "correct_feedback": "It acknowledges the feeling and asks what kind of support they want, instead of guessing.",
+          "incorrect_feedback": "That either overrides their feelings with a verdict, jumps to logistics, or redirects the conversation to you."
         },
         {
           "step": 2,
-          "question": "Which creates subtle friction?",
-          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "question": "Why does 'you're better off' usually miss?",
+          "correct_option": "It tells them what to feel, at a moment when they need permission to feel what they already do.",
           "incorrect_options": [
-            "A response that keeps tone neutral",
-            "A response that acknowledges before replying",
-            "A response that invites discussion"
+            "It might turn out to be untrue.",
+            "It criticises someone they still care about.",
+            "It's too blunt for the timing."
           ],
-          "correct_feedback": "Tone introduces friction.",
-          "incorrect_feedback": "Others maintain flow."
+          "correct_feedback": "Right. It's meant as comfort, but it lands as instruction.",
+          "incorrect_feedback": "The problem isn't accuracy or bluntness — it's that it overrules their emotional experience."
         },
         {
           "step": 3,
-          "question": "Polite but weak?",
-          "correct_option": "A response that avoids taking a clear stance.",
+          "question": "They fall silent for a while. What's the best thing to do?",
+          "correct_option": "Stay on the line and let the silence be, without filling it.",
           "incorrect_options": [
-            "A response that adds direction",
-            "A response that clarifies intent",
-            "A response that provides next steps"
+            "Ask another question to keep them talking.",
+            "Offer to call back when they feel more up to it.",
+            "Start telling them about your day to distract them."
           ],
-          "correct_feedback": "Avoids ownership.",
-          "incorrect_feedback": "Others stronger."
+          "correct_feedback": "Silence with someone present is very different from silence alone. Staying is the support.",
+          "incorrect_feedback": "Prompting, leaving, or distracting all treat the silence as a problem rather than part of the process."
         },
         {
           "step": 4,
-          "question": "Best emotional intelligence?",
-          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Offering advice before they've asked for any.",
           "incorrect_options": [
-            "A factual response",
-            "A neutral response",
-            "A slightly reactive response"
+            "Saying you don't know what to say, but you're there.",
+            "Checking in again the next day.",
+            "Repeating back what you heard them say."
           ],
-          "correct_feedback": "Empathy + clarity.",
-          "incorrect_feedback": "Others lack depth."
-        },
-        {
-          "step": 5,
-          "question": "Subtly dismissive?",
-          "correct_option": "A short minimal reply that closes conversation.",
-          "incorrect_options": [
-            "A warm response",
-            "A structured response",
-            "A thoughtful reply"
-          ],
-          "correct_feedback": "Feels cold.",
-          "incorrect_feedback": "Others maintain connection."
+          "correct_feedback": "Right. Unrequested advice implies the problem is that they haven't thought about it enough.",
+          "incorrect_feedback": "That one helps. Honest presence, following up, and reflecting back are all genuinely supportive."
         }
       ],
       "response": {
-        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
-        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+        "prompt": "A friend messages that they've had a terrible week and feel like they're failing at everything. Write your reply.",
+        "success_feedback": "Warm and present — it listens instead of fixing."
       }
     },
     {
       "id": 19,
-      "journey_id": 5,
-      "journey_title": "Navigating Disagreements",
-      "title": "Handling Passive Aggression",
-      "scenario": "Someone makes a subtle passive-aggressive remark.",
+      "journey_id": 4,
+      "journey_title": "Hard Conversations",
+      "title": "Naming Passive Aggression",
+      "emoji": "🌡️",
+      "skill": "Directness",
+      "difficulty": "advanced",
+      "goal": "Surface an indirect jab without escalating it into a fight.",
+      "scenario": "In a team channel, a colleague writes: 'Great, another change of direction. Some of us actually have to deliver this.' It's aimed at your decision.",
+      "teaching": {
+        "idea": "Respond to the real message, not the tone. Take the content seriously and move the conversation somewhere direct.",
+        "points": [
+          "Don't match the tone. Sarcasm answered with sarcasm ends the useful conversation.",
+          "Assume there's a real grievance underneath, and ask about it.",
+          "Move it out of the public channel."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Most effective response?",
-          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "question": "What's the best response in the channel?",
+          "correct_option": "'It sounds like this change is landing badly on your side — that's fair, it's late. Can we talk for ten minutes today so I understand the delivery impact?'",
           "incorrect_options": [
-            "A response that is slightly defensive in tone",
-            "A response that is polite but vague",
-            "A response that is neutral but lacks direction"
+            "'If you have a problem with the decision, say it directly.'",
+            "'Sorry you feel that way. The decision's been made.'",
+            "'We all have to deliver it, not just some of us.'"
           ],
-          "correct_feedback": "Balances clarity, tone, and intent.",
-          "incorrect_feedback": "Others miss subtle communication elements."
+          "correct_feedback": "It takes the grievance seriously, ignores the barb, and moves to a real conversation. That de-escalates without conceding.",
+          "incorrect_feedback": "That either calls out the tone publicly, dismisses the concern, or matches the jab — all of which escalate in front of an audience."
         },
         {
           "step": 2,
-          "question": "Which creates subtle friction?",
-          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "question": "Why is 'say it directly' a poor move here, even though it's true?",
+          "correct_option": "It makes the tone the topic in public, which forces them to defend themselves rather than explain the problem.",
           "incorrect_options": [
-            "A response that keeps tone neutral",
-            "A response that acknowledges before replying",
-            "A response that invites discussion"
+            "It's an accusation you can't prove.",
+            "It's more aggressive than what they wrote.",
+            "It breaks channel etiquette."
           ],
-          "correct_feedback": "Tone introduces friction.",
-          "incorrect_feedback": "Others maintain flow."
+          "correct_feedback": "Right. You may be correct and still lose the substance by making it about conduct.",
+          "incorrect_feedback": "It's not about proof, proportionality or etiquette — it's that it replaces the real issue with a confrontation about tone."
         },
         {
           "step": 3,
-          "question": "Polite but weak?",
-          "correct_option": "A response that avoids taking a clear stance.",
+          "question": "In the private call, they say 'it's fine, forget it.' What's the best response?",
+          "correct_option": "Say you'd genuinely rather hear it, and name the specific thing you think might be frustrating.",
           "incorrect_options": [
-            "A response that adds direction",
-            "A response that clarifies intent",
-            "A response that provides next steps"
+            "Take them at their word and move on.",
+            "Point out that the channel message suggested otherwise.",
+            "Apologise for the change of direction to smooth it over."
           ],
-          "correct_feedback": "Avoids ownership.",
-          "incorrect_feedback": "Others stronger."
+          "correct_feedback": "Naming your guess gives them an easy way in, which 'what's wrong?' rarely does.",
+          "incorrect_feedback": "Dropping it, quoting their message back, or apologising reflexively all leave the actual grievance unspoken."
         },
         {
           "step": 4,
-          "question": "Best emotional intelligence?",
-          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Screenshotting the message and raising it with their manager first.",
           "incorrect_options": [
-            "A factual response",
-            "A neutral response",
-            "A slightly reactive response"
+            "Responding once, calmly, in the channel.",
+            "Moving the conversation to a private call.",
+            "Acknowledging that the frustration is reasonable."
           ],
-          "correct_feedback": "Empathy + clarity.",
-          "incorrect_feedback": "Others lack depth."
-        },
-        {
-          "step": 5,
-          "question": "Subtly dismissive?",
-          "correct_option": "A short minimal reply that closes conversation.",
-          "incorrect_options": [
-            "A warm response",
-            "A structured response",
-            "A thoughtful reply"
-          ],
-          "correct_feedback": "Feels cold.",
-          "incorrect_feedback": "Others maintain connection."
+          "correct_feedback": "Right. Escalating before talking to them turns a fixable friction into a formal conflict.",
+          "incorrect_feedback": "That one's sound. A calm public reply, a private follow-up, and acknowledging the frustration all defuse it."
         }
       ],
       "response": {
-        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
-        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+        "prompt": "A colleague makes a pointed remark about your work in a group chat. Write your reply.",
+        "success_feedback": "Calm, takes the substance seriously, and moves it somewhere private."
       }
     },
     {
       "id": 20,
-      "journey_id": 5,
-      "journey_title": "Navigating Disagreements",
-      "title": "De-escalating Conflict",
-      "scenario": "A conversation is becoming heated.",
+      "journey_id": 4,
+      "journey_title": "Hard Conversations",
+      "title": "De-escalating a Heated Moment",
+      "emoji": "🕊️",
+      "skill": "De-escalation",
+      "difficulty": "advanced",
+      "goal": "Bring the temperature down when someone is angry at you.",
+      "scenario": "A client is on the phone, genuinely angry about a delay. They're raising their voice and talking over you.",
+      "teaching": {
+        "idea": "You cannot reason with someone until they feel heard. Lower your pace and volume, acknowledge the anger, and only then move to substance.",
+        "points": [
+          "Slow down and drop your volume — people tend to converge on the other person's tempo.",
+          "Acknowledge the emotion before the facts. 'You're right to be frustrated' costs you nothing.",
+          "Don't defend yet. Defence sounds like dismissal to someone who's angry."
+        ]
+      },
       "mcqs": [
         {
           "step": 1,
-          "question": "Most effective response?",
-          "correct_option": "A response that acknowledges context, stays composed, and adds clarity.",
+          "question": "They're mid-rant. What's the best move?",
+          "correct_option": "Let them finish, then say slowly: 'You're right to be frustrated — this has cost you a week. Let me tell you exactly where it stands.'",
           "incorrect_options": [
-            "A response that is slightly defensive in tone",
-            "A response that is polite but vague",
-            "A response that is neutral but lacks direction"
+            "'I understand you're upset, but if you'd let me explain the situation—'",
+            "'There's no need to shout at me.'",
+            "'This wasn't actually our fault — the delay came from the vendor.'"
           ],
-          "correct_feedback": "Balances clarity, tone, and intent.",
-          "incorrect_feedback": "Others miss subtle communication elements."
+          "correct_feedback": "Letting them finish, validating specifically, and only then moving to substance. That's the whole sequence.",
+          "incorrect_feedback": "That either interrupts with a 'but', polices their behaviour, or defends before they feel heard — all of which raise the temperature."
         },
         {
           "step": 2,
-          "question": "Which creates subtle friction?",
-          "correct_option": "A response that sounds correct but slightly challenges the other person.",
+          "question": "Why does 'I understand you're upset, but...' tend to make things worse?",
+          "correct_option": "The 'but' cancels the acknowledgement, so it lands as a formality on the way to a defence.",
           "incorrect_options": [
-            "A response that keeps tone neutral",
-            "A response that acknowledges before replying",
-            "A response that invites discussion"
+            "It's a phrase people recognise as a customer service script.",
+            "It's too formal for a heated conversation.",
+            "It admits fault you may not want to admit."
           ],
-          "correct_feedback": "Tone introduces friction.",
-          "incorrect_feedback": "Others maintain flow."
+          "correct_feedback": "Right. Replace 'but' with a full stop and the same sentence starts working.",
+          "incorrect_feedback": "The issue isn't the script, the register, or liability — it's that 'but' erases the acknowledgement in front of it."
         },
         {
           "step": 3,
-          "question": "Polite but weak?",
-          "correct_option": "A response that avoids taking a clear stance.",
+          "question": "They've calmed slightly but repeat the same complaint again. What's happening?",
+          "correct_option": "They probably don't yet believe you've understood it — repeating is a bid to be heard.",
           "incorrect_options": [
-            "A response that adds direction",
-            "A response that clarifies intent",
-            "A response that provides next steps"
+            "They're trying to wear you down into a concession.",
+            "They've forgotten what you already addressed.",
+            "They're building a case to escalate later."
           ],
-          "correct_feedback": "Avoids ownership.",
-          "incorrect_feedback": "Others stronger."
+          "correct_feedback": "Repetition almost always means 'you haven't shown me you got it.' Reflect it back specifically.",
+          "incorrect_feedback": "Reading it as tactics, forgetfulness, or manoeuvring misses the simpler explanation: they don't feel heard yet."
         },
         {
           "step": 4,
-          "question": "Best emotional intelligence?",
-          "correct_option": "A response that acknowledges the other perspective before adding your own.",
+          "question": "Which of these is the misstep?",
+          "correct_option": "Matching their intensity so they know you're taking it seriously.",
           "incorrect_options": [
-            "A factual response",
-            "A neutral response",
-            "A slightly reactive response"
+            "Speaking more slowly than you normally would.",
+            "Summarising their complaint back before responding.",
+            "Committing to a specific next step and a time."
           ],
-          "correct_feedback": "Empathy + clarity.",
-          "incorrect_feedback": "Others lack depth."
-        },
-        {
-          "step": 5,
-          "question": "Subtly dismissive?",
-          "correct_option": "A short minimal reply that closes conversation.",
-          "incorrect_options": [
-            "A warm response",
-            "A structured response",
-            "A thoughtful reply"
-          ],
-          "correct_feedback": "Feels cold.",
-          "incorrect_feedback": "Others maintain connection."
+          "correct_feedback": "Right. Intensity is contagious — matching it guarantees escalation, no matter how sincere it is.",
+          "incorrect_feedback": "That one de-escalates. A slower pace, accurate reflection, and a concrete commitment all bring the temperature down."
         }
       ],
       "response": {
-        "prompt": "Write a 1–2 sentence response handling this situation effectively.",
-        "success_feedback": "Excellent—this response shows high-level communication awareness, nuance, and intent."
+        "prompt": "An angry customer says your team has wasted their time. Write your opening response.",
+        "success_feedback": "Calm, validating, and it moves to a concrete next step."
       }
     }
   ]

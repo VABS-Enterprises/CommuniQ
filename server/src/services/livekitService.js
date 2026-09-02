@@ -116,8 +116,19 @@ async function deleteRoom(sessionId) {
  *   the Pipecat LLM context as the first assistant message so the bot doesn't
  *   re-introduce itself on the first user turn.
  */
+/**
+ * Start the Pipecat agent in the session's LiveKit room.
+ *
+ * Returns true only when the worker actually accepted the agent. This matters
+ * more than it looks: the client switches to live-voice mode on the strength
+ * of this, and live-voice mode does not run the file recorder. If the agent
+ * never joined, the user gets a mic that records nothing, sends nothing, and
+ * waits forever for a bot that is not in the room — the conversation simply
+ * dies after the opening line. Reporting the truth here lets the client fall
+ * back to the HTTP turn loop, which works.
+ */
 async function dispatchAgent(sessionId, systemPrompt, openingText = '') {
-  if (!ENABLED) return;
+  if (!ENABLED) return false;
   const agentToken = await createAgentToken(sessionId);
   try {
     const res = await fetch(`${PIPECAT_WORKER_URL}/start-agent`, {
@@ -141,11 +152,14 @@ async function dispatchAgent(sessionId, systemPrompt, openingText = '') {
     if (!res.ok) {
       const body = await res.text();
       console.error(`[livekit] dispatchAgent(${sessionId}) worker error ${res.status}: ${body}`);
+      return false;
     }
+    return true;
   } catch (err) {
-    // Non-fatal — log but allow the opening response to still reach Flutter.
-    // The worker can be started manually or retried.
+    // Non-fatal for the opening itself — the AI line and its audio still reach
+    // the client, which continues in classic HTTP mode.
     console.error(`[livekit] dispatchAgent(${sessionId}) failed: ${err.message}`);
+    return false;
   }
 }
 

@@ -34,16 +34,24 @@ class ConfettiOverlay extends StatefulWidget {
 
 class ConfettiOverlayState extends State<ConfettiOverlay>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 2400),
-  );
+  /// Created eagerly in [initState], not lazily at first use.
+  ///
+  /// As a lazy `late final` this was only constructed when a burst actually
+  /// fired — so on every screen that mounts the overlay and never celebrates
+  /// (the common case), `dispose()` was the first read of the field and built
+  /// an AnimationController against an already-deactivated element, tripping
+  /// "Looking up a deactivated widget's ancestor is unsafe".
+  late final AnimationController _c;
 
   final List<_Particle> _particles = [];
 
   @override
   void initState() {
     super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
     if (widget.play) burst();
   }
 

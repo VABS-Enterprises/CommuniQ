@@ -1,6 +1,7 @@
 import asyncio
 import io
 import re
+from typing import AsyncIterator
 
 import edge_tts
 
@@ -99,22 +100,61 @@ def strip_stage_directions(text: str) -> str:
     return _STAGE_DIRECTION.sub(" ", text).strip()
 
 
-async def synthesize_full(text: str, voice: str | None = None) -> bytes:
+# edge-tts is a network round trip per chunk, so several can be in flight at
+# once. Bounded because a long reply would otherwise open a dozen sockets to
+# the same free service in one burst.
+_MAX_CONCURRENT_TTS = 4
+
+
+async def synthesize_stream(
+    text: str, voice: str | None = None
+) -> AsyncIterator[tuple[int, bytes]]:
     """
-    Synthesize a full text block to a single concatenated MP3.
-    Used by /tts and /session/turn endpoints.
+    Yield `(index, mp3_bytes)` per sentence, **in order**, as each is ready.
+
+    This is what makes a reply start playing immediately. Synthesis used to be
+    a sequential loop whose caller waited for the whole block: a mid-length
+    answer took 5.7s before a single byte of audio existed, which was ~92% of
+    the perceived turn latency.
+
+    Every sentence is dispatched at once (up to [_MAX_CONCURRENT_TTS]) so the
+    later ones are already being synthesised while the first is being sent.
+    Results are yielded strictly in order — audio has to play in the order it
+    was written, so out-of-order completion cannot be forwarded.
     """
     text = strip_stage_directions(text)
     sentences = split_sentences(text)
     if not sentences:
-        return b""
+        return
 
-    chunks = []
-    for sentence in sentences:
-        chunk = await synthesize_sentence(sentence, voice)
-        if chunk:
-            chunks.append(chunk)
+    semaphore = asyncio.Semaphore(_MAX_CONCURRENT_TTS)
 
+    async def run(sentence: str) -> bytes:
+        async with semaphore:
+            return await synthesize_sentence(sentence, voice)
+
+    tasks = [asyncio.create_task(run(s)) for s in sentences]
+    try:
+        for index, task in enumerate(tasks):
+            chunk = await task
+            if chunk:
+                yield index, chunk
+    finally:
+        # A disconnected client must not leave synthesis running.
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+
+
+async def synthesize_full(text: str, voice: str | None = None) -> bytes:
+    """
+    Synthesize a full text block to a single concatenated MP3.
+    Used by /tts and the non-streaming /session/turn.
+
+    Shares [synthesize_stream]'s concurrency, so even callers that need the
+    whole blob no longer pay for one sequential round trip per sentence.
+    """
+    chunks = [chunk async for _, chunk in synthesize_stream(text, voice)]
     return b"".join(chunks)
 
 

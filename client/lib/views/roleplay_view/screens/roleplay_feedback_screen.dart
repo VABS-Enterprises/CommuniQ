@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/session_result_model.dart';
@@ -14,12 +16,12 @@ import 'package:communiq/views/roleplay_view/screens/setup_scenario_page.dart';
 // ─── Palette ──────────────────────────────────────────────────────────────────
 // One set of constants so every colour decision is in one place.
 
-const _kBarColor = AppColors.primary;          // indigo — all skill bars
-const _kTrackColor = Color(0xFF1E293B);         // dark slate track
-const _kCardBg = Color(0xFF0F172A);             // surface card
-const _kDivider = Color(0xFF1E293B);            // subtle divider
-const _kUserLabel = AppColors.primary;
-const _kAiLabel = Color(0xFF475569);            // slate-600
+const _kBarColor = AppColors.brand;          // indigo — all skill bars
+const _kTrackColor = AppColors.bgSunk;         // dark slate track
+const _kCardBg = AppColors.surface;             // surface card
+const _kDivider = AppColors.bgSunk;            // subtle divider
+const _kUserLabel = AppColors.brand;
+const _kAiLabel = AppColors.inkMuted;            // slate-600
 
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
@@ -127,7 +129,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(
           children: [
@@ -155,7 +157,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                     const Text(
                       'Tap highlighted words for feedback.',
                       style: TextStyle(
-                          color: AppColors.textMuted,
+                          color: AppColors.inkSoft,
                           fontSize: 11,
                           height: 1.4),
                     ),
@@ -218,9 +220,9 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                 border: Border.all(color: _kDivider),
               ),
               child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: AppColors.textPrimary, size: 16),
+                  color: AppColors.ink, size: 16),
             ),
-            onPressed: () => Navigator.popUntil(context, (r) => r.isFirst),
+            onPressed: () => context.go(AppRoutes.roleplay),
             padding: EdgeInsets.zero,
           ),
           const Expanded(
@@ -228,7 +230,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               'Session Complete',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.ink,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
                 letterSpacing: -0.2,
@@ -274,7 +276,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                         Text(
                           '$display',
                           style: const TextStyle(
-                            color: AppColors.textPrimary,
+                            color: AppColors.ink,
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             height: 1,
@@ -283,7 +285,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                         const Text(
                           '%',
                           style: TextStyle(
-                            color: AppColors.textMuted,
+                            color: AppColors.inkSoft,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -306,13 +308,13 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                   padding: const EdgeInsets.symmetric(
                       horizontal: 9, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
+                    color: AppColors.brand.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
                     'SESSION PERFORMANCE',
                     style: TextStyle(
-                      color: AppColors.primaryLight,
+                      color: AppColors.brandLight,
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
@@ -323,7 +325,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                 Text(
                   widget.config.scenarioTitle,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.ink,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     letterSpacing: -0.3,
@@ -334,7 +336,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                 Text(
                   _scoreLabel(widget.config.overallScore),
                   style: const TextStyle(
-                    color: AppColors.textMuted,
+                    color: AppColors.inkSoft,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -352,13 +354,13 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                         _chip(
                           icon: Icons.bolt_rounded,
                           label: '+${widget.xpAwarded} XP',
-                          color: AppColors.primaryLight,
+                          color: AppColors.brandLight,
                         ),
                       if (widget.leveledUp)
                         _chip(
                           icon: Icons.arrow_upward_rounded,
                           label: 'Level ${widget.newLevel}',
-                          color: AppColors.primaryLight,
+                          color: AppColors.brandLight,
                         ),
                       if (widget.newStreak > 0)
                         _chip(
@@ -424,7 +426,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
         Container(
           width: 3, height: 14,
           decoration: BoxDecoration(
-            color: AppColors.primary,
+            color: AppColors.brand,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -432,7 +434,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
         Text(
           label,
           style: const TextStyle(
-            color: AppColors.textMuted,
+            color: AppColors.inkSoft,
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.4,
@@ -484,7 +486,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
           child: Text(
             skill.title,
             style: const TextStyle(
-              color: AppColors.textSecondary,
+              color: AppColors.inkMuted,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -521,7 +523,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
             '${skill.score}%',
             textAlign: TextAlign.right,
             style: const TextStyle(
-              color: AppColors.textPrimary,
+              color: AppColors.ink,
               fontSize: 13,
               fontWeight: FontWeight.bold,
             ),
@@ -703,7 +705,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
         child: Text(
           rawTranscript,
           style: const TextStyle(
-              color: AppColors.textSecondary, fontSize: 13, height: 1.7),
+              color: AppColors.inkMuted, fontSize: 13, height: 1.7),
         ),
       );
     }
@@ -752,7 +754,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                           : Text(
                               text,
                               style: const TextStyle(
-                                color: AppColors.textSecondary,
+                                color: AppColors.inkMuted,
                                 fontSize: 13,
                                 height: 1.65,
                               ),
@@ -806,7 +808,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
         spans.add(TextSpan(
           text: i < words.length - 1 ? '$word ' : word,
           style: const TextStyle(
-            color: AppColors.textPrimary,
+            color: AppColors.ink,
             fontSize: 13,
             height: 1.65,
           ),
@@ -821,8 +823,8 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg,
-          style: const TextStyle(color: Colors.white, fontSize: 13)),
-      backgroundColor: const Color(0xFF1E293B),
+          style: const TextStyle(color: AppColors.inkOnDark, fontSize: 13)),
+      backgroundColor: AppColors.ink,
       duration: const Duration(seconds: 3),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -853,7 +855,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                   width: 4,
                   height: 4,
                   decoration: const BoxDecoration(
-                    color: AppColors.primary,
+                    color: AppColors.brand,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -862,7 +864,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                   child: Text(
                     e.value,
                     style: const TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.inkMuted,
                       fontSize: 14,
                       height: 1.6,
                     ),
@@ -900,11 +902,11 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                   height: 28,
                   margin: const EdgeInsets.only(top: 1),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.10),
+                    color: AppColors.brand.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.lightbulb_outline_rounded,
-                      color: AppColors.primaryLight, size: 14),
+                      color: AppColors.brandLight, size: 14),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -913,7 +915,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                     child: Text(
                       e.value,
                       style: const TextStyle(
-                        color: AppColors.textSecondary,
+                        color: AppColors.inkMuted,
                         fontSize: 14,
                         height: 1.5,
                       ),
@@ -933,15 +935,16 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
   Widget _recommendedCard(BuildContext context) {
     final nextType = widget.report!.recommendedNextType!;
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(
-          builder: (_) => SetupScenarioPage(
-              prefilledPresetKey: _matchPresetKey(nextType)))),
+      // Routes to the same setup page every other entry point uses, prefilled
+      // with the recommended scenario. This used to push a second, legacy
+      // setup screen that the router does not know about.
+      onTap: () => context.push(AppRoutes.roleplaySetup, extra: nextType),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.s16),
         decoration: BoxDecoration(
           color: _kCardBg,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+          border: Border.all(color: AppColors.brand.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -949,11 +952,11 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.12),
+                color: AppColors.brand.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.auto_awesome_rounded,
-                  color: AppColors.primaryLight, size: 16),
+                  color: AppColors.brandLight, size: 16),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -963,21 +966,21 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                   const Text(
                     'Try next',
                     style: TextStyle(
-                        color: AppColors.textMuted,
+                        color: AppColors.inkSoft,
                         fontSize: 11,
                         fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
                   Text(nextType,
                       style: const TextStyle(
-                          color: AppColors.textPrimary,
+                          color: AppColors.ink,
                           fontSize: 14,
                           fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
             const Icon(Icons.arrow_forward_ios_rounded,
-                color: AppColors.textMuted, size: 13),
+                color: AppColors.inkSoft, size: 13),
           ],
         ),
       ),
@@ -994,40 +997,22 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
           onTap: () {
             HapticFeedback.lightImpact();
             if (widget.isOnboarding) {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const GoalConfirmationScreen(data: OnboardingData())),
-                (_) => false,
-              );
+              context.go(AppRoutes.onboardingConfirm);
             } else {
-              // Prefill with this same scenario when it matches a known
-              // preset (e.g. finishing "Job Interview" offers straight back
-              // into a configured "Job Interview" setup); otherwise this
-              // was a custom scenario and opens blank, same as before.
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => SetupScenarioPage(
-                    prefilledPresetKey:
-                        _matchPresetKey(widget.config.scenarioTitle),
-                  ),
-                ),
-              );
+              context.pushReplacement(AppRoutes.roleplaySetup);
             }
           },
           child: Container(
             height: 54,
             decoration: BoxDecoration(
-              color: AppColors.primary,
+              color: AppColors.brand,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Center(
               child: Text(
                 widget.isOnboarding ? 'Continue' : 'Practice Again',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.inkOnDark,
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
                   letterSpacing: -0.1,
@@ -1040,7 +1025,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
         GestureDetector(
           onTap: () {
             HapticFeedback.lightImpact();
-            Navigator.popUntil(context, (r) => r.isFirst);
+            context.go(AppRoutes.roleplay);
           },
           child: Container(
             height: 54,
@@ -1053,7 +1038,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               child: Text(
                 'Try New Scenario',
                 style: TextStyle(
-                  color: AppColors.textSecondary,
+                  color: AppColors.inkMuted,
                   fontWeight: FontWeight.w600,
                   fontSize: 15,
                 ),
@@ -1077,7 +1062,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
         child: Center(
           child: Text(msg,
               style: const TextStyle(
-                  color: AppColors.textMuted, fontSize: 14)),
+                  color: AppColors.inkSoft, fontSize: 14)),
         ),
       );
 }

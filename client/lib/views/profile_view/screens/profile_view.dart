@@ -113,18 +113,17 @@ class _ProfileViewState extends State<ProfileView> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.cardRadius),
-        title: Text('Log Out', style: AppTextStyles.titleLarge),
-        content: Text(
-          'Are you sure you want to log out?',
-          style: AppTextStyles.bodyMedium,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Log Out',
+            style: TextStyle(
+                color: AppColors.ink, fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to log out?',
+            style: TextStyle(color: AppColors.inkMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel',
-                style: AppTextStyles.labelMedium
-                    .copyWith(color: AppColors.inkMuted)),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.inkMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -169,17 +168,20 @@ class _ProfileViewState extends State<ProfileView> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.cardRadius),
-        title: Text(title, style: AppTextStyles.titleLarge),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(title,
+            style: const TextStyle(
+                color: AppColors.ink, fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
-          child: Text(body, style: AppTextStyles.bodyMedium.copyWith(height: 1.6)),
+          child: Text(body,
+              style:
+                  const TextStyle(color: AppColors.inkMuted, height: 1.6)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Close',
-                style: AppTextStyles.labelMedium
-                    .copyWith(color: AppColors.brand)),
+            child:
+                const Text('Close', style: TextStyle(color: AppColors.brand)),
           ),
         ],
       ),
@@ -194,7 +196,9 @@ class _ProfileViewState extends State<ProfileView> {
         backgroundColor: AppColors.transparent,
         body: SafeArea(
           child: _loading
-              ? const LoadingStateView()
+              ? const Center(
+                  child:
+                      CircularProgressIndicator(color: AppColors.brand))
               : _error
                   ? ErrorStateView(
                       title: 'Could not load profile',
@@ -261,8 +265,8 @@ class _ProfileViewState extends State<ProfileView> {
                               subtitle: _profile?.isPremium == true
                                   ? 'Premium'
                                   : 'Free (Tap to upgrade)',
-                              iconColor: _profile?.isPremium == true
-                                  ? AppColors.sun
+                              trailingColor: _profile?.isPremium == true
+                                  ? AppColors.gold
                                   : AppColors.brand,
                               onTap: _profile?.isPremium == true
                                   ? null
@@ -289,12 +293,61 @@ class _ProfileViewState extends State<ProfileView> {
                             ),
                           ]),
 
-                          _buildSection('Legal', [
-                            _Tile(
-                              icon: Icons.description_outlined,
-                              title: 'Terms & Conditions',
-                              onTap: () => _showInfoDialog(
-                                  'Terms & Conditions', _kTerms),
+                          // ── Legal ───────────────────────────────────────
+                          SliverToBoxAdapter(
+                              child: _buildSection('Legal', [
+                            _buildTile(Icons.description_outlined,
+                                'Terms & Conditions',
+                                onTap: () => _showInfoDialog(
+                                    'Terms & Conditions', _kTerms)),
+                            _buildTile(
+                                Icons.privacy_tip_outlined, 'Privacy Policy',
+                                onTap: () => _showInfoDialog(
+                                    'Privacy Policy', _kPrivacy)),
+                          ])),
+
+                          // ── App ─────────────────────────────────────────
+                          SliverToBoxAdapter(
+                              child: _buildSection('App', [
+                            _buildTile(Icons.info_outline_rounded, 'App Version',
+                                subtitle: '1.0.0 (build 1)'),
+                            _buildTile(Icons.help_outline_rounded,
+                                'Help & Support',
+                                onTap: () => _showInfoDialog('Help & Support',
+                                    'For support, reach us at support@communiq.app')),
+                          ])),
+
+                          // ── Log Out ─────────────────────────────────────
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                      color: AppColors.outline
+                                          .withValues(alpha: 0.4)),
+                                ),
+                                child: ListTile(
+                                  leading: const IconTile(
+                                    size: 34,
+                                    icon: Icons.logout_rounded,
+                                    color: AppColors.error,
+                                  ),
+                                  title: const Text('Log Out',
+                                      style: TextStyle(
+                                          // Was white on AppColors.surface,
+                                          // i.e. white on white.
+                                          color: AppColors.error,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600)),
+                                  onTap: _handleLogout,
+                                  dense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 4),
+                                ),
+                              ),
                             ),
                             _Tile(
                               icon: Icons.privacy_tip_outlined,
@@ -333,6 +386,73 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
+  Widget _buildError() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: AppColors.outline.withValues(alpha: 0.4)),
+            ),
+            child: const Icon(Icons.cloud_off_rounded,
+                color: AppColors.inkSoft, size: 32),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Could not load profile',
+            style: TextStyle(
+                color: AppColors.ink,
+                fontSize: 16,
+                fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'Your account may not exist yet, or the server is unreachable.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: AppColors.inkSoft, fontSize: 13, height: 1.5),
+            ),
+          ),
+          const SizedBox(height: 24),
+          TextButton.icon(
+            onPressed: () => _load(forceRefresh: true),
+            icon: const Icon(Icons.refresh_rounded,
+                color: AppColors.brand, size: 18),
+            label: const Text('Retry',
+                style: TextStyle(
+                    color: AppColors.brand, fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.logout_rounded,
+                  color: Colors.redAccent, size: 18),
+              label: const Text('Log Out',
+                  style: TextStyle(
+                      color: Colors.redAccent, fontWeight: FontWeight.w600)),
+              onPressed: _handleLogout,
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.redAccent),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                minimumSize: const Size(double.infinity, 46),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Section wrapper ───────────────────────────────────────────────────────
 
   Widget _buildSection(String title, List<Widget> tiles) {
@@ -342,15 +462,31 @@ class _ProfileViewState extends State<ProfileView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionHeader(title: title, padding: const EdgeInsets.only(bottom: AppSpacing.s10)),
-          ChunkyCard(
-            padding: EdgeInsets.zero,
+          Text(
+            title.toUpperCase(),
+            style: const TextStyle(
+                color: AppColors.inkSoft,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                  color: AppColors.outline.withValues(alpha: 0.4)),
+            ),
             child: Column(
               children: [
                 for (int i = 0; i < tiles.length; i++) ...[
                   tiles[i],
                   if (i < tiles.length - 1)
-                    const Divider(height: 1, color: AppColors.outline, indent: 62),
+                    Divider(
+                        height: 1,
+                        color: AppColors.outline.withValues(alpha: 0.3),
+                        indent: 50),
                 ],
               ],
             ),
@@ -383,14 +519,18 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: IconTile(size: 40, icon: icon, color: iconColor),
-      title: Text(title, style: AppTextStyles.titleSmall),
+      leading: IconTile(size: 34, icon: icon),
+      title: Text(title,
+          style:
+              const TextStyle(color: AppColors.ink, fontSize: 14)),
       subtitle: subtitle != null
-          ? Text(subtitle!, style: AppTextStyles.bodySmall)
+          ? Text(subtitle,
+              style: const TextStyle(
+                  color: AppColors.inkMuted, fontSize: 12))
           : null,
       trailing: onTap != null
-          ? const Icon(Icons.chevron_right_rounded,
-              color: AppColors.inkSoft, size: 20)
+          ? Icon(Icons.chevron_right_rounded,
+              color: trailingColor ?? AppColors.inkSoft, size: 20)
           : null,
       onTap: onTap,
       dense: true,
@@ -420,9 +560,12 @@ class _SwitchTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: IconTile(size: 40, icon: icon),
-      title: Text(title, style: AppTextStyles.titleSmall),
-      subtitle: Text(subtitle, style: AppTextStyles.bodySmall.copyWith(height: 1.4)),
+      leading: IconTile(size: 34, icon: icon),
+      title: Text(title,
+          style: const TextStyle(color: AppColors.ink, fontSize: 14)),
+      subtitle: Text(subtitle,
+          style: const TextStyle(
+              color: AppColors.inkMuted, fontSize: 12, height: 1.4)),
       isThreeLine: true,
       trailing: updating
           ? const SizedBox(
@@ -460,48 +603,118 @@ class _ProfileHeroHeader extends StatelessWidget {
     final level = profile?.level ?? 1;
     final levelLabel = profile?.levelLabel ?? 'Starter';
 
-    return ChunkyCard(
-      accent: isPremium ? AppColors.sun : AppColors.brand,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+        border: Border.all(
+            color: AppColors.outline.withValues(alpha: 0.4)),
+      ),
+      child: Column(
         children: [
           Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isPremium ? AppColors.sun : AppColors.brand,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: photo != null
-                    ? Image.network(
-                        photo,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _InitialAvatar(name: name),
-                      )
-                    : _InitialAvatar(name: name),
-              ),
-              Positioned(
-                bottom: -4,
-                right: -4,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.brand,
-                    borderRadius: AppRadius.pillRadius,
-                    border: Border.all(color: AppColors.surface, width: 2),
-                  ),
-                  child: Text(
-                    'Lv $level',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.inkOnDark,
-                      fontSize: 10,
+              // Avatar with level badge overlay
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isPremium
+                          ? AppColors.gold
+                          : AppColors.brand,
+                    ),
+                    child: CircleAvatar(
+                      radius: 44,
+                      backgroundColor: Colors.transparent,
+                      backgroundImage:
+                          photo != null ? NetworkImage(photo) : null,
+                      child: photo == null
+                          ? Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                              style: const TextStyle(
+                                  color: AppColors.inkOnDark,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold),
+                            )
+                          : null,
                     ),
                   ),
+                  // Level badge
+                  Positioned(
+                    bottom: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.brand,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: AppColors.bg, width: 2),
+                      ),
+                      child: Text(
+                        'Lv $level',
+                        style: const TextStyle(
+                          color: AppColors.inkOnDark,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 18),
+
+              // Name / email / badges
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                          color: AppColors.ink,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      email,
+                      style: const TextStyle(
+                          color: AppColors.inkMuted, fontSize: 13),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        // Level label chip
+                        _Chip(
+                          label: levelLabel,
+                          color: AppColors.brand,
+                          icon: Icons.military_tech_rounded,
+                        ),
+                        const SizedBox(width: 8),
+                        // Premium/Free chip
+                        if (isPremium)
+                          _Chip(
+                            label: 'Premium',
+                            color: AppColors.gold,
+                            icon: Icons.workspace_premium_rounded,
+                            textColor: Colors.black,
+                          )
+                        else
+                          _Chip(
+                            label: 'Free Plan',
+                            color: AppColors.inkSoft,
+                            icon: Icons.stars_outlined,
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -580,36 +793,51 @@ class _PremiumBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChunkyCard(
-      onTap: onTap,
-      fill: AppColors.brand,
-      borderColor: AppColors.brandDark,
-      child: Row(
-        children: [
-          const IconTile(
-            icon: Icons.workspace_premium_rounded,
-            color: AppColors.inkOnDark,
-            tinted: false,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+          decoration: BoxDecoration(
+            color: AppColors.brandDark,
+            borderRadius: BorderRadius.circular(16),
           ),
-          const SizedBox(width: AppSpacing.s16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Upgrade to Premium',
-                  style: AppTextStyles.titleLarge
-                      .copyWith(color: AppColors.inkOnDark),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: AppColors.inkOnDark24,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Unlock all 150 sessions & advanced AI',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.inkOnDark.withValues(alpha: 0.85)),
+                child: const Icon(Icons.workspace_premium_rounded,
+                    color: AppColors.inkOnDark, size: 26),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Upgrade to Premium',
+                      style: TextStyle(
+                          color: AppColors.inkOnDark,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Unlock all 150 sessions & advanced AI',
+                      style:
+                          TextStyle(color: AppColors.inkOnDark70, fontSize: 12),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const Icon(Icons.chevron_right_rounded,
+                  color: AppColors.inkOnDark70),
+            ],
           ),
           Icon(Icons.chevron_right_rounded,
               color: AppColors.inkOnDark.withValues(alpha: 0.85)),
@@ -648,21 +876,38 @@ class _OnboardingSection extends StatelessWidget {
 
     if (tiles.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionHeader(
-          title: 'Onboarding preferences',
-          padding: EdgeInsets.only(bottom: AppSpacing.s10),
-        ),
-        ChunkyCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              for (int i = 0; i < tiles.length; i++) ...[
-                tiles[i],
-                if (i < tiles.length - 1)
-                  const Divider(height: 1, color: AppColors.outline, indent: 62),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ONBOARDING PREFERENCES',
+            style: TextStyle(
+                color: AppColors.inkSoft,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                  color: AppColors.outline.withValues(alpha: 0.4)),
+            ),
+            child: Column(
+              children: [
+                for (int i = 0; i < tiles.length; i++) ...[
+                  tiles[i],
+                  if (i < tiles.length - 1)
+                    Divider(
+                      height: 1,
+                      color: AppColors.outline.withValues(alpha: 0.3),
+                      indent: 50,
+                    ),
+                ],
               ],
             ],
           ),
@@ -671,10 +916,17 @@ class _OnboardingSection extends StatelessWidget {
     );
   }
 
-  Widget _infoTile(IconData icon, String title, String value) => _Tile(
-        icon: icon,
-        title: title,
-        subtitle: value,
+  Widget _infoTile(IconData icon, String title, String value) => ListTile(
+        leading: IconTile(size: 34, icon: icon),
+        title: Text(title,
+            style: const TextStyle(
+                color: AppColors.ink, fontSize: 13)),
+        subtitle: Text(value,
+            style: const TextStyle(
+                color: AppColors.inkMuted, fontSize: 12)),
+        dense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       );
 
   Widget _chipTile(IconData icon, String title, List<String> items) => Padding(
@@ -690,8 +942,10 @@ class _OnboardingSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(title, style: AppTextStyles.titleSmall),
-                  const SizedBox(height: AppSpacing.s6),
+                  Text(title,
+                      style: const TextStyle(
+                          color: AppColors.ink, fontSize: 13)),
+                  const SizedBox(height: 6),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
@@ -700,16 +954,16 @@ class _OnboardingSection extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AppColors.brandSoft,
-                                borderRadius: AppRadius.pillRadius,
+                                color: AppColors.brand
+                                    .withValues(alpha: 0.12),
+                                borderRadius:
+                                    BorderRadius.circular(20),
                               ),
-                              child: Text(
-                                t,
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: AppColors.brand,
-                                  letterSpacing: 0,
-                                ),
-                              ),
+                              child: Text(t,
+                                  style: const TextStyle(
+                                      color: AppColors.brandLight,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500)),
                             ))
                         .toList(),
                   ),
