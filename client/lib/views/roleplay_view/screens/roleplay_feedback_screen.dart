@@ -1,13 +1,12 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/session_result_model.dart';
-import 'package:communiq/models/onboarding_data.dart';
-import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
-import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 // One set of constants so every colour decision is in one place.
@@ -193,7 +192,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               child: const Icon(Icons.arrow_back_ios_new_rounded,
                   color: AppColors.ink, size: 16),
             ),
-            onPressed: () => Navigator.popUntil(context, (r) => r.isFirst),
+            onPressed: () => context.go(AppRoutes.roleplay),
             padding: EdgeInsets.zero,
           ),
           const Expanded(
@@ -759,9 +758,10 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
   Widget _recommendedCard(BuildContext context) {
     final nextType = widget.report!.recommendedNextType!;
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(
-          builder: (_) =>
-              RoleplaySetupScreen(mode: 'prefilled', scenario: nextType))),
+      // Routes to the same setup page every other entry point uses, prefilled
+      // with the recommended scenario. This used to push a second, legacy
+      // setup screen that the router does not know about.
+      onTap: () => context.push(AppRoutes.roleplaySetup, extra: nextType),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.s16),
         decoration: BoxDecoration(
@@ -820,20 +820,9 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
           onTap: () {
             HapticFeedback.lightImpact();
             if (widget.isOnboarding) {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const GoalConfirmationScreen(data: OnboardingData())),
-                (_) => false,
-              );
+              context.go(AppRoutes.onboardingConfirm);
             } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const RoleplaySetupScreen(mode: 'custom')),
-              );
+              context.pushReplacement(AppRoutes.roleplaySetup);
             }
           },
           child: Container(
@@ -859,7 +848,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
         GestureDetector(
           onTap: () {
             HapticFeedback.lightImpact();
-            Navigator.popUntil(context, (r) => r.isFirst);
+            context.go(AppRoutes.roleplay);
           },
           child: Container(
             height: 54,

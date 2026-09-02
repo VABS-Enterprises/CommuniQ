@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -14,6 +15,8 @@ import 'package:speech_to_text/speech_to_text.dart';
 
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/spacing.dart';
+import 'package:communiq/core/routes/app_router.dart';
+import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/services/live_voice_service.dart';
 import 'package:communiq/core/services/session_service.dart';
@@ -1243,10 +1246,9 @@ class _RoleplayConversationScreenState
     if (_isDemoMode) {
       await Future.delayed(const Duration(seconds: 2));
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => RoleplayFeedbackScreen(
+      context.pushReplacement(
+        AppRoutes.roleplayFeedback,
+        extra: FeedbackArgs(
             config: FeedbackConfig(
               scenarioTitle: widget.config.scenarioTitle.isNotEmpty
                   ? widget.config.scenarioTitle
@@ -1294,7 +1296,6 @@ class _RoleplayConversationScreenState
             leveledUp: false,
             newBadges: const [],
             newStreak: 1,
-          ),
         ),
       );
       return;
@@ -1311,20 +1312,23 @@ class _RoleplayConversationScreenState
 
       debugPrint('✅ [Conversation] Evaluation received');
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => RoleplayFeedbackScreen(
-            config: feedbackConfig,
-            report: result.report,
-            conversationHistory: List.from(_conversationHistory),
-            isOnboarding: widget.isOnboarding,
-            xpAwarded: result.xpAwarded,
-            newLevel: result.newLevel,
-            leveledUp: result.leveledUp,
-            newBadges: result.newBadges,
-            newStreak: result.newStreak,
-          ),
+      // Must go through go_router. This screen is a page-based route, so an
+      // imperative pushReplacement threw "A page-based route cannot be
+      // completed using imperative api" — *after* the AI evaluation had
+      // already completed. The report was generated and stored, and the user
+      // never saw it, which is why evaluation looked broken.
+      context.pushReplacement(
+        AppRoutes.roleplayFeedback,
+        extra: FeedbackArgs(
+          config: feedbackConfig,
+          report: result.report,
+          conversationHistory: List.from(_conversationHistory),
+          isOnboarding: widget.isOnboarding,
+          xpAwarded: result.xpAwarded,
+          newLevel: result.newLevel,
+          leveledUp: result.leveledUp,
+          newBadges: result.newBadges,
+          newStreak: result.newStreak,
         ),
       );
     } catch (e) {
@@ -1347,7 +1351,7 @@ class _RoleplayConversationScreenState
               duration: Duration(seconds: 3),
             ),
           );
-          Navigator.pop(context);
+          context.pop();
         }
         return;
       }
@@ -1434,7 +1438,10 @@ class _RoleplayConversationScreenState
       await _audioPlayer.stop();
       SessionService.instance.abandonSession(widget.sessionId).ignore();
       _cleanupTempFiles();
-      if (mounted) Navigator.pop(context);
+      // context.pop, not Navigator.pop: this screen is a go_router page, and
+      // completing it imperatively throws. Abandoning a session used to fail
+      // on the way out for the same reason ending one did.
+      if (mounted) context.pop();
     }
   }
 
