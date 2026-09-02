@@ -6,8 +6,9 @@ import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/session_result_model.dart';
 import 'package:communiq/models/onboarding_data.dart';
+import 'package:communiq/core/data/scenario_presets.dart';
 import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
-import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
+import 'package:communiq/views/roleplay_view/screens/setup_scenario_page.dart';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 // One set of constants so every colour decision is in one place.
@@ -100,6 +101,22 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     if (s >= 60) return 'Good Start';
     if (s >= 45) return 'Keep Practicing';
     return 'Room to Grow';
+  }
+
+  /// Best-effort match of a free-form scenario name (the evaluator's
+  /// `recommendedNextType`, or this session's own title) back to a real
+  /// [ScenarioPreset] key, so "Recommended next" / "Practice again" can
+  /// prefill [SetupScenarioPage] instead of opening it blank. Returns null
+  /// — which [SetupScenarioPage] already treats as "open in custom mode" —
+  /// when nothing matches, rather than guessing wrong.
+  String? _matchPresetKey(String candidate) {
+    final exact = presetForKey(candidate);
+    if (exact != null) return exact.key;
+    final needle = candidate.trim().toLowerCase();
+    for (final p in kScenarioPresets) {
+      if (p.title.toLowerCase() == needle) return p.key;
+    }
+    return null;
   }
 
   // ─── Build ───────────────────────────────────────────────────────────────────
@@ -760,8 +777,8 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     final nextType = widget.report!.recommendedNextType!;
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(
-          builder: (_) =>
-              RoleplaySetupScreen(mode: 'prefilled', scenario: nextType))),
+          builder: (_) => SetupScenarioPage(
+              prefilledPresetKey: _matchPresetKey(nextType)))),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.s16),
         decoration: BoxDecoration(
@@ -828,11 +845,18 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                 (_) => false,
               );
             } else {
+              // Prefill with this same scenario when it matches a known
+              // preset (e.g. finishing "Job Interview" offers straight back
+              // into a configured "Job Interview" setup); otherwise this
+              // was a custom scenario and opens blank, same as before.
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                    builder: (_) =>
-                        const RoleplaySetupScreen(mode: 'custom')),
+                  builder: (_) => SetupScenarioPage(
+                    prefilledPresetKey:
+                        _matchPresetKey(widget.config.scenarioTitle),
+                  ),
+                ),
               );
             }
           },
