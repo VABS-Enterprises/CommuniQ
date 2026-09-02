@@ -16,6 +16,10 @@ class ApiConstants {
   static const String sessionsStart = '/sessions/start';
   static const String sessionsOpening = '/sessions/opening';
   static const String sessionsTurn = '/sessions/turn';
+
+  /// Streamed variant of [sessionsTurn]. Same work, NDJSON response, so the
+  /// reply can start playing before the last sentence is synthesised.
+  static const String sessionsTurnStream = '/sessions/turn/stream';
   static const String sessionsEnd = '/sessions/end';
   static const String sessionsAbandon = '/sessions/abandon';
   static const String sessionsHistory = '/sessions/history';

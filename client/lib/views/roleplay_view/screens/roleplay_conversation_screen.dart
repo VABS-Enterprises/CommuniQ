@@ -19,6 +19,8 @@ import 'package:communiq/core/services/live_voice_service.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/roleplay_config.dart';
+import 'package:communiq/models/session_result_model.dart'
+    show TurnTranscript, TurnAudioChunk, TurnDone, TurnStreamError;
 import 'package:communiq/views/roleplay_view/screens/roleplay_feedback_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -72,6 +74,23 @@ class _RoleplayConversationScreenState
   _AiPlaybackStage _aiPlaybackStage = _AiPlaybackStage.none;
   /// Last turn’s AI audio bytes (base64) — replayed once before the next mic (Colab).
   String? _lastAiAudioForReplay;
+
+  /// Sentence clips still waiting to play, in order.
+  ///
+  /// The streamed turn delivers audio one sentence at a time, so playback
+  /// starts on the first clip while the rest are still being synthesised.
+  /// Clips must play strictly in order, and the player's "completed" event
+  /// fires at the end of *each* clip — so a queue is needed to tell "this
+  /// sentence finished" from "the whole reply finished".
+  final List<String> _pendingClips = [];
+
+  /// True while a streamed reply is playing, so the completed handler advances
+  /// the queue instead of returning the mic to the user.
+  bool _streamingPlayback = false;
+
+  /// Set once the server has sent every sentence. Until then an empty queue
+  /// means "waiting for more audio", not "the reply is over".
+  bool _streamClipsComplete = false;
 
   // The text shown in the large conversation card and who is speaking.
   // Updated on every meaningful state change.
@@ -797,6 +816,134 @@ class _RoleplayConversationScreenState
     await _startMic();
   }
 
+  /// Plays the next queued sentence, or finishes the reply if there are none
+  /// left and the server has said it is done.
+  Future<void> _playNextClip() async {
+    if (_pendingClips.isEmpty) {
+      if (_streamClipsComplete) {
+        _streamingPlayback = false;
+        _aiPlaybackStage = _AiPlaybackStage.none;
+        _audioFinishHandled = false;
+        await _onAudioFinished();
+      }
+      // Otherwise: more sentences are still being synthesised. The next
+      // arrival will call back into here.
+      return;
+    }
+    final path = _pendingClips.removeAt(0);
+    try {
+      await _audioPlayer.setFilePath(path);
+      await _audioPlayer.play();
+    } catch (e) {
+      debugPrint('❌ [Conversation] Clip playback failed: $e');
+      await _playNextClip(); // skip the bad clip rather than stall the reply
+    }
+  }
+
+  /// A streamed turn: transcript first, then audio a sentence at a time.
+  ///
+  /// The batch endpoint could not respond until the last sentence had been
+  /// synthesised, which was the bulk of the wait between speaking and hearing
+  /// a reply. Here the transcript is on screen in about half a second and the
+  /// first sentence starts playing while the rest are still being made.
+  Future<void> _sendTurnStreamed(String audioPath, int turnNumber) async {
+    final bytes = await File(audioPath).readAsBytes();
+    final filename = audioPath.split(Platform.pathSeparator).last;
+    final sw = Stopwatch()..start();
+
+    _pendingClips.clear();
+    _streamClipsComplete = false;
+    _streamingPlayback = true;
+    var clipCount = 0;
+    var sawTranscript = false;
+
+    final stream = SessionService.instance.processTurnStreamed(
+      sessionId: widget.sessionId,
+      audioBytes: Uint8List.fromList(bytes),
+      filename: filename,
+      conversationHistory: List.from(_conversationHistory),
+    );
+
+    await for (final event in stream) {
+      if (!mounted) return;
+      switch (event) {
+        case TurnTranscript(:final userTranscript, :final aiReply):
+          sawTranscript = true;
+          debugPrint('📝 [Conversation] Transcript in '
+              '${sw.elapsedMilliseconds}ms — "$userTranscript"');
+
+          if (userTranscript.trim().isEmpty) {
+            _streamingPlayback = false;
+            await _rejectSilentTurn(
+              "I didn't catch that. Speak a little louder, or check your mic.",
+            );
+            return;
+          }
+
+          _conversationHistory.addAll([
+            {'role': 'user', 'transcript': userTranscript},
+            {'role': 'ai', 'transcript': aiReply},
+          ]);
+
+          setState(() {
+            _state = _ConvState.ai_speaking;
+            _cardText = aiReply;
+            _karaokeChunk = '';
+            _karaokeWordCount = 0;
+            _cardAnimKey++;
+            _liveTranscript = '';
+          });
+          _startTimerIfNotStarted();
+          // Karaoke runs alongside playback rather than gating it.
+          unawaited(_streamLocalKaraoke(aiReply));
+
+        case TurnAudioChunk(:final index, :final audioBase64):
+          if (audioBase64.isEmpty) continue;
+          final dir = await getTemporaryDirectory();
+          final path =
+              '${dir.path}/ai_${DateTime.now().millisecondsSinceEpoch}_$index.mp3';
+          _tempFiles.add(path);
+          await File(path).writeAsBytes(base64Decode(audioBase64));
+          _pendingClips.add(path);
+          clipCount++;
+
+          if (clipCount == 1) {
+            debugPrint('🔊 [Conversation] First audio in '
+                '${sw.elapsedMilliseconds}ms — starting playback');
+            _audioFinishHandled = false;
+            await _playNextClip();
+          } else if (_audioPlayer.playing != true &&
+              _pendingClips.isNotEmpty) {
+            // Synthesis fell behind playback; resume as soon as it catches up.
+            await _playNextClip();
+          }
+
+        case TurnDone():
+          _streamClipsComplete = true;
+          debugPrint('✅ [Conversation] Turn #$turnNumber streamed in '
+              '${sw.elapsedMilliseconds}ms ($clipCount clips)');
+          if (_pendingClips.isEmpty && _audioPlayer.playing != true) {
+            await _playNextClip();
+          }
+
+        case TurnStreamError(:final detail):
+          _streamingPlayback = false;
+          _streamClipsComplete = true;
+          throw Exception(detail);
+      }
+    }
+
+    if (!sawTranscript) {
+      _streamingPlayback = false;
+      throw Exception('The turn ended before the AI replied.');
+    }
+    // A stream that closes without a done marker still has to release the mic.
+    _streamClipsComplete = true;
+    if (_pendingClips.isEmpty && _audioPlayer.playing != true) {
+      await _playNextClip();
+    }
+  }
+
   Future<void> _sendTurn(String audioPath) async {
     final turnNumber = _completedUserTurns + 1;
     debugPrint('🔄 [Conversation] Processing turn #$turnNumber...');
@@ -838,15 +985,14 @@ class _RoleplayConversationScreenState
 
     // ── Real mode ──────────────────────────────────────────────────────────────
     try {
-      final bytes = await File(audioPath).readAsBytes();
-      final filename = audioPath.split(Platform.pathSeparator).last;
-
-      // Nothing was actually picked up. Say so instead of uploading silence
-      // and letting the AI answer a question the user never asked.
-      final peak = _peakAmplitude(bytes);
+      // Streamed: the transcript lands in ~0.5s and the first sentence starts
+      // playing while the rest are still being synthesised. The batch call
+      // below is kept as the fallback for a server without the stream route.
+      final probe = await File(audioPath).readAsBytes();
+      final probePeak = _peakAmplitude(probe);
       debugPrint('📊 [Conversation] Recording peak amplitude: '
-          '${(peak * 100).toStringAsFixed(3)}%');
-      if (peak < _silenceThreshold) {
+          '${(probePeak * 100).toStringAsFixed(3)}%');
+      if (probePeak < _silenceThreshold) {
         debugPrint('🔇 [Conversation] Turn #$turnNumber is silent — not sending');
         setState(() => _state = _ConvState.user_turn);
         await _rejectSilentTurn(
@@ -854,6 +1000,19 @@ class _RoleplayConversationScreenState
         );
         return;
       }
+
+      try {
+        await _sendTurnStreamed(audioPath, turnNumber);
+        return;
+      } catch (e) {
+        _streamingPlayback = false;
+        _pendingClips.clear();
+        debugPrint('⚠️ [Conversation] Streamed turn failed, '
+            'falling back to batch: $e');
+      }
+
+      final bytes = await File(audioPath).readAsBytes();
+      final filename = audioPath.split(Platform.pathSeparator).last;
 
       debugPrint('📤 [Conversation] Turn #$turnNumber → ${bytes.length}B audio, '
           'history=${_conversationHistory.length} turns');
@@ -987,6 +1146,13 @@ class _RoleplayConversationScreenState
   void _onPlayerStateChange(PlayerState state) {
     if (state.processingState == ProcessingState.completed) {
       if (_state != _ConvState.ai_speaking) return;
+      // A streamed reply is many clips. "completed" here means this sentence
+      // ended, not the reply — advance the queue and only finish when the
+      // server has sent everything and nothing is left to play.
+      if (_streamingPlayback) {
+        unawaited(_playNextClip());
+        return;
+      }
       debugPrint(
           '🔊 [Conversation] AI audio finished — returning mic to user');
       _onAudioFinished();
@@ -1059,6 +1225,8 @@ class _RoleplayConversationScreenState
     _stopMic();
     await _recorder.stop();
     _sessionTimer?.cancel();
+    _streamingPlayback = false;
+    _pendingClips.clear();
 
     // ── Mark level complete in SharedPreferences ───────────────────────────────
     // This fires before any async AI call so the learning view always receives

@@ -110,6 +110,45 @@ async function sendTurnToFastApi(
 }
 
 /**
+ * Same turn as sendTurnToFastApi, but returns the raw NDJSON stream so the
+ * caller can forward each sentence's audio to the client as it is synthesised.
+ *
+ * The non-streaming call cannot return until the last sentence has been
+ * synthesised, which is the bulk of the turn's perceived latency. Here the
+ * transcript arrives first and audio follows in pieces.
+ *
+ * Resolves to a Node readable stream of NDJSON lines.
+ */
+async function streamTurnFromFastApi(
+  audioBuffer,
+  audioOriginalName,
+  sessionId,
+  conversationHistory,
+  systemPrompt
+) {
+  const form = new FormData();
+  form.append('audioFile', audioBuffer, {
+    filename: audioOriginalName || 'audio.wav',
+    contentType: getAudioMimeType(audioOriginalName),
+  });
+  form.append('sessionId', sessionId);
+  form.append('conversationHistory', JSON.stringify(conversationHistory));
+  form.append('systemPrompt', systemPrompt);
+
+  try {
+    const response = await axios.post(`${FASTAPI_URL}/session/turn/stream`, form, {
+      headers: { ...form.getHeaders(), ..._aiHeaders() },
+      responseType: 'stream',
+      timeout: 90000,
+    });
+    return response.data;
+  } catch (err) {
+    handleAxiosError(err, 'turn');
+  }
+}
+
+
+/**
  * Sends the full transcript to FastAPI for structured evaluation.
  * @param {string} sessionId
  * @param {string} fullTranscript
@@ -228,6 +267,7 @@ async function transcribeAudio(audioBuffer, filename) {
 
 module.exports = {
   sendTurnToFastApi,
+  streamTurnFromFastApi,
   sendOpeningToFastApi,
   evaluateSession,
   evaluateLearningAnswer,

@@ -192,3 +192,70 @@ class SessionReport {
     );
   }
 }
+
+/// One event from the streamed turn endpoint (`POST /sessions/turn/stream`).
+///
+/// The stream is newline-delimited JSON in a fixed order: the transcript, then
+/// one entry per synthesised sentence, then a terminator. An [error] may
+/// replace the tail — once streaming has begun the HTTP status is already
+/// committed, so a mid-stream failure can only arrive as data.
+sealed class TurnEvent {
+  const TurnEvent();
+
+  factory TurnEvent.fromJson(Map<String, dynamic> json) {
+    switch (json['type']) {
+      case 'transcript':
+        return TurnTranscript(
+          userTranscript: json['userTranscript'] as String? ?? '',
+          aiReply: json['aiReply'] as String? ?? '',
+          turnCount: (json['turnCount'] as num?)?.toInt() ?? 0,
+        );
+      case 'audio':
+        return TurnAudioChunk(
+          index: (json['index'] as num?)?.toInt() ?? 0,
+          audioBase64: json['audioBase64'] as String? ?? '',
+        );
+      case 'done':
+        return const TurnDone();
+      default:
+        return TurnStreamError(
+          json['detail'] as String? ?? 'The turn failed part-way through.',
+        );
+    }
+  }
+}
+
+/// What the user said and what the AI will say. Arrives before any audio, so
+/// both can be shown while the voice is still being synthesised.
+class TurnTranscript extends TurnEvent {
+  const TurnTranscript({
+    required this.userTranscript,
+    required this.aiReply,
+    required this.turnCount,
+  });
+
+  final String userTranscript;
+  final String aiReply;
+  final int turnCount;
+}
+
+/// One sentence of synthesised audio. [index] is the playback order, which is
+/// also the order these arrive in — audio cannot be played out of sequence.
+class TurnAudioChunk extends TurnEvent {
+  const TurnAudioChunk({required this.index, required this.audioBase64});
+
+  final int index;
+  final String audioBase64;
+}
+
+/// Every sentence has been sent.
+class TurnDone extends TurnEvent {
+  const TurnDone();
+}
+
+/// The turn failed after streaming had already started.
+class TurnStreamError extends TurnEvent {
+  const TurnStreamError(this.detail);
+
+  final String detail;
+}
