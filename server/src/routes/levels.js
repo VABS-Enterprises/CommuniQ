@@ -8,7 +8,7 @@ const { evaluateLearningAnswer } = require('../services/fastApiService');
 
 // Path to the levels JSON file at the project root.
 // __dirname = server/src/routes → ../../.. = project root
-const LEVELS_PATH = path.join(__dirname, '..', '..', '..', 'communiq_levels.json');
+const LEVELS_PATH = path.join(__dirname, '..', '..', '..', 'communiq_levels_1_20.json');
 
 // /levels/evaluate: 15/min per uid — each call costs an LLM evaluation call.
 // Keyed on req.uid (runs after verifyToken) so IP rotation can't bypass it.
@@ -21,8 +21,65 @@ const evaluateRateLimit = rateLimit({
   message: { error: 'Too many requests — please slow down' },
 });
 
+/*
+ * Deterministic option ordering.
+ *
+ * The correct answer must not be identifiable by its position, but the order
+ * must also be stable — a client that re-fetches mid-level should not see the
+ * options jump around. A seeded shuffle keyed on levelId+step gives both.
+ */
+function seededShuffle(items, seed) {
+  const out = items.slice();
+  // Mix the seed before use: consecutive small seeds (levelId*1000+step) leave
+  // xorshift poorly diffused for the first few outputs, which skewed how often
+  // the correct answer landed in position 0.
+  let state = Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b) >>> 0;
+  state ^= state >>> 13;
+  state = Math.imul(state, 0xc2b2ae35) >>> 0;
+  state ^= state >>> 16;
+  if (state === 0) state = 0x6d2b79f5;
+  const next = () => {
+    // xorshift32 — tiny, deterministic, and adequate for ordering options.
+    state ^= state << 13; state >>>= 0;
+    state ^= state >> 17;
+    state ^= state << 5; state >>>= 0;
+    return state;
+  };
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = next() % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/*
+ * Strips the answer key out of a level before it goes over the wire.
+ *
+ * The client needs the question and its options to render the step; it must
+ * not learn which option is correct, nor the per-outcome feedback (which would
+ * leak the answer just as effectively). Grading happens in
+ * learningController.submitAnswer, which returns the right feedback string.
+ */
+function sanitizeLevel(level) {
+  const mcqs = Array.isArray(level.mcqs) ? level.mcqs : [];
+  return {
+    ...level,
+    mcqs: mcqs.map((m) => {
+      const options = seededShuffle(
+        [m.correct_option, ...(m.incorrect_options || [])],
+        (level.id * 1000) + (m.step || 1)
+      );
+      return { step: m.step, question: m.question, options };
+    }),
+  };
+}
+
+let _sanitizedCache = null;
+
 router.get('/', verifyToken, async (req, res) => {
   try {
+    if (_sanitizedCache) return res.status(200).json(_sanitizedCache);
+
     if (!fs.existsSync(LEVELS_PATH)) {
       console.error(`Levels file not found at ${LEVELS_PATH}`);
       return res.status(404).json({ error: 'Levels data not found on server' });
@@ -30,8 +87,10 @@ router.get('/', verifyToken, async (req, res) => {
 
     const rawData = fs.readFileSync(LEVELS_PATH, 'utf8');
     const data = JSON.parse(rawData);
+    const levels = Array.isArray(data.levels) ? data.levels : [];
 
-    return res.status(200).json(data);
+    _sanitizedCache = { ...data, levels: levels.map(sanitizeLevel) };
+    return res.status(200).json(_sanitizedCache);
   } catch (err) {
     console.error('getLevels error:', err.message);
     return res.status(500).json({ error: 'Could not fetch levels' });

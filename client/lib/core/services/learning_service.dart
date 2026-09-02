@@ -58,11 +58,17 @@ class LearningAnswerResult {
   final int totalCoins;
   final int attemptNumber;
 
+  /// Server-supplied feedback for this outcome. The client no longer holds
+  /// the per-outcome feedback strings — carrying both would have revealed the
+  /// answer as surely as the answer key itself.
+  final String feedback;
+
   const LearningAnswerResult({
     required this.correct,
     required this.coinsAwarded,
     required this.totalCoins,
     required this.attemptNumber,
+    required this.feedback,
   });
 
   factory LearningAnswerResult.fromJson(Map<String, dynamic> json) {
@@ -71,6 +77,10 @@ class LearningAnswerResult {
       coinsAwarded: (json['coinsAwarded'] as num?)?.toInt() ?? 0,
       totalCoins: (json['totalCoins'] as num?)?.toInt() ?? 0,
       attemptNumber: (json['attemptNumber'] as num?)?.toInt() ?? 1,
+      feedback: json['feedback'] as String? ??
+          ((json['correct'] as bool? ?? false)
+              ? 'Correct!'
+              : 'Not quite — try again.'),
     );
   }
 }

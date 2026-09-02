@@ -1,29 +1,29 @@
 /// A single multiple-choice question step.
+///
+/// Deliberately carries no notion of which option is correct. The server
+/// strips the answer key from `GET /levels` and grades submissions in
+/// `POST /learning/answer`, returning both the verdict and the feedback text —
+/// so a decompiled APK reveals nothing.
 class CommuniqMCQ {
   final int step;
   final String question;
-  final String correctOption;
-  final List<String> incorrectOptions;
-  final String correctFeedback;
-  final String incorrectFeedback;
+
+  /// All options in server-provided order. The order is stable per level+step
+  /// but carries no information about which one is correct.
+  final List<String> options;
 
   const CommuniqMCQ({
     required this.step,
     required this.question,
-    required this.correctOption,
-    required this.incorrectOptions,
-    required this.correctFeedback,
-    required this.incorrectFeedback,
+    required this.options,
   });
 
   factory CommuniqMCQ.fromJson(Map<String, dynamic> json) {
+    final raw = json['options'];
     return CommuniqMCQ(
-      step: json['step'] as int? ?? 1,
+      step: (json['step'] as num?)?.toInt() ?? 1,
       question: json['question'] as String? ?? '',
-      correctOption: json['correct_option'] as String? ?? '',
-      incorrectOptions: List<String>.from(json['incorrect_options'] ?? []),
-      correctFeedback: json['correct_feedback'] as String? ?? 'Perfect!',
-      incorrectFeedback: json['incorrect_feedback'] as String? ?? 'Try again!',
+      options: raw is List ? raw.map((e) => '$e').toList() : const [],
     );
   }
 }
@@ -50,12 +50,8 @@ class CommuniqLevel {
     required this.responseSuccessFeedback,
   });
 
-  // Compatibility getters for single-MCQ logic
   String get mcqQuestion => mcqs.isNotEmpty ? mcqs.first.question : '';
-  String get mcqCorrectOption => mcqs.isNotEmpty ? mcqs.first.correctOption : '';
-  List<String> get mcqIncorrectOptions => mcqs.isNotEmpty ? mcqs.first.incorrectOptions : [];
-  String get mcqCorrectFeedback => mcqs.isNotEmpty ? mcqs.first.correctFeedback : '';
-  String get mcqIncorrectFeedback => mcqs.isNotEmpty ? mcqs.first.incorrectFeedback : '';
+  List<String> get mcqOptions => mcqs.isNotEmpty ? mcqs.first.options : const [];
 
   factory CommuniqLevel.fromJson(Map<String, dynamic> json) {
     final response = json['response'] as Map<String, dynamic>? ?? {};
@@ -68,7 +64,7 @@ class CommuniqLevel {
     }
 
     return CommuniqLevel(
-      id: json['id'] as int,
+      id: (json['id'] as num).toInt(),
       journeyId: json['journey_id'] as int? ?? 1,
       journeyTitle: json['journey_title'] as String? ?? '',
       title: json['title'] as String,

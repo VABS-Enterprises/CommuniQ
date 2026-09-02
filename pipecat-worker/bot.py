@@ -70,6 +70,7 @@ from pipecat.turns.user_stop.turn_analyzer_user_turn_stop_strategy import TurnAn
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from pipecat.services.groq.llm import GroqLLMService
 from pipecat.services.groq.stt import GroqSTTService
+from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
 from pipecat.transports.livekit.transport import LiveKitParams, LiveKitTransport

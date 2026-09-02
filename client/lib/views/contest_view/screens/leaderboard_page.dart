@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:communiq/common_widgets/chunky_card.dart';
+import 'package:communiq/common_widgets/mascot/mascot.dart';
+import 'package:communiq/common_widgets/playful_background.dart';
+import 'package:communiq/common_widgets/state_views.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/constants/app_text_styles.dart';
+import 'package:communiq/core/constants/motion.dart';
+import 'package:communiq/core/constants/radius.dart';
+import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/core/services/leaderboard_service.dart';
-import 'package:communiq/views/contest_view/widgets/leaderboard_item.dart';
 
-/// Real, server-authoritative XP leaderboard (GET /leaderboard,
-/// GET /leaderboard/weekly) — replaces the previous static kLeaderboard mock.
+/// App-wide XP standings (GET /leaderboard, GET /leaderboard/weekly).
+///
+/// Ranks total XP across the whole app. The contest tab has its own separate
+/// board that ranks contest scores.
 class LeaderboardPage extends StatefulWidget {
   const LeaderboardPage({super.key});
 
@@ -40,300 +51,219 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
         _loading = false;
       });
     } catch (e) {
+      debugPrint('[LeaderboardPage] load failed: $e');
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load the leaderboard. Pull to retry.';
+        _error = 'Could not load the leaderboard.';
         _loading = false;
       });
     }
   }
 
+  void _setWeekly(bool weekly) {
+    if (_weekly == weekly) return;
+    setState(() => _weekly = weekly);
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final myUid = AuthService.currentUser?.uid;
-    final top3 = _entries.take(3).toList();
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
+    return PlayfulBackground(
+      seed: 12,
+      child: Scaffold(
+        backgroundColor: AppColors.transparent,
+        appBar: AppBar(
+          title: const Text('Leaderboard'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: Column(
           children: [
-            // ── Header ─────────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.page,
+                vertical: AppSpacing.s8,
+              ),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.surface,
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: AppColors.textSecondary, size: 16),
+                  Expanded(
+                    child: _Toggle(
+                      label: 'All time',
+                      selected: !_weekly,
+                      onTap: () => _setWeekly(false),
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('🏆 Leaderboard',
-                            style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold)),
-                        SizedBox(height: 2),
-                        Text('Ranked by total XP',
-                            style: TextStyle(
-                                color: AppColors.textSecondary, fontSize: 12)),
-                      ],
+                  const SizedBox(width: AppSpacing.s10),
+                  Expanded(
+                    child: _Toggle(
+                      label: 'This week',
+                      selected: _weekly,
+                      onTap: () => _setWeekly(true),
                     ),
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 16),
-
-            // ── All-time / Weekly toggle ─────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _TabToggle(
-                weekly: _weekly,
-                onChanged: (weekly) {
-                  if (weekly == _weekly) return;
-                  setState(() => _weekly = weekly);
-                  _load();
-                },
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Expanded(
-              child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: AppColors.primary))
-                  : _error != null
-                      ? _ErrorState(message: _error!, onRetry: _load)
-                      : _entries.isEmpty
-                          ? const _EmptyState()
-                          : RefreshIndicator(
-                              onRefresh: _load,
-                              color: AppColors.primary,
-                              child: ListView(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                physics: const AlwaysScrollableScrollPhysics(
-                                    parent: BouncingScrollPhysics()),
-                                children: [
-                                  if (top3.length == 3) ...[
-                                    _PodiumRow(top3: top3),
-                                    const SizedBox(height: 20),
-                                  ],
-                                  ...List.generate(_entries.length, (i) {
-                                    final e = _entries[i];
-                                    return LeaderboardItem(
-                                      rank: i + 1,
-                                      name: e.name,
-                                      score: e.xp,
-                                      isCurrentUser: myUid != null && myUid == e.uid,
-                                      scoreLabelBuilder: (xp) => '$xp XP',
-                                      scoreColorBuilder: (_) => AppColors.primaryLight,
-                                    );
-                                  }),
-                                ],
-                              ),
-                            ),
-            ),
-
-            const SizedBox(height: 30),
+            Expanded(child: _body()),
           ],
         ),
       ),
     );
   }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TOGGLE — All-time / Weekly
-// ─────────────────────────────────────────────────────────────────────────────
+  Widget _body() {
+    if (_loading) return const LoadingStateView();
 
-class _TabToggle extends StatelessWidget {
-  final bool weekly;
-  final ValueChanged<bool> onChanged;
-  const _TabToggle({required this.weekly, required this.onChanged});
+    if (_error != null) return ErrorStateView(message: _error, onRetry: _load);
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(child: _TabButton(label: 'All-Time', active: !weekly, onTap: () => onChanged(false))),
-          Expanded(child: _TabButton(label: 'This Week', active: weekly, onTap: () => onChanged(true))),
-        ],
+    if (_entries.isEmpty) {
+      return EmptyState(
+        title: _weekly ? 'Nothing this week' : 'No rankings yet',
+        message: 'Finish a session to get on the board.',
+        mood: MascotMood.encouraging,
+        actionLabel: 'Refresh',
+        onAction: _load,
+      );
+    }
+
+    final myUid = AuthService.currentUser?.uid;
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppColors.brand,
+      backgroundColor: AppColors.surface,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.page,
+          AppSpacing.s8,
+          AppSpacing.page,
+          AppSpacing.s32,
+        ),
+        itemCount: _entries.length,
+        itemBuilder: (context, i) {
+          final e = _entries[i];
+          return FadeInUp(
+            delay: AppMotion.staggerFor(i),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.s10),
+              child: LeaderboardRow(
+                rank: i + 1,
+                name: e.name,
+                trailing: '${e.xp} XP',
+                isMe: myUid != null && myUid == e.uid,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 }
 
-class _TabButton extends StatelessWidget {
+class _Toggle extends StatelessWidget {
+  const _Toggle({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
   final String label;
-  final bool active;
+  final bool selected;
   final VoidCallback onTap;
-  const _TabButton({required this.label, required this.active, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        duration: AppMotion.quick,
+        height: 42,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: active ? AppColors.primary.withValues(alpha: 0.18) : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: active ? Border.all(color: AppColors.primary.withValues(alpha: 0.4)) : null,
+          color: selected ? AppColors.brand : AppColors.surface,
+          borderRadius: AppRadius.pillRadius,
+          border: Border.all(
+            color: selected ? AppColors.brand : AppColors.outline,
+            width: 2,
+          ),
         ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: active ? AppColors.primaryLight : AppColors.textSecondary,
-              fontWeight: active ? FontWeight.bold : FontWeight.w500,
-              fontSize: 13,
+        child: Text(
+          label,
+          style: AppTextStyles.labelMedium.copyWith(
+            color: selected ? AppColors.inkOnDark : AppColors.inkMuted,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One ranked row. Shared shape for any standings list.
+class LeaderboardRow extends StatelessWidget {
+  const LeaderboardRow({
+    super.key,
+    required this.rank,
+    required this.name,
+    required this.trailing,
+    required this.isMe,
+  });
+
+  final int rank;
+  final String name;
+  final String trailing;
+  final bool isMe;
+
+  Color get _rankColor => switch (rank) {
+        1 => AppColors.gold,
+        2 => AppColors.silver,
+        3 => AppColors.bronze,
+        _ => AppColors.bgSunk,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return ChunkyCard(
+      selected: isMe,
+      accent: AppColors.brand,
+      padding: const EdgeInsets.all(AppSpacing.s12),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _rankColor,
+              shape: BoxShape.circle,
+            ),
+            child: rank <= 3
+                ? const Icon(Icons.emoji_events_rounded,
+                    size: 19, color: AppColors.ink)
+                : Text(
+                    '$rank',
+                    style: AppTextStyles.numeralSmall
+                        .copyWith(color: AppColors.inkMuted),
+                  ),
+          ),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Text(
+              isMe ? '$name (you)' : name,
+              style: AppTextStyles.titleSmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EMPTY / ERROR STATES
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 32),
-        child: Text(
-          'No one has practised yet — complete a session to be the first on the board!',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(message,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-            const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PODIUM — visual top-3 display
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _PodiumRow extends StatelessWidget {
-  final List<LeaderboardEntry> top3;
-  const _PodiumRow({required this.top3});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(child: _PodiumBlock(entry: top3[1], rank: 2, height: 80)),
-        const SizedBox(width: 8),
-        Expanded(child: _PodiumBlock(entry: top3[0], rank: 1, height: 108)),
-        const SizedBox(width: 8),
-        Expanded(child: _PodiumBlock(entry: top3[2], rank: 3, height: 64)),
-      ],
-    );
-  }
-}
-
-class _PodiumBlock extends StatelessWidget {
-  final LeaderboardEntry entry;
-  final int rank;
-  final double height;
-
-  const _PodiumBlock({required this.entry, required this.rank, required this.height});
-
-  @override
-  Widget build(BuildContext context) {
-    final medal = rank == 1 ? '🥇' : rank == 2 ? '🥈' : '🥉';
-    final color = rank == 1
-        ? AppColors.scoreNeedsWork
-        : rank == 2
-            ? const Color(0xFF9CA3AF)
-            : const Color(0xFFD97706);
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Text(medal, style: const TextStyle(fontSize: 24)),
-        const SizedBox(height: 4),
-        Text(entry.name,
-            style: const TextStyle(
-                color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 12),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis),
-        const SizedBox(height: 2),
-        Text('${entry.xp} XP',
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11)),
-        const SizedBox(height: 6),
-        Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-            border: Border.all(color: color.withValues(alpha: 0.3)),
+          Text(
+            trailing,
+            style: AppTextStyles.numeralSmall.copyWith(color: AppColors.brand),
           ),
-          child: Center(
-            child: Text('#$rank',
-                style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 20)),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

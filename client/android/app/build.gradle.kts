@@ -25,6 +25,9 @@ android {
         applicationId = "com.vabs.communiq"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // 23, not Flutter's default 21: the `record` plugin's Android
+        // implementation (record_android) requires API 23+ for audio capture,
+        // which the practice-session mic flow depends on.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

@@ -8,7 +8,11 @@ Input JSON: either
 
 Each session object may contain:
   - system_prompt | systemPrompt | scenarioSystemPrompt
-  - scenarioType (optional) — e.g. hr_interview, technical, gd, sales; prepended to system for training
+  - scenarioType (optional) — e.g. hr_interview, technical, gd, sales; recorded in the
+    output record's metadata for bookkeeping, but NOT injected into the system prompt
+    text itself. Production (server/src/controllers/sessionController.js's
+    buildFinalPrompt) never adds a scenarioType tag to what it actually sends the LLM,
+    so doing it here would train the model on a cue it will never see at inference time.
   - turns: [{ "role": "user"|"ai"|"assistant", "transcript"|"content": "..." }, ...]
 """
 
@@ -45,10 +49,9 @@ def session_to_record(doc: dict[str, Any]) -> dict[str, Any] | None:
         or doc.get("scenarioSystemPrompt")
         or ""
     ).strip()
-    st = doc.get("scenarioType") or doc.get("scenario_type")
-    if isinstance(st, str) and st.strip():
-        tag = st.strip()
-        system = f"[scenarioType:{tag}]\n\n{system}" if system else f"[scenarioType:{tag}]"
+    # scenarioType is intentionally NOT prepended to the system prompt — see the
+    # module docstring. Production never sends this tag, so training on it would
+    # create a train/inference mismatch the model would never see live.
     turns = doc.get("turns") or doc.get("conversation") or []
     if not isinstance(turns, list):
         return None

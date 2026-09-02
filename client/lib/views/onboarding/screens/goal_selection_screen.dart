@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/spacing.dart';
-import 'package:communiq/views/main_navigation_view/screens/main_navigation_view.dart';
+import 'package:go_router/go_router.dart';
+import 'package:communiq/core/routes/app_routes.dart';
 
 class GoalSelectionScreen extends StatefulWidget {
   const GoalSelectionScreen({super.key});
@@ -89,13 +90,9 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
                           final prefs = await SharedPreferences.getInstance();
                           await prefs.setBool('onboarding_complete', true);
                           if (!context.mounted) return;
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const MainNavigationView(),
-                            ),
-                            (_) => false,
-                          );
+                          // go() replaces the stack, so the funnel can't be
+                          // reached with the back button once it's finished.
+                          context.go(AppRoutes.home);
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,

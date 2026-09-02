@@ -112,6 +112,7 @@ async function submitAnswer(req, res) {
           coinsAwarded: 0,
           totalCoins: coins,
           attemptNumber: attempts[attemptKey] || 1,
+          feedback: mcq.correct_feedback || 'Correct!',
         };
       }
 
@@ -131,7 +132,13 @@ async function submitAnswer(req, res) {
           },
           { merge: true }
         );
-        return { correct: true, coinsAwarded, totalCoins, attemptNumber };
+        return {
+          correct: true,
+          coinsAwarded,
+          totalCoins,
+          attemptNumber,
+          feedback: mcq.correct_feedback || 'Correct!',
+        };
       }
 
       tx.set(
@@ -143,7 +150,13 @@ async function submitAnswer(req, res) {
         },
         { merge: true }
       );
-      return { correct: false, coinsAwarded: 0, totalCoins: coins, attemptNumber };
+      return {
+        correct: false,
+        coinsAwarded: 0,
+        totalCoins: coins,
+        attemptNumber,
+        feedback: mcq.incorrect_feedback || 'Not quite — try again.',
+      };
     });
 
     if (result.notFound) {
