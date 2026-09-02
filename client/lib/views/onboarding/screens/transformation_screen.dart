@@ -575,7 +575,8 @@ class _ProgressGraphPainter extends CustomPainter {
 
     // ── 1. Subtle horizontal grid lines ──────────────────────────────────
     final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.05)
+      // Was white at 5%, invisible against the light chart ground.
+      ..color = AppColors.outline.withValues(alpha: 0.7)
       ..strokeWidth = 1;
     for (int i = 1; i < 4; i++) {
       final y = h * i / 4;

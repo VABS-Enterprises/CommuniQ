@@ -346,7 +346,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                     'Your first roleplay\nawaits',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.ink,
                       fontSize: 30,
                       fontWeight: FontWeight.w800,
                       height: 1.2,
@@ -440,7 +440,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                   ],
                 ),
                 child: const Icon(Icons.psychology_rounded,
-                    color: Colors.white, size: 28),
+                    color: AppColors.inkOnDark, size: 28),
               ),
 
               const SizedBox(height: 20),
@@ -448,7 +448,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               const Text(
                 'Say hello to\nyour AI coach',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   height: 1.2,
@@ -629,7 +629,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                   width: 22,
                   height: 22,
                   child: CircularProgressIndicator(
-                    color: Colors.white,
+                    color: AppColors.inkOnDark,
                     strokeWidth: 2.5,
                   ),
                 )
@@ -638,14 +638,14 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                   children: [
                     Icon(
                       Icons.auto_awesome_rounded,
-                      color: canSubmit ? Colors.white : AppColors.inkSoft,
+                      color: canSubmit ? AppColors.inkOnDark : AppColors.inkSoft,
                       size: 18,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Evaluate My Intro',
                       style: TextStyle(
-                        color: canSubmit ? Colors.white : AppColors.inkSoft,
+                        color: canSubmit ? AppColors.inkOnDark : AppColors.inkSoft,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.2,
@@ -1113,12 +1113,12 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.rocket_launch_rounded,
-                      color: Colors.white, size: 18),
+                      color: AppColors.inkOnDark, size: 18),
                   SizedBox(width: 10),
                   Text(
                     'Create Account — It\'s Free',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.inkOnDark,
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.2,
@@ -1193,7 +1193,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               ),
               child: const Icon(
                 Icons.mic_rounded,
-                color: Colors.white,
+                color: AppColors.inkOnDark,
                 size: 36,
               ),
             ),
@@ -1423,7 +1423,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                     ),
                     child: Icon(
                       _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
-                      color: isBusy ? AppColors.inkSoft : Colors.white,
+                      color: isBusy ? AppColors.inkSoft : AppColors.inkOnDark,
                       size: 26,
                     ),
                   ),

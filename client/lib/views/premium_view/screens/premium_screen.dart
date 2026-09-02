@@ -125,14 +125,16 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
             ),
           ),
           child: const Center(
-            child: Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 36),
+            child: Icon(Icons.workspace_premium_rounded, color: AppColors.inkOnDark, size: 36),
           ),
         ),
         const SizedBox(height: 24),
         // Title
+        // The mask ran white -> #E2E2E2, which was designed for the old dark
+        // background and rendered the headline invisible on cream.
         ShaderMask(
           shaderCallback: (bounds) => const LinearGradient(
-            colors: [Colors.white, Color(0xFFE2E2E2)],
+            colors: [AppColors.brandDark, AppColors.brand],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ).createShader(bounds),
@@ -140,7 +142,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
             'Unlock Your Full\nPotential',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.ink,
               fontSize: 32,
               fontWeight: FontWeight.w900,
               height: 1.1,
@@ -214,7 +216,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
                   color: AppColors.success,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text('SAVE 40%', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                child: const Text('SAVE 40%', style: TextStyle(color: AppColors.inkOnDark, fontSize: 10, fontWeight: FontWeight.bold)),
               ),
             ]
           ],
@@ -255,18 +257,20 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
               children: [
                 const Padding(
                   padding: EdgeInsets.only(top: 8.0, right: 2),
-                  child: Text('\$', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                  child: Text('\$', style: TextStyle(color: AppColors.inkOnDark, fontSize: 24, fontWeight: FontWeight.bold)),
                 ),
                 Text(
                   _isAnnual ? '4.99' : '7.99',
-                  style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.w900, height: 1.0),
+                  style: const TextStyle(color: AppColors.inkOnDark, fontSize: 48, fontWeight: FontWeight.w900, height: 1.0),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
               _isAnnual ? 'per month, billed annually at \$59.88' : 'per month, cancel anytime',
-              style: const TextStyle(color: AppColors.inkMuted, fontSize: 13),
+              // Sits on the brand gradient card, so muted grey ink was barely
+              // legible — this needs the on-dark ramp, not the on-light one.
+              style: const TextStyle(color: AppColors.inkOnDark70, fontSize: 13),
             ),
           ],
         ),
@@ -323,7 +327,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
       onPressed: () {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Redirecting to secure checkout...', style: TextStyle(color: Colors.white)),
+            content: const Text('Redirecting to secure checkout...', style: TextStyle(color: AppColors.inkOnDark)),
             backgroundColor: AppColors.brand,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -355,14 +359,14 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
               Text(
                 'Upgrade to Premium',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.inkOnDark,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
               ),
               SizedBox(width: 8),
-              Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+              Icon(Icons.arrow_forward_rounded, color: AppColors.inkOnDark, size: 20),
             ],
           ),
         ),

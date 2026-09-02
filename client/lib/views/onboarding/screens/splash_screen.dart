@@ -445,7 +445,7 @@ class _BrandingText extends StatelessWidget {
         ShaderMask(
           blendMode: BlendMode.srcIn,
           shaderCallback: (bounds) => const LinearGradient(
-            colors: [Color(0xFFFFFFFF), Color(0xFFBECCE3)],
+            colors: [AppColors.brandDark, AppColors.brand],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ).createShader(bounds),
@@ -455,7 +455,7 @@ class _BrandingText extends StatelessWidget {
               fontSize: 30,
               fontWeight: FontWeight.w900,
               letterSpacing: 9,
-              color: Colors.white,
+              color: AppColors.ink,
             ),
           ),
         ),

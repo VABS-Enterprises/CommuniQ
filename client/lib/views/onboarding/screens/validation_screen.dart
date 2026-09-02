@@ -252,7 +252,7 @@ class _HeroStat extends StatelessWidget {
                     Text(
                       '9',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 62,
                         fontWeight: FontWeight.w900,
                         height: 1,
@@ -263,7 +263,7 @@ class _HeroStat extends StatelessWidget {
                     Text(
                       '/10',
                       style: TextStyle(
-                        color: Color(0x50FFFFFF),
+                        color: AppColors.inkSoft,
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.5,
@@ -308,16 +308,14 @@ class _ProofCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
+      child: Container(
           padding: const EdgeInsets.fromLTRB(13, 14, 13, 14),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.07),
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.10),
-              width: 1,
+              color: AppColors.outline,
+              width: 1.5,
             ),
           ),
           child: Column(
@@ -338,7 +336,7 @@ class _ProofCard extends StatelessWidget {
               Text(
                 stat,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
                   height: 1,
@@ -350,14 +348,13 @@ class _ProofCard extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.48),
+                  color: AppColors.inkMuted,
                   fontSize: 10.5,
                   height: 1.42,
                 ),
               ),
             ],
           ),
-        ),
       ),
     );
   }
@@ -601,7 +598,7 @@ class _ReviewCard extends StatelessWidget {
                   child: Text(
                     item.initial,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.inkOnDark,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),

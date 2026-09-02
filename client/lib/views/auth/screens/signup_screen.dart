@@ -202,7 +202,7 @@ class _SignupScreenState extends State<SignupScreen>
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => const Icon(
                                 Icons.mic_rounded,
-                                color: Colors.white,
+                                color: AppColors.inkOnDark,
                                 size: 32,
                               ),
                             ),
@@ -215,7 +215,8 @@ class _SignupScreenState extends State<SignupScreen>
                           'Create account',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white,
+                            // Was Colors.white — invisible on the cream ground.
+                            color: AppColors.ink,
                             fontSize: 30,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.5,

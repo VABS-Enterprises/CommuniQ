@@ -133,7 +133,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           'Speak It Like You\nMean It',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white,
+                            // Was Colors.white — the app's headline, drawn in
+                            // white on the cream ground, so the first thing a
+                            // new user saw was blank space.
+                            color: AppColors.ink,
                             fontSize: 38,
                             fontWeight: FontWeight.w800,
                             height: 1.18,

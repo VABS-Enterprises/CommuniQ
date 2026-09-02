@@ -222,7 +222,7 @@ class OnboardingSelectCard extends StatelessWidget {
               ),
               child: isSelected
                   ? const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 13)
+                      color: AppColors.inkOnDark, size: 13)
                   : null,
             ),
           ],
@@ -302,7 +302,7 @@ class _OnboardingButtonState extends State<OnboardingButton> {
             child: Text(
               widget.label,
               style: TextStyle(
-                color: widget.enabled ? Colors.white : AppColors.inkSoft,
+                color: widget.enabled ? AppColors.inkOnDark : AppColors.inkSoft,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.3,

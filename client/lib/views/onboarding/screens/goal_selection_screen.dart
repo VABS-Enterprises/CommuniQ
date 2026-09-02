@@ -97,7 +97,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brand,
                     disabledBackgroundColor: AppColors.surface,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.inkOnDark,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
@@ -192,7 +192,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
               ),
               child: isSelected
                   ? const Icon(Icons.check_rounded,
-                      color: Colors.white, size: 13)
+                      color: AppColors.inkOnDark, size: 13)
                   : null,
             ),
           ],

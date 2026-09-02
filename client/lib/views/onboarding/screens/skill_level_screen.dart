@@ -80,7 +80,7 @@ class _SkillLevelScreenState extends State<SkillLevelScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brand,
                     disabledBackgroundColor: AppColors.surface,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.inkOnDark,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),

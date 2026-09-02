@@ -256,7 +256,7 @@ class _BuildingViewState extends State<_BuildingView>
             ),
             child: const Icon(
               Icons.insights_rounded,
-              color: Colors.white,
+              color: AppColors.inkOnDark,
               size: 28,
             ),
           ),
@@ -444,7 +444,7 @@ class _ArcPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(dotX, dotY),
       3,
-      Paint()..color = Colors.white,
+      Paint()..color = AppColors.surface,
     );
   }
 
@@ -801,7 +801,7 @@ class _RevealView extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.play_arrow_rounded,
-                  color: Colors.white, size: 16),
+                  color: AppColors.inkOnDark, size: 16),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1156,7 +1156,7 @@ class _RevealView extends StatelessWidget {
             ),
             child: const Icon(
               Icons.mic_rounded,
-              color: Colors.white,
+              color: AppColors.inkOnDark,
               size: 17,
             ),
           ),

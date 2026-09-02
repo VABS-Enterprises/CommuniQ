@@ -37,6 +37,14 @@ class AppColors {
   static const Color inkSoft = Color(0xFF9A9AAB); // hints, disabled
   static const Color inkOnDark = Color(0xFFFFFFFF); // text on a brand fill
 
+  /// Secondary and decorative text on a brand fill. These replace the bare
+  /// `Colors.white70` / `Colors.white24` that dark-era screens used: same
+  /// pixels, but the name says "this sits on a dark surface", which is the
+  /// thing that was actually being asserted — and the thing that was wrong
+  /// wherever the surface underneath turned out to be cream.
+  static const Color inkOnDark70 = Color(0xB3FFFFFF); // white70
+  static const Color inkOnDark24 = Color(0x3DFFFFFF); // white24
+
   // ── Brand ────────────────────────────────────────────────────────────────
   // ONE dominant colour. Everything that is merely *primary* — CTAs, the
   // active tab, selected states, progress, level nodes, accent stripes — is

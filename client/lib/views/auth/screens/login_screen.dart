@@ -204,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen>
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => const Icon(
                                 Icons.mic_rounded,
-                                color: Colors.white,
+                                color: AppColors.inkOnDark,
                                 size: 32,
                               ),
                             ),
@@ -213,9 +213,12 @@ class _LoginScreenState extends State<LoginScreen>
 
                         const SizedBox(height: 24),
 
+                        // The gradient ran white -> pale blue, which was
+                        // designed against the old dark background. On the
+                        // cream ground it painted the headline out entirely.
                         ShaderMask(
                           shaderCallback: (b) => const LinearGradient(
-                            colors: [Colors.white, Color(0xFFBCC8FF)],
+                            colors: [AppColors.brandDark, AppColors.brand],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ).createShader(b),
@@ -224,7 +227,10 @@ class _LoginScreenState extends State<LoginScreen>
                             'Welcome back',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Colors.white,
+                              // Painted over by the ShaderMask; any opaque
+                              // colour works, but keep it readable if the mask
+                              // is ever removed.
+                              color: AppColors.ink,
                               fontSize: 30,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.5,

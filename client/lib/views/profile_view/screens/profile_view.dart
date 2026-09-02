@@ -325,7 +325,9 @@ class _ProfileViewState extends State<ProfileView> {
                                   ),
                                   title: const Text('Log Out',
                                       style: TextStyle(
-                                          color: Colors.white,
+                                          // Was white on AppColors.surface,
+                                          // i.e. white on white.
+                                          color: AppColors.error,
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600)),
                                   onTap: _handleLogout,
@@ -570,7 +572,7 @@ class _ProfileHeroHeader extends StatelessWidget {
                           ? Text(
                               name.isNotEmpty ? name[0].toUpperCase() : 'U',
                               style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.inkOnDark,
                                   fontSize: 32,
                                   fontWeight: FontWeight.bold),
                             )
@@ -593,7 +595,7 @@ class _ProfileHeroHeader extends StatelessWidget {
                       child: Text(
                         'Lv $level',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.inkOnDark,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -725,11 +727,11 @@ class _PremiumBanner extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: const BoxDecoration(
-                  color: Colors.white24,
+                  color: AppColors.inkOnDark24,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.workspace_premium_rounded,
-                    color: Colors.white, size: 26),
+                    color: AppColors.inkOnDark, size: 26),
               ),
               const SizedBox(width: 16),
               const Expanded(
@@ -739,7 +741,7 @@ class _PremiumBanner extends StatelessWidget {
                     Text(
                       'Upgrade to Premium',
                       style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.inkOnDark,
                           fontSize: 15,
                           fontWeight: FontWeight.bold),
                     ),
@@ -747,13 +749,13 @@ class _PremiumBanner extends StatelessWidget {
                     Text(
                       'Unlock all 150 sessions & advanced AI',
                       style:
-                          TextStyle(color: Colors.white70, fontSize: 12),
+                          TextStyle(color: AppColors.inkOnDark70, fontSize: 12),
                     ),
                   ],
                 ),
               ),
               const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white70),
+                  color: AppColors.inkOnDark70),
             ],
           ),
         ),
