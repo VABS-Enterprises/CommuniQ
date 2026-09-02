@@ -1144,16 +1144,16 @@ class _RoleplayConversationScreenState
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('End Session?',
             style: TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.ink,
                 fontWeight: FontWeight.bold)),
         content: const Text(
             'Leaving now will abandon this session. Progress will not be saved.',
-            style: TextStyle(color: AppColors.textSecondary)),
+            style: TextStyle(color: AppColors.inkMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Stay',
-                style: TextStyle(color: AppColors.textSecondary)),
+                style: TextStyle(color: AppColors.inkMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -1283,10 +1283,10 @@ class _RoleplayConversationScreenState
               decoration: BoxDecoration(
                 color: const Color(0xFF141D2C),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: AppColors.outline),
               ),
               child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: AppColors.textPrimary, size: 16),
+                  color: AppColors.ink, size: 16),
             ),
             onPressed: _onWillPop,
             padding: EdgeInsets.zero,
@@ -1296,7 +1296,7 @@ class _RoleplayConversationScreenState
               Text(
                 widget.config.persona,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.textPrimary,
+                      color: AppColors.ink,
                       fontWeight: FontWeight.bold,
                     ),
               ),
@@ -1310,7 +1310,7 @@ class _RoleplayConversationScreenState
                       width: 6,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: AppColors.primaryLight.withValues(
+                        color: AppColors.brandLight.withValues(
                             alpha: 0.5 + 0.5 * _pulseController.value),
                         shape: BoxShape.circle,
                       ),
@@ -1320,7 +1320,7 @@ class _RoleplayConversationScreenState
                   Text(
                     'LIVE SESSION',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.primaryLight,
+                          color: AppColors.brandLight,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
                         ),
@@ -1338,8 +1338,8 @@ class _RoleplayConversationScreenState
   Widget _buildTimerPill() {
     final remaining = _secondsRemaining;
     Color pillBg = const Color(0xFF141D2C);
-    Color pillBorder = AppColors.border;
-    Color textColor = AppColors.textPrimary;
+    Color pillBorder = AppColors.outline;
+    Color textColor = AppColors.ink;
 
     if (remaining != null) {
       if (remaining <= 10) {
@@ -1377,7 +1377,7 @@ class _RoleplayConversationScreenState
   }
 
   // ─── Animated dots loader ─────────────────────────────────────────────────────
-  Widget _buildDotsLoader({Color color = AppColors.primary, double size = 9}) {
+  Widget _buildDotsLoader({Color color = AppColors.brand, double size = 9}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(3, (i) {
@@ -1420,33 +1420,33 @@ class _RoleplayConversationScreenState
           // dimmed slightly when AI is speaking to hint whose turn it is.
           switch (_state) {
             case _ConvState.user_turn:
-              orbColor = AppColors.primary;
-              glowColor = AppColors.primaryLight;
+              orbColor = AppColors.brand;
+              glowColor = AppColors.brandLight;
               scale = 1.0 + (pulse * 0.14); // more pulse = user is expected to speak
             case _ConvState.ai_speaking:
               // Mic still on — just dim the orb so the AI's side feels dominant.
-              orbColor = AppColors.primary.withValues(alpha: 0.45);
-              glowColor = AppColors.primaryLight.withValues(alpha: 0.3);
+              orbColor = AppColors.brand.withValues(alpha: 0.45);
+              glowColor = AppColors.brandLight.withValues(alpha: 0.3);
               scale = 1.0 + (pulse * 0.04);
             case _ConvState.processing:
             case _ConvState.ending:
-              orbColor = AppColors.primaryDark;
-              glowColor = AppColors.primary;
+              orbColor = AppColors.brandDark;
+              glowColor = AppColors.brand;
               scale = 1.0;
           }
         } else {
           switch (_state) {
             case _ConvState.user_turn:
-              orbColor = AppColors.primary;
-              glowColor = AppColors.primaryLight;
+              orbColor = AppColors.brand;
+              glowColor = AppColors.brandLight;
               scale = 1.0 + (pulse * 0.12);
             case _ConvState.ai_speaking:
               orbColor = const Color(0xFF3B82F6);
               glowColor = const Color(0xFF93C5FD);
             case _ConvState.processing:
             case _ConvState.ending:
-              orbColor = AppColors.primaryDark;
-              glowColor = AppColors.primary;
+              orbColor = AppColors.brandDark;
+              glowColor = AppColors.brand;
               scale = 1.0;
           }
         }
@@ -1540,15 +1540,15 @@ class _RoleplayConversationScreenState
 
     switch (_state) {
       case _ConvState.user_turn:
-        borderColor = AppColors.primary.withValues(alpha: 0.35);
-        accentColor = AppColors.primary;
+        borderColor = AppColors.brand.withValues(alpha: 0.35);
+        accentColor = AppColors.brand;
       case _ConvState.ai_speaking:
         borderColor = const Color(0xFF3B82F6).withValues(alpha: 0.35);
         accentColor = const Color(0xFF3B82F6);
       case _ConvState.processing:
       case _ConvState.ending:
-        borderColor = AppColors.border;
-        accentColor = AppColors.textMuted;
+        borderColor = AppColors.outline;
+        accentColor = AppColors.inkSoft;
     }
 
     return AnimatedContainer(
@@ -1658,10 +1658,10 @@ class _RoleplayConversationScreenState
         padding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.10),
+          color: AppColors.brand.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.28)),
+              color: AppColors.brand.withValues(alpha: 0.28)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1671,7 +1671,7 @@ class _RoleplayConversationScreenState
               height: 6,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary.withValues(
+                color: AppColors.brand.withValues(
                     alpha: 0.5 + 0.5 * _pulseController.value),
               ),
             ),
@@ -1679,7 +1679,7 @@ class _RoleplayConversationScreenState
             Text(
               'REC  $timeStr',
               style: TextStyle(
-                color: AppColors.primaryLight,
+                color: AppColors.brandLight,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.4,
@@ -1788,7 +1788,7 @@ class _RoleplayConversationScreenState
             child: Text(
               label,
               style: const TextStyle(
-                color: AppColors.textMuted,
+                color: AppColors.inkSoft,
                 fontSize: 14,
                 letterSpacing: 0.2,
               ),
@@ -1832,7 +1832,7 @@ class _RoleplayConversationScreenState
                       key: ValueKey<String>(
                           isUserTurn ? userDisplayText : aiDisplayText),
                       style: const TextStyle(
-                        color: AppColors.textPrimary,
+                        color: AppColors.ink,
                         fontSize: 19,
                         fontWeight: FontWeight.w400,
                         height: 1.6,
@@ -1856,7 +1856,7 @@ class _RoleplayConversationScreenState
               ? '${widget.config.persona} is speaking'
               : (_isLiveVoiceActive ? 'Listening — speak anytime' : 'Speak clearly'),
           style: const TextStyle(
-            color: AppColors.textMuted,
+            color: AppColors.inkSoft,
             fontSize: 12,
             letterSpacing: 0.1,
           ),
@@ -1871,7 +1871,7 @@ class _RoleplayConversationScreenState
       key: const ValueKey('placeholder'),
       isUserTurn ? 'Say something...' : '...',
       style: const TextStyle(
-        color: AppColors.textMuted,
+        color: AppColors.inkSoft,
         fontSize: 17,
         fontStyle: FontStyle.italic,
         height: 1.6,
@@ -1902,7 +1902,7 @@ class _RoleplayConversationScreenState
               height: height,
               margin: const EdgeInsets.symmetric(horizontal: 2.5),
               decoration: BoxDecoration(
-                color: AppColors.primaryLight
+                color: AppColors.brandLight
                     .withValues(alpha: 0.5 + 0.5 * amp),
                 borderRadius: BorderRadius.circular(2),
               ),
@@ -1930,20 +1930,20 @@ class _RoleplayConversationScreenState
           _buildIconButton(
             icon: _isMuted ? Icons.volume_off : Icons.volume_up,
             color:
-                _isMuted ? AppColors.textMuted : AppColors.textPrimary,
+                _isMuted ? AppColors.inkSoft : AppColors.ink,
             onTap: _toggleMute,
             tooltip: _isMuted ? 'Unmute AI' : 'Mute AI',
           ),
           _buildCenterAction(),
           _buildIconButton(
             icon: Icons.call_end_rounded,
-            color: _canEndCall ? Colors.white : AppColors.textMuted,
+            color: _canEndCall ? Colors.white : AppColors.inkSoft,
             backgroundColor: _canEndCall
                 ? const Color(0xFFEF4444)
                 : AppColors.surface,
             borderColor: _canEndCall
                 ? const Color(0xFFEF4444)
-                : AppColors.border,
+                : AppColors.outline,
             glow: _canEndCall
                 ? const Color(0xFFEF4444).withValues(alpha: 0.4)
                 : null,
@@ -1974,7 +1974,7 @@ class _RoleplayConversationScreenState
         decoration: BoxDecoration(
           color: const Color(0xFF141D2C),
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.outline),
         ),
         child: Center(child: _buildDotsLoader(size: 7)),
       );
@@ -2028,11 +2028,11 @@ class _RoleplayConversationScreenState
             width: 140,
             height: 60,
             decoration: BoxDecoration(
-              color: AppColors.primary,
+              color: AppColors.brand,
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.4),
+                  color: AppColors.brand.withValues(alpha: 0.4),
                   blurRadius: 16,
                   spreadRadius: 2,
                   offset: const Offset(0, 4),
@@ -2068,7 +2068,7 @@ class _RoleplayConversationScreenState
 
     final Color barColor = isAi
         ? const Color(0xFF3B82F6)
-        : AppColors.primary;
+        : AppColors.brand;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -2081,7 +2081,7 @@ class _RoleplayConversationScreenState
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
           color: isLoading
-              ? AppColors.border
+              ? AppColors.outline
               : barColor.withValues(alpha: 0.25),
           width: 1.5,
         ),
@@ -2143,7 +2143,7 @@ class _RoleplayConversationScreenState
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: backgroundColor ?? const Color(0xFF141D2C),
-          border: Border.all(color: borderColor ?? AppColors.border),
+          border: Border.all(color: borderColor ?? AppColors.outline),
           boxShadow: glow != null
               ? [BoxShadow(color: glow, blurRadius: 12, spreadRadius: 1)]
               : [],

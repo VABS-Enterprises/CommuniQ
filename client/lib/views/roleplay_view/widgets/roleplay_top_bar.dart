@@ -10,7 +10,7 @@ class RoleplayTopBar extends StatelessWidget {
       child: Text(
         'Roleplay',
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: AppColors.primaryLight,
+              color: AppColors.brandLight,
               fontWeight: FontWeight.bold,
             ),
       ),

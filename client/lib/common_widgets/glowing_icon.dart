@@ -19,14 +19,14 @@ class GlowingIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = color ?? AppColors.primary;
+    final iconColor = color ?? AppColors.brand;
 
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.15),
+            color: AppColors.brand.withValues(alpha: 0.15),
             blurRadius: size * 0.5,
             spreadRadius: 2,
           ),

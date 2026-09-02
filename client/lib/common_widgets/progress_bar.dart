@@ -32,14 +32,14 @@ class CustomProgressBar extends StatelessWidget {
               height: height,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.primaryLight],
+                  colors: [AppColors.brand, AppColors.brandLight],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
                 borderRadius: BorderRadius.circular(height / 2),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
+                    color: AppColors.brand.withValues(alpha: 0.3),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),

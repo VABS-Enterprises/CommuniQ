@@ -302,7 +302,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       resizeToAvoidBottomInset: true,
       body: OnboardingBackground(
         child: SafeArea(
@@ -358,7 +358,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                     'Practice with a real scenario the moment\nyou create your account',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.inkMuted,
                       fontSize: 15,
                       height: 1.6,
                     ),
@@ -385,7 +385,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           TextButton(
             onPressed: _goToSignup,
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.textMuted,
+              foregroundColor: AppColors.inkSoft,
             ),
             child: const Text(
               'Skip for now →',
@@ -427,13 +427,13 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(
-                    colors: AppColors.primaryGradient,
+                    colors: [AppColors.brand, AppColors.brandLight],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.4),
+                      color: AppColors.brand.withValues(alpha: 0.4),
                       blurRadius: 20,
                       spreadRadius: 2,
                     ),
@@ -461,7 +461,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               const Text(
                 'Type or speak a short intro — your name, what you do, and why you want to speak better. Your AI coach will give you instant feedback.',
                 style: TextStyle(
-                  color: AppColors.textSecondary,
+                  color: AppColors.inkMuted,
                   fontSize: 14,
                   height: 1.65,
                 ),
@@ -516,7 +516,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                       ? null
                       : () => setState(() => _phase = _Phase.teaser),
                   style: TextButton.styleFrom(
-                    foregroundColor: AppColors.textMuted,
+                    foregroundColor: AppColors.inkSoft,
                   ),
                   child: const Text('← Back', style: TextStyle(fontSize: 14)),
                 ),
@@ -542,14 +542,14 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           children: [
             Container(
               decoration: BoxDecoration(
-                color: AppColors.cardSurface,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: disabled
-                      ? AppColors.glassBorder
+                      ? AppColors.outline
                       : atMin
-                          ? AppColors.primary.withValues(alpha: 0.5)
-                          : AppColors.glassBorder,
+                          ? AppColors.brand.withValues(alpha: 0.5)
+                          : AppColors.outline,
                   width: 1.5,
                 ),
               ),
@@ -563,7 +563,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                 buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
                     const SizedBox.shrink(),
                 style: const TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.ink,
                   fontSize: 15,
                   height: 1.6,
                 ),
@@ -571,7 +571,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                   hintText:
                       'e.g. "Hi, I\'m Arjun. I\'m a software developer from Bangalore. I want to improve my English communication for client meetings and presentations..."',
                   hintStyle: TextStyle(
-                    color: AppColors.textMuted.withValues(alpha: 0.7),
+                    color: AppColors.inkSoft.withValues(alpha: 0.7),
                     fontSize: 14,
                     height: 1.55,
                   ),
@@ -586,7 +586,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
             Text(
               '$len / $_maxChars  ·  min $_minChars chars',
               style: TextStyle(
-                color: atMin ? AppColors.success : AppColors.textMuted,
+                color: atMin ? AppColors.success : AppColors.inkSoft,
                 fontSize: 12,
               ),
             ),
@@ -607,16 +607,16 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           borderRadius: BorderRadius.circular(16),
           gradient: canSubmit
               ? const LinearGradient(
-                  colors: AppColors.primaryGradient,
+                  colors: [AppColors.brand, AppColors.brandLight],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 )
               : null,
-          color: canSubmit ? null : AppColors.surfaceVariant,
+          color: canSubmit ? null : AppColors.surfaceAlt,
           boxShadow: canSubmit
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.35),
+                    color: AppColors.brand.withValues(alpha: 0.35),
                     blurRadius: 20,
                     offset: const Offset(0, 6),
                   )
@@ -638,14 +638,14 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                   children: [
                     Icon(
                       Icons.auto_awesome_rounded,
-                      color: canSubmit ? Colors.white : AppColors.textMuted,
+                      color: canSubmit ? Colors.white : AppColors.inkSoft,
                       size: 18,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Evaluate My Intro',
                       style: TextStyle(
-                        color: canSubmit ? Colors.white : AppColors.textMuted,
+                        color: canSubmit ? Colors.white : AppColors.inkSoft,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.2,
@@ -686,7 +686,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               // ── Sub-scores ────────────────────────────────────────────────
               _buildSection(
                 icon: Icons.bar_chart_rounded,
-                iconColor: AppColors.primary,
+                iconColor: AppColors.brand,
                 title: 'Skill Breakdown',
                 child: _buildScoreBars(r.scores),
               ),
@@ -706,9 +706,9 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               // ── Improvements ──────────────────────────────────────────────
               _buildSection(
                 icon: Icons.lightbulb_rounded,
-                iconColor: AppColors.amber,
+                iconColor: AppColors.sun,
                 title: 'AI Tips for you',
-                child: _buildPointList(r.improvements, AppColors.amber),
+                child: _buildPointList(r.improvements, AppColors.sun),
               ),
 
               const SizedBox(height: 16),
@@ -736,15 +736,15 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primary.withValues(alpha: 0.18),
-            AppColors.violet.withValues(alpha: 0.12),
+            AppColors.brand.withValues(alpha: 0.18),
+            AppColors.brand.withValues(alpha: 0.12),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.3),
+          color: AppColors.brand.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -778,7 +778,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                       const Text(
                         '/100',
                         style: TextStyle(
-                          color: AppColors.textMuted,
+                          color: AppColors.inkSoft,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
@@ -810,7 +810,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                 const Text(
                   'Your AI coach analysed your introduction and scored it live.',
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.inkMuted,
                     fontSize: 13,
                     height: 1.55,
                   ),
@@ -820,16 +820,16 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.15),
+                    color: AppColors.brand.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.3),
+                        color: AppColors.brand.withValues(alpha: 0.3),
                         width: 1),
                   ),
                   child: const Text(
                     'AI-powered · instant',
                     style: TextStyle(
-                      color: AppColors.primaryLight,
+                      color: AppColors.brandLight,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.4,
@@ -854,9 +854,9 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.cardSurface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.glassBorder, width: 1),
+        border: Border.all(color: AppColors.outline, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -868,7 +868,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               Text(
                 title,
                 style: const TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.ink,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.3,
@@ -911,7 +911,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           child: Text(
             label,
             style: const TextStyle(
-              color: AppColors.textSecondary,
+              color: AppColors.inkMuted,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -927,7 +927,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                   Container(
                     height: 7,
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
+                      color: AppColors.surfaceAlt,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -999,7 +999,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                 child: Text(
                   pt,
                   style: const TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.inkMuted,
                     fontSize: 13.5,
                     height: 1.6,
                   ),
@@ -1019,15 +1019,15 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.violet.withValues(alpha: 0.12),
-            AppColors.primary.withValues(alpha: 0.08),
+            AppColors.brand.withValues(alpha: 0.12),
+            AppColors.brand.withValues(alpha: 0.08),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-            color: AppColors.violet.withValues(alpha: 0.25), width: 1),
+            color: AppColors.brand.withValues(alpha: 0.25), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1035,12 +1035,12 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           Row(
             children: const [
               Icon(Icons.chat_bubble_outline_rounded,
-                  color: AppColors.violetLight, size: 15),
+                  color: AppColors.brandLight, size: 15),
               SizedBox(width: 8),
               Text(
                 'AI Coach says',
                 style: TextStyle(
-                  color: AppColors.violetLight,
+                  color: AppColors.brandLight,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
@@ -1052,7 +1052,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           Text(
             feedback,
             style: const TextStyle(
-              color: AppColors.textSecondary,
+              color: AppColors.inkMuted,
               fontSize: 14,
               height: 1.65,
             ),
@@ -1068,20 +1068,20 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
         // Separator hint
         Row(
           children: [
-            const Expanded(child: Divider(color: AppColors.glassBorder)),
+            const Expanded(child: Divider(color: AppColors.outline)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 'WANT YOUR FULL PROGRESS TRACKED?',
                 style: TextStyle(
-                  color: AppColors.textMuted.withValues(alpha: 0.8),
+                  color: AppColors.inkSoft.withValues(alpha: 0.8),
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 1.0,
                 ),
               ),
             ),
-            const Expanded(child: Divider(color: AppColors.glassBorder)),
+            const Expanded(child: Divider(color: AppColors.outline)),
           ],
         ),
 
@@ -1096,13 +1096,13 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               gradient: const LinearGradient(
-                colors: AppColors.primaryGradient,
+                colors: [AppColors.brand, AppColors.brandLight],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.4),
+                  color: AppColors.brand.withValues(alpha: 0.4),
                   blurRadius: 24,
                   offset: const Offset(0, 8),
                 ),
@@ -1137,7 +1137,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           'Track every session · Unlock all scenarios · Level up faster',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: AppColors.textMuted,
+            color: AppColors.inkSoft,
             fontSize: 12,
           ),
         ),
@@ -1168,7 +1168,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.primary.withValues(alpha: alpha),
+                    color: AppColors.brand.withValues(alpha: alpha),
                     width: 1.5,
                   ),
                 ),
@@ -1182,10 +1182,10 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary,
+                color: AppColors.brand,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withValues(alpha: _micGlow.value),
+                    color: AppColors.brand.withValues(alpha: _micGlow.value),
                     blurRadius: 40,
                     spreadRadius: 4,
                   ),
@@ -1208,12 +1208,12 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardSurface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.glassBorder, width: 1),
+        border: Border.all(color: AppColors.outline, width: 1),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: AppColors.brand.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -1228,13 +1228,13 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
+                  color: AppColors.brand.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
                   'SCENARIO',
                   style: TextStyle(
-                    color: AppColors.primaryLight,
+                    color: AppColors.brandLight,
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.4,
@@ -1259,7 +1259,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           const Text(
             'Introduce yourself',
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: AppColors.ink,
               fontSize: 18,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.2,
@@ -1270,7 +1270,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
             'Tell us about yourself in a relaxed, friendly conversation. '
             'A great place to start your journey.',
             style: TextStyle(
-              color: AppColors.textMuted,
+              color: AppColors.inkSoft,
               fontSize: 13,
               height: 1.55,
             ),
@@ -1294,20 +1294,20 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.10),
+        color: AppColors.brand.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.22), width: 1),
+            color: AppColors.brand.withValues(alpha: 0.22), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColors.primaryLight, size: 12),
+          Icon(icon, color: AppColors.brandLight, size: 12),
           const SizedBox(width: 5),
           Text(
             label,
             style: const TextStyle(
-              color: AppColors.primaryLight,
+              color: AppColors.brandLight,
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
             ),
@@ -1334,18 +1334,18 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColors.violetLight, size: 13),
+          Icon(icon, color: AppColors.brandLight, size: 13),
           const SizedBox(width: 5),
           Text(
             label,
             style: const TextStyle(
-              color: AppColors.textSecondary,
+              color: AppColors.inkMuted,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -1368,7 +1368,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               width: 36,
               height: 36,
               child: CircularProgressIndicator(
-                color: AppColors.primary,
+                color: AppColors.brand,
                 strokeWidth: 2.5,
               ),
             ),
@@ -1376,7 +1376,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
             Text(
               'Transcribing…',
               style: TextStyle(
-                color: AppColors.textMuted,
+                color: AppColors.inkSoft,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -1390,10 +1390,10 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       animation: _micRecordCtrl,
       builder: (_, __) {
         final scale = _isRecording ? _micRecordPulse.value : 1.0;
-        final bgColor = _isRecording ? AppColors.error : AppColors.primary;
+        final bgColor = _isRecording ? AppColors.error : AppColors.brand;
         final glowColor = _isRecording
             ? AppColors.error.withValues(alpha: 0.35)
-            : AppColors.primary.withValues(alpha: 0.25);
+            : AppColors.brand.withValues(alpha: 0.25);
         final isBusy = disabled || _isTranscribing;
 
         return Center(
@@ -1409,7 +1409,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: isBusy
-                          ? AppColors.surfaceVariant
+                          ? AppColors.surfaceAlt
                           : bgColor,
                       boxShadow: isBusy
                           ? null
@@ -1423,7 +1423,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                     ),
                     child: Icon(
                       _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
-                      color: isBusy ? AppColors.textMuted : Colors.white,
+                      color: isBusy ? AppColors.inkSoft : Colors.white,
                       size: 26,
                     ),
                   ),
@@ -1433,7 +1433,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               Text(
                 _isRecording ? 'Recording… tap to stop' : 'Or tap to speak',
                 style: TextStyle(
-                  color: _isRecording ? AppColors.error : AppColors.textMuted,
+                  color: _isRecording ? AppColors.error : AppColors.inkSoft,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -1461,7 +1461,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
 
   Color _scoreColor(int score) {
     if (score >= 75) return AppColors.success;
-    if (score >= 50) return AppColors.amber;
+    if (score >= 50) return AppColors.sun;
     return AppColors.error;
   }
 
@@ -1494,7 +1494,7 @@ class _ScoreRingPainter extends CustomPainter {
 
     // Track
     final trackPaint = Paint()
-      ..color = AppColors.surfaceVariant
+      ..color = AppColors.surfaceAlt
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;

@@ -13,7 +13,7 @@ class RoleplayHeader extends StatelessWidget {
         Text(
           'COMMUNIQ HUB',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.inkMuted,
                 letterSpacing: 1.2,
                 fontSize: 10,
               ),
@@ -22,7 +22,7 @@ class RoleplayHeader extends StatelessWidget {
         Text(
           'Practice real-life\nconversations',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: AppColors.textPrimary,
+                color: AppColors.ink,
                 fontWeight: FontWeight.bold,
                 height: 1.2,
               ),

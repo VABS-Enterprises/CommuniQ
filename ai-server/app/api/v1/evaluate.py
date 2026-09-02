@@ -95,7 +95,7 @@ async def evaluate_roleplay(
             status_code=502, detail="Evaluation service unavailable. Please try again."
         ) from e
 
-    raw = response.choices[0].message.content or ""
+    raw = llm_facade.content_of(response)
 
     try:
         result = parse_evaluation(raw)
@@ -171,7 +171,7 @@ async def evaluate_learning(
             status_code=502, detail="Evaluation service unavailable. Please try again."
         ) from e
 
-    raw = response.choices[0].message.content or ""
+    raw = llm_facade.content_of(response)
 
     try:
         result = parse_learning_evaluation(raw)
@@ -247,7 +247,7 @@ async def evaluate_contest(
             status_code=502, detail="Evaluation service unavailable. Please try again."
         ) from e
 
-    raw = response.choices[0].message.content or ""
+    raw = llm_facade.content_of(response)
 
     try:
         result = parse_contest_evaluation(raw)

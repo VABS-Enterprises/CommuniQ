@@ -46,7 +46,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s24),
@@ -59,7 +59,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
               const Text(
                 'What do you want\nto improve?',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.ink,
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                   height: 1.25,
@@ -68,7 +68,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
               const SizedBox(height: AppSpacing.s8),
               const Text(
                 'Select all that apply',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                style: TextStyle(color: AppColors.inkMuted, fontSize: 14),
               ),
               const SizedBox(height: AppSpacing.s24),
               Expanded(
@@ -95,7 +95,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
                           context.go(AppRoutes.home);
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.brand,
                     disabledBackgroundColor: AppColors.surface,
                     foregroundColor: Colors.white,
                     elevation: 0,
@@ -133,7 +133,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
+            color: isSelected ? AppColors.brand : AppColors.outline,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -144,13 +144,13 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
               height: 40,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.15)
-                    : AppColors.background,
+                    ? AppColors.brand.withValues(alpha: 0.15)
+                    : AppColors.bg,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 goal.icon,
-                color: isSelected ? AppColors.primaryLight : AppColors.textMuted,
+                color: isSelected ? AppColors.brandLight : AppColors.inkSoft,
                 size: 20,
               ),
             ),
@@ -163,8 +163,8 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
                     goal.value,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
+                          ? AppColors.ink
+                          : AppColors.inkMuted,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -173,7 +173,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
                   Text(
                     goal.description,
                     style: const TextStyle(
-                        color: AppColors.textMuted, fontSize: 12),
+                        color: AppColors.inkSoft, fontSize: 12),
                   ),
                 ],
               ),
@@ -184,9 +184,9 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
               height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                color: isSelected ? AppColors.brand : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.border,
+                  color: isSelected ? AppColors.brand : AppColors.outline,
                   width: 1.5,
                 ),
               ),
@@ -220,7 +220,7 @@ Widget _buildProgressDots(int activeIndex) {
         width: i == activeIndex ? 20 : 6,
         height: 6,
         decoration: BoxDecoration(
-          color: i == activeIndex ? AppColors.primary : AppColors.border,
+          color: i == activeIndex ? AppColors.brand : AppColors.outline,
           borderRadius: BorderRadius.circular(3),
         ),
       ),

@@ -89,7 +89,7 @@ async def session_opening(
             status_code=502, detail="AI opening failed. Please try again."
         ) from e
 
-    ai_reply = (response.choices[0].message.content or "").strip()
+    ai_reply = llm_facade.content_of(response)
     if not ai_reply:
         raise HTTPException(
             status_code=502, detail="AI returned an empty opening. Please try again."
@@ -203,7 +203,7 @@ async def session_turn(
             status_code=502, detail="AI response failed. Please try again."
         )
 
-    ai_reply = (response.choices[0].message.content or "").strip()
+    ai_reply = llm_facade.content_of(response)
     if not ai_reply:
         raise HTTPException(
             status_code=502, detail="AI returned an empty response. Please try again."
@@ -275,7 +275,7 @@ async def session_evaluate(
             status_code=502, detail="Evaluation service unavailable. Please try again."
         ) from e
 
-    raw = response.choices[0].message.content or ""
+    raw = llm_facade.content_of(response)
 
     try:
         result = parse_evaluation(raw)

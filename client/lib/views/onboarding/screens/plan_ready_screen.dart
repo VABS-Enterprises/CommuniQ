@@ -67,7 +67,7 @@ class _PlanReadyScreenState extends State<PlanReadyScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: OnboardingBackground(
         child: SafeArea(
           child: AnimatedSwitcher(
@@ -160,7 +160,7 @@ class _BuildingViewState extends State<_BuildingView>
           const Text(
             'Building your plan',
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: AppColors.ink,
               fontSize: 22,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.4,
@@ -170,7 +170,7 @@ class _BuildingViewState extends State<_BuildingView>
           const Text(
             'Personalizing everything to you',
             style: TextStyle(
-              color: AppColors.textMuted,
+              color: AppColors.inkSoft,
               fontSize: 13.5,
             ),
           ),
@@ -213,7 +213,7 @@ class _BuildingViewState extends State<_BuildingView>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.08),
+                color: AppColors.brand.withValues(alpha: 0.08),
                 width: 1.5,
               ),
             ),
@@ -225,8 +225,8 @@ class _BuildingViewState extends State<_BuildingView>
               size: const Size(148, 148),
               painter: _ArcPainter(
                 progress: widget.itemsCtrl.value,
-                primaryColor: AppColors.primary,
-                lightColor: AppColors.primaryLight,
+                primaryColor: AppColors.brand,
+                lightColor: AppColors.brandLight,
               ),
             ),
           ),
@@ -236,7 +236,7 @@ class _BuildingViewState extends State<_BuildingView>
             height: 104,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: AppColors.brand.withValues(alpha: 0.08),
             ),
           ),
           // Core icon circle
@@ -245,10 +245,10 @@ class _BuildingViewState extends State<_BuildingView>
             height: 72,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary,
+              color: AppColors.brand,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.45),
+                  color: AppColors.brand.withValues(alpha: 0.45),
                   blurRadius: 36,
                   spreadRadius: 4,
                 ),
@@ -276,7 +276,7 @@ class _BuildingViewState extends State<_BuildingView>
             Text(
               _currentLabel(p),
               style: const TextStyle(
-                color: AppColors.textMuted,
+                color: AppColors.inkSoft,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 0.2,
@@ -285,7 +285,7 @@ class _BuildingViewState extends State<_BuildingView>
             Text(
               '${(p * 100).round()}%',
               style: const TextStyle(
-                color: AppColors.primaryLight,
+                color: AppColors.brandLight,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
               ),
@@ -300,14 +300,14 @@ class _BuildingViewState extends State<_BuildingView>
               // Track
               Container(
                 height: 4,
-                color: AppColors.primary.withValues(alpha: 0.10),
+                color: AppColors.brand.withValues(alpha: 0.10),
               ),
               // Fill
               FractionallySizedBox(
                 widthFactor: p,
                 child: Container(
                   height: 4,
-                  color: AppColors.primary,
+                  color: AppColors.brand,
                 ),
               ),
             ],
@@ -362,12 +362,12 @@ class _BuildingViewState extends State<_BuildingView>
                             key: const ValueKey('spinner'),
                             padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.12),
+                              color: AppColors.brand.withValues(alpha: 0.12),
                               shape: BoxShape.circle,
                             ),
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppColors.primaryLight,
+                              color: AppColors.brandLight,
                             ),
                           )
                         : const SizedBox.shrink(key: ValueKey('empty')),
@@ -379,10 +379,10 @@ class _BuildingViewState extends State<_BuildingView>
                 _steps[i],
                 style: TextStyle(
                   color: isComplete
-                      ? AppColors.textSecondary
+                      ? AppColors.inkMuted
                       : isCurrent
-                          ? AppColors.textPrimary
-                          : AppColors.textMuted,
+                          ? AppColors.ink
+                          : AppColors.inkSoft,
                   fontSize: 13.5,
                   fontWeight:
                       isCurrent ? FontWeight.w600 : FontWeight.w500,
@@ -576,7 +576,7 @@ class _RevealView extends StatelessWidget {
                       'Free forever · No credit card needed',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppColors.textMuted,
+                        color: AppColors.inkSoft,
                         fontSize: 13,
                       ),
                     ),
@@ -627,7 +627,7 @@ class _RevealView extends StatelessWidget {
         const Text(
           '150 sessions,\nall built for you.',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: AppColors.ink,
             fontSize: 27,
             fontWeight: FontWeight.w800,
             height: 1.2,
@@ -638,7 +638,7 @@ class _RevealView extends StatelessWidget {
         RichText(
           text: TextSpan(
             style: const TextStyle(
-              color: AppColors.textSecondary,
+              color: AppColors.inkMuted,
               fontSize: 14,
               height: 1.5,
             ),
@@ -653,7 +653,7 @@ class _RevealView extends StatelessWidget {
               TextSpan(
                 text: goal,
                 style: const TextStyle(
-                    color: AppColors.primaryLight,
+                    color: AppColors.brandLight,
                     fontWeight: FontWeight.w600),
               ),
             ],
@@ -669,9 +669,9 @@ class _RevealView extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.cardSurface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: AppColors.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -688,7 +688,7 @@ class _RevealView extends StatelessWidget {
                       Text(
                         preview.journeyTitle.toUpperCase(),
                         style: const TextStyle(
-                          color: AppColors.textMuted,
+                          color: AppColors.inkSoft,
                           fontSize: 9.5,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.3,
@@ -698,7 +698,7 @@ class _RevealView extends StatelessWidget {
                       Text(
                         preview.levelRange,
                         style: const TextStyle(
-                          color: AppColors.textMuted,
+                          color: AppColors.inkSoft,
                           fontSize: 11,
                         ),
                       ),
@@ -709,21 +709,21 @@ class _RevealView extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
+                    color: AppColors.brand.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.25)),
+                        color: AppColors.brand.withValues(alpha: 0.25)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
                       Icon(Icons.flag_rounded,
-                          color: AppColors.primaryLight, size: 10),
+                          color: AppColors.brandLight, size: 10),
                       SizedBox(width: 4),
                       Text(
                         'YOUR START',
                         style: TextStyle(
-                          color: AppColors.primaryLight,
+                          color: AppColors.brandLight,
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.0,
@@ -736,7 +736,7 @@ class _RevealView extends StatelessWidget {
             ),
           ),
 
-          Container(height: 1, color: AppColors.cardBorder),
+          Container(height: 1, color: AppColors.outline),
 
           // Level rows
           ...preview.levels.asMap().entries.map((e) {
@@ -747,7 +747,7 @@ class _RevealView extends StatelessWidget {
                 if (e.key < preview.levels.length - 1)
                   Container(
                     height: 1,
-                    color: AppColors.cardBorder.withValues(alpha: 0.5),
+                    color: AppColors.outline.withValues(alpha: 0.5),
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                   ),
               ],
@@ -755,18 +755,18 @@ class _RevealView extends StatelessWidget {
           }),
 
           // Footer — remaining count + quick stats
-          Container(height: 1, color: AppColors.cardBorder),
+          Container(height: 1, color: AppColors.outline),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
             child: Row(
               children: [
                 const Icon(Icons.more_horiz_rounded,
-                    color: AppColors.textMuted, size: 14),
+                    color: AppColors.inkSoft, size: 14),
                 const SizedBox(width: 6),
                 Text(
                   '+${preview.remainingCount} more sessions',
                   style: const TextStyle(
-                    color: AppColors.textMuted,
+                    color: AppColors.inkSoft,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                   ),
@@ -788,7 +788,7 @@ class _RevealView extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.10),
+          color: AppColors.brand.withValues(alpha: 0.10),
           borderRadius: const BorderRadius.vertical(bottom: Radius.zero),
         ),
         child: Row(
@@ -797,7 +797,7 @@ class _RevealView extends StatelessWidget {
               width: 30,
               height: 30,
               decoration: const BoxDecoration(
-                color: AppColors.primary,
+                color: AppColors.brand,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.play_arrow_rounded,
@@ -811,7 +811,7 @@ class _RevealView extends StatelessWidget {
                   Text(
                     'Level $id',
                     style: const TextStyle(
-                      color: AppColors.primaryLight,
+                      color: AppColors.brandLight,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
@@ -821,7 +821,7 @@ class _RevealView extends StatelessWidget {
                   Text(
                     title,
                     style: const TextStyle(
-                      color: AppColors.textPrimary,
+                      color: AppColors.ink,
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                     ),
@@ -860,11 +860,11 @@ class _RevealView extends StatelessWidget {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: AppColors.cardBorder.withValues(alpha: 0.6),
+              color: AppColors.outline.withValues(alpha: 0.6),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.lock_rounded,
-                color: AppColors.textMuted, size: 12),
+                color: AppColors.inkSoft, size: 12),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -874,7 +874,7 @@ class _RevealView extends StatelessWidget {
                 Text(
                   'Level $id',
                   style: const TextStyle(
-                    color: AppColors.textMuted,
+                    color: AppColors.inkSoft,
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.4,
@@ -884,7 +884,7 @@ class _RevealView extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.inkMuted,
                     fontSize: 13,
                   ),
                 ),
@@ -910,10 +910,10 @@ class _RevealView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
+        color: AppColors.brand.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.20)),
+            color: AppColors.brand.withValues(alpha: 0.20)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -925,17 +925,17 @@ class _RevealView extends StatelessWidget {
                 width: 22,
                 height: 22,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.15),
+                  color: AppColors.brand.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.psychology_rounded,
-                    color: AppColors.primaryLight, size: 13),
+                    color: AppColors.brandLight, size: 13),
               ),
               const SizedBox(width: 8),
               const Text(
                 'YOUR COACH\'S READ',
                 style: TextStyle(
-                  color: AppColors.primaryLight,
+                  color: AppColors.brandLight,
                   fontSize: 9.5,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.1,
@@ -949,7 +949,7 @@ class _RevealView extends StatelessWidget {
           Text(
             insight,
             style: const TextStyle(
-              color: AppColors.textSecondary,
+              color: AppColors.inkMuted,
               fontSize: 13.5,
               height: 1.55,
             ),
@@ -958,7 +958,7 @@ class _RevealView extends StatelessWidget {
           // Show their own words back if they wrote a note
           if (hasNote) ...[
             const SizedBox(height: 10),
-            Container(height: 1, color: AppColors.primary.withValues(alpha: 0.15)),
+            Container(height: 1, color: AppColors.brand.withValues(alpha: 0.15)),
             const SizedBox(height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -966,7 +966,7 @@ class _RevealView extends StatelessWidget {
                 const Text(
                   'You said  ',
                   style: TextStyle(
-                    color: AppColors.textMuted,
+                    color: AppColors.inkSoft,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                   ),
@@ -975,7 +975,7 @@ class _RevealView extends StatelessWidget {
                   child: Text(
                     '"${note!.trim()}"',
                     style: const TextStyle(
-                      color: AppColors.primaryLight,
+                      color: AppColors.brandLight,
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
                       height: 1.45,
@@ -1092,12 +1092,12 @@ class _RevealView extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: AppColors.textMuted, size: 11),
+        Icon(icon, color: AppColors.inkSoft, size: 11),
         const SizedBox(width: 4),
         Text(
           label,
           style: const TextStyle(
-            color: AppColors.textMuted,
+            color: AppColors.inkSoft,
             fontSize: 10.5,
             fontWeight: FontWeight.w500,
           ),
@@ -1133,9 +1133,9 @@ class _RevealView extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
-        color: AppColors.cardSurface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: AppColors.outline),
       ),
       child: Row(
         children: [
@@ -1145,10 +1145,10 @@ class _RevealView extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary,
+              color: AppColors.brand,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.30),
+                  color: AppColors.brand.withValues(alpha: 0.30),
                   blurRadius: 10,
                   spreadRadius: 1,
                 ),
@@ -1173,14 +1173,14 @@ class _RevealView extends StatelessWidget {
                       TextSpan(
                         text: '$count roleplays ',
                         style: const TextStyle(
-                          color: AppColors.textPrimary,
+                          color: AppColors.ink,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       const TextSpan(
                         text: 'also built for you',
                         style: TextStyle(
-                          color: AppColors.textSecondary,
+                          color: AppColors.inkMuted,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1191,7 +1191,7 @@ class _RevealView extends StatelessWidget {
                 Text(
                   'Focused on $label',
                   style: const TextStyle(
-                    color: AppColors.textMuted,
+                    color: AppColors.inkSoft,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                   ),
@@ -1203,21 +1203,21 @@ class _RevealView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.emerald.withValues(alpha: 0.10),
+              color: AppColors.success.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                  color: AppColors.emerald.withValues(alpha: 0.25)),
+                  color: AppColors.success.withValues(alpha: 0.25)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: const [
                 Icon(Icons.lock_open_rounded,
-                    color: AppColors.emerald, size: 10),
+                    color: AppColors.success, size: 10),
                 SizedBox(width: 4),
                 Text(
                   'Unlocked',
                   style: TextStyle(
-                    color: AppColors.emerald,
+                    color: AppColors.success,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.3,
@@ -1372,11 +1372,11 @@ class _RevealView extends StatelessWidget {
   Color _levelColor(String level) {
     switch (level) {
       case 'Intermediate':
-        return AppColors.amber;
+        return AppColors.sun;
       case 'Advanced':
-        return AppColors.violetLight;
+        return AppColors.brandLight;
       default:
-        return AppColors.emerald;
+        return AppColors.success;
     }
   }
 }

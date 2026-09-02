@@ -97,7 +97,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Stack(
@@ -157,7 +157,7 @@ class _BackgroundPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height),
-      Paint()..color = AppColors.background,
+      Paint()..color = AppColors.bg,
     );
 
     final center = Offset(size.width / 2, size.height * 0.42);
@@ -241,7 +241,7 @@ class _OrbitRings extends StatelessWidget {
                   angle: ringController.value * 2 * 3.14159,
                   child: _DashedRing(
                     radius: 115,
-                    color: AppColors.primary
+                    color: AppColors.brand
                         .withOpacity(0.10 * glowAnimation.value),
                     dashCount: 6,
                     strokeWidth: 1.0,
@@ -258,7 +258,7 @@ class _OrbitRings extends StatelessWidget {
                   angle: -ringController.value * 2 * 3.14159,
                   child: _DashedRing(
                     radius: 145,
-                    color: AppColors.secondary
+                    color: AppColors.brand
                         .withOpacity(0.06 * glowAnimation.value),
                     dashCount: 10,
                     strokeWidth: 0.5,
@@ -365,13 +365,13 @@ class _MicLottieSection extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary
+                      color: AppColors.brand
                           .withOpacity(0.22 * glowAnimation.value),
                       blurRadius: 70,
                       spreadRadius: 18,
                     ),
                     BoxShadow(
-                      color: AppColors.secondary
+                      color: AppColors.brand
                           .withOpacity(0.10 * glowAnimation.value),
                       blurRadius: 90,
                       spreadRadius: 30,
@@ -388,14 +388,14 @@ class _MicLottieSection extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppColors.primary.withOpacity(0.14),
+                      AppColors.brand.withOpacity(0.14),
                       AppColors.surface.withOpacity(0.55),
-                      AppColors.background.withOpacity(0.0),
+                      AppColors.bg.withOpacity(0.0),
                     ],
                     stops: const [0.0, 0.55, 1.0],
                   ),
                   border: Border.all(
-                    color: AppColors.primary.withOpacity(0.18),
+                    color: AppColors.brand.withOpacity(0.18),
                     width: 1.0,
                   ),
                 ),
@@ -408,7 +408,7 @@ class _MicLottieSection extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.secondary.withOpacity(0.10),
+                    color: AppColors.brand.withOpacity(0.10),
                     width: 0.5,
                   ),
                 ),
@@ -467,7 +467,7 @@ class _BrandingText extends StatelessWidget {
             gradient: LinearGradient(
               colors: [
                 Colors.transparent,
-                AppColors.secondary.withOpacity(0.65),
+                AppColors.brand.withOpacity(0.65),
                 Colors.transparent,
               ],
             ),
@@ -477,7 +477,7 @@ class _BrandingText extends StatelessWidget {
         Text(
           'ELEVATING EVERY INTERACTION',
           style: TextStyle(
-            color: AppColors.textMuted.withOpacity(0.85),
+            color: AppColors.inkSoft.withOpacity(0.85),
             fontSize: 10,
             fontWeight: FontWeight.w400,
             letterSpacing: 3.5,

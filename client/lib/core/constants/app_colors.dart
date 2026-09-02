@@ -51,6 +51,11 @@ class AppColors {
   static const Color brandDark = Color(0xFF6D3FD1);
   static const Color brandSoft = Color(0xFFEDE4FF);
 
+  /// The light end of the brand gradient. Not a second identity colour — use
+  /// it only as the far stop of a brand gradient fill, never on its own to
+  /// distinguish one item from another.
+  static const Color brandLight = Color(0xFFA98BFF);
+
   /// The brand colour under its literal name. Prefer [brand] at call sites —
   /// it says "primary", which is what the colour means.
   static const Color grape = brand;

@@ -98,7 +98,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: OnboardingBackground(
         // Same two-orb ambient background every other onboarding screen
         // uses — replaces this screen's old, much busier three-blob
@@ -154,7 +154,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         'Master real conversations with\nAI-powered voice practice',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: AppColors.textSecondary,
+                          color: AppColors.inkMuted,
                           fontSize: 16,
                           height: 1.65,
                           letterSpacing: 0.1,
@@ -201,15 +201,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         text: const TextSpan(
                           text: 'Already training? ',
                           style: TextStyle(
-                              color: AppColors.textMuted, fontSize: 14),
+                              color: AppColors.inkSoft, fontSize: 14),
                           children: [
                             TextSpan(
                               text: 'Sign in',
                               style: TextStyle(
-                                color: AppColors.primaryLight,
+                                color: AppColors.brandLight,
                                 fontWeight: FontWeight.w600,
                                 decoration: TextDecoration.underline,
-                                decorationColor: AppColors.primaryLight,
+                                decorationColor: AppColors.brandLight,
                               ),
                             ),
                           ],
@@ -243,14 +243,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             height: 122,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary,
+              color: AppColors.brand,
               border: Border.all(
-                color: AppColors.primaryLight.withValues(alpha: 0.25),
+                color: AppColors.brandLight.withValues(alpha: 0.25),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: _orbGlowAlpha.value),
+                  color: AppColors.brand.withValues(alpha: _orbGlowAlpha.value),
                   blurRadius: 48,
                   spreadRadius: 6,
                 ),
@@ -276,7 +276,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       decoration: BoxDecoration(
         color: AppColors.surface.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder, width: 1),
+        border: Border.all(color: AppColors.outline, width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -297,7 +297,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         Text(
           value,
           style: const TextStyle(
-            color: AppColors.primaryLight,
+            color: AppColors.brandLight,
             fontSize: 19,
             fontWeight: FontWeight.w800,
             letterSpacing: -0.3,
@@ -307,7 +307,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         Text(
           label,
           style: const TextStyle(
-            color: AppColors.textMuted,
+            color: AppColors.inkSoft,
             fontSize: 11,
             letterSpacing: 0.2,
           ),
@@ -320,7 +320,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     return Container(
       width: 1,
       height: 30,
-      color: AppColors.cardBorder,
+      color: AppColors.outline,
     );
   }
 }

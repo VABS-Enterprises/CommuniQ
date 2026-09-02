@@ -109,14 +109,14 @@ class _ProfileViewState extends State<ProfileView> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Log Out',
             style: TextStyle(
-                color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+                color: AppColors.ink, fontWeight: FontWeight.bold)),
         content: const Text('Are you sure you want to log out?',
-            style: TextStyle(color: AppColors.textSecondary)),
+            style: TextStyle(color: AppColors.inkMuted)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
+                style: TextStyle(color: AppColors.inkMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -164,17 +164,17 @@ class _ProfileViewState extends State<ProfileView> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(title,
             style: const TextStyle(
-                color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+                color: AppColors.ink, fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Text(body,
               style:
-                  const TextStyle(color: AppColors.textSecondary, height: 1.6)),
+                  const TextStyle(color: AppColors.inkMuted, height: 1.6)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child:
-                const Text('Close', style: TextStyle(color: AppColors.primary)),
+                const Text('Close', style: TextStyle(color: AppColors.brand)),
           ),
         ],
       ),
@@ -190,12 +190,12 @@ class _ProfileViewState extends State<ProfileView> {
           child: _loading
               ? const Center(
                   child:
-                      CircularProgressIndicator(color: AppColors.primary))
+                      CircularProgressIndicator(color: AppColors.brand))
               : _error
                   ? _buildError()
                   : RefreshIndicator(
                       onRefresh: () => _load(forceRefresh: true),
-                      color: AppColors.primary,
+                      color: AppColors.brand,
                       backgroundColor: AppColors.surface,
                       child: CustomScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -253,7 +253,7 @@ class _ProfileViewState extends State<ProfileView> {
                                   : 'Free (Tap to upgrade)',
                               trailingColor: _profile?.isPremium == true
                                   ? AppColors.gold
-                                  : AppColors.primary,
+                                  : AppColors.brand,
                               onTap: _profile?.isPremium == true
                                   ? null
                                   : () {
@@ -314,7 +314,7 @@ class _ProfileViewState extends State<ProfileView> {
                                   color: AppColors.surface,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                      color: AppColors.glassBorder
+                                      color: AppColors.outline
                                           .withValues(alpha: 0.4)),
                                 ),
                                 child: ListTile(
@@ -359,16 +359,16 @@ class _ProfileViewState extends State<ProfileView> {
               color: AppColors.surface,
               shape: BoxShape.circle,
               border: Border.all(
-                  color: AppColors.glassBorder.withValues(alpha: 0.4)),
+                  color: AppColors.outline.withValues(alpha: 0.4)),
             ),
             child: const Icon(Icons.cloud_off_rounded,
-                color: AppColors.textMuted, size: 32),
+                color: AppColors.inkSoft, size: 32),
           ),
           const SizedBox(height: 16),
           const Text(
             'Could not load profile',
             style: TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.ink,
                 fontSize: 16,
                 fontWeight: FontWeight.w600),
           ),
@@ -379,17 +379,17 @@ class _ProfileViewState extends State<ProfileView> {
               'Your account may not exist yet, or the server is unreachable.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: AppColors.textMuted, fontSize: 13, height: 1.5),
+                  color: AppColors.inkSoft, fontSize: 13, height: 1.5),
             ),
           ),
           const SizedBox(height: 24),
           TextButton.icon(
             onPressed: () => _load(forceRefresh: true),
             icon: const Icon(Icons.refresh_rounded,
-                color: AppColors.primary, size: 18),
+                color: AppColors.brand, size: 18),
             label: const Text('Retry',
                 style: TextStyle(
-                    color: AppColors.primary, fontWeight: FontWeight.w600)),
+                    color: AppColors.brand, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(height: 8),
           Padding(
@@ -426,7 +426,7 @@ class _ProfileViewState extends State<ProfileView> {
           Text(
             title.toUpperCase(),
             style: const TextStyle(
-                color: AppColors.textMuted,
+                color: AppColors.inkSoft,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.2),
@@ -437,7 +437,7 @@ class _ProfileViewState extends State<ProfileView> {
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                  color: AppColors.glassBorder.withValues(alpha: 0.4)),
+                  color: AppColors.outline.withValues(alpha: 0.4)),
             ),
             child: Column(
               children: [
@@ -446,7 +446,7 @@ class _ProfileViewState extends State<ProfileView> {
                   if (i < tiles.length - 1)
                     Divider(
                         height: 1,
-                        color: AppColors.glassBorder.withValues(alpha: 0.3),
+                        color: AppColors.outline.withValues(alpha: 0.3),
                         indent: 50),
                 ],
               ],
@@ -469,15 +469,15 @@ class _ProfileViewState extends State<ProfileView> {
       leading: IconTile(size: 34, icon: icon),
       title: Text(title,
           style:
-              const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+              const TextStyle(color: AppColors.ink, fontSize: 14)),
       subtitle: subtitle != null
           ? Text(subtitle,
               style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 12))
+                  color: AppColors.inkMuted, fontSize: 12))
           : null,
       trailing: onTap != null
           ? Icon(Icons.chevron_right_rounded,
-              color: trailingColor ?? AppColors.textMuted, size: 20)
+              color: trailingColor ?? AppColors.inkSoft, size: 20)
           : null,
       onTap: onTap,
       dense: true,
@@ -497,21 +497,21 @@ class _ProfileViewState extends State<ProfileView> {
     return ListTile(
       leading: IconTile(size: 34, icon: icon),
       title: Text(title,
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+          style: const TextStyle(color: AppColors.ink, fontSize: 14)),
       subtitle: Text(subtitle,
           style: const TextStyle(
-              color: AppColors.textSecondary, fontSize: 12, height: 1.4)),
+              color: AppColors.inkMuted, fontSize: 12, height: 1.4)),
       isThreeLine: true,
       trailing: updating
           ? const SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
-                  strokeWidth: 2, color: AppColors.primary),
+                  strokeWidth: 2, color: AppColors.brand),
             )
           : Switch(
               value: value,
-              activeColor: AppColors.primary,
+              activeColor: AppColors.brand,
               onChanged: onChanged,
             ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -543,7 +543,7 @@ class _ProfileHeroHeader extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
         border: Border.all(
-            color: AppColors.glassBorder.withValues(alpha: 0.4)),
+            color: AppColors.outline.withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
@@ -559,7 +559,7 @@ class _ProfileHeroHeader extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: isPremium
                           ? AppColors.gold
-                          : AppColors.primary,
+                          : AppColors.brand,
                     ),
                     child: CircleAvatar(
                       radius: 44,
@@ -585,10 +585,10 @@ class _ProfileHeroHeader extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: AppColors.brand,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: AppColors.background, width: 2),
+                            color: AppColors.bg, width: 2),
                       ),
                       child: Text(
                         'Lv $level',
@@ -612,7 +612,7 @@ class _ProfileHeroHeader extends StatelessWidget {
                     Text(
                       name,
                       style: const TextStyle(
-                          color: AppColors.textPrimary,
+                          color: AppColors.ink,
                           fontSize: 22,
                           fontWeight: FontWeight.bold),
                     ),
@@ -620,7 +620,7 @@ class _ProfileHeroHeader extends StatelessWidget {
                     Text(
                       email,
                       style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13),
+                          color: AppColors.inkMuted, fontSize: 13),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -628,7 +628,7 @@ class _ProfileHeroHeader extends StatelessWidget {
                         // Level label chip
                         _Chip(
                           label: levelLabel,
-                          color: AppColors.primary,
+                          color: AppColors.brand,
                           icon: Icons.military_tech_rounded,
                         ),
                         const SizedBox(width: 8),
@@ -643,7 +643,7 @@ class _ProfileHeroHeader extends StatelessWidget {
                         else
                           _Chip(
                             label: 'Free Plan',
-                            color: AppColors.textMuted,
+                            color: AppColors.inkSoft,
                             icon: Icons.stars_outlined,
                           ),
                       ],
@@ -717,7 +717,7 @@ class _PremiumBanner extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
           decoration: BoxDecoration(
-            color: AppColors.primaryDark,
+            color: AppColors.brandDark,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
@@ -799,7 +799,7 @@ class _OnboardingSection extends StatelessWidget {
           const Text(
             'ONBOARDING PREFERENCES',
             style: TextStyle(
-                color: AppColors.textMuted,
+                color: AppColors.inkSoft,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.2),
@@ -810,7 +810,7 @@ class _OnboardingSection extends StatelessWidget {
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                  color: AppColors.glassBorder.withValues(alpha: 0.4)),
+                  color: AppColors.outline.withValues(alpha: 0.4)),
             ),
             child: Column(
               children: [
@@ -819,7 +819,7 @@ class _OnboardingSection extends StatelessWidget {
                   if (i < tiles.length - 1)
                     Divider(
                       height: 1,
-                      color: AppColors.glassBorder.withValues(alpha: 0.3),
+                      color: AppColors.outline.withValues(alpha: 0.3),
                       indent: 50,
                     ),
                 ],
@@ -835,10 +835,10 @@ class _OnboardingSection extends StatelessWidget {
         leading: IconTile(size: 34, icon: icon),
         title: Text(title,
             style: const TextStyle(
-                color: AppColors.textPrimary, fontSize: 13)),
+                color: AppColors.ink, fontSize: 13)),
         subtitle: Text(value,
             style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 12)),
+                color: AppColors.inkMuted, fontSize: 12)),
         dense: true,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -859,7 +859,7 @@ class _OnboardingSection extends StatelessWidget {
                 children: [
                   Text(title,
                       style: const TextStyle(
-                          color: AppColors.textPrimary, fontSize: 13)),
+                          color: AppColors.ink, fontSize: 13)),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 6,
@@ -869,14 +869,14 @@ class _OnboardingSection extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AppColors.primary
+                                color: AppColors.brand
                                     .withValues(alpha: 0.12),
                                 borderRadius:
                                     BorderRadius.circular(20),
                               ),
                               child: Text(t,
                                   style: const TextStyle(
-                                      color: AppColors.primaryLight,
+                                      color: AppColors.brandLight,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w500)),
                             ))

@@ -107,7 +107,7 @@ class _TransformationScreenState extends State<TransformationScreen>
     final level = widget.data.level ?? 'Beginner';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: OnboardingBackground(
         child: SafeArea(
           child: Padding(
@@ -157,7 +157,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                         const Text(
                           "Here's what you'll\nunlock",
                           style: TextStyle(
-                            color: AppColors.textPrimary,
+                            color: AppColors.ink,
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
                             height: 1.2,
@@ -168,7 +168,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                         const Text(
                           'Real outcomes from people who started where you are',
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color: AppColors.inkMuted,
                             fontSize: 14,
                             height: 1.5,
                           ),
@@ -237,9 +237,9 @@ class _TransformationScreenState extends State<TransformationScreen>
   Widget _buildTransformTable(List<_Pair> pairs) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardSurface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.glassBorder, width: 1),
+        border: Border.all(color: AppColors.outline, width: 1),
       ),
       child: Column(
         children: [
@@ -248,7 +248,7 @@ class _TransformationScreenState extends State<TransformationScreen>
             padding:
                 const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
             decoration: BoxDecoration(
-              color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+              color: AppColors.surfaceAlt.withValues(alpha: 0.5),
               borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20)),
             ),
@@ -269,7 +269,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                       const Text(
                         'Before',
                         style: TextStyle(
-                          color: AppColors.textMuted,
+                          color: AppColors.inkSoft,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.5,
@@ -293,7 +293,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                       const Text(
                         'After training',
                         style: TextStyle(
-                          color: AppColors.textMuted,
+                          color: AppColors.inkSoft,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.5,
@@ -330,7 +330,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                               child: Text(
                                 e.value.before,
                                 style: const TextStyle(
-                                  color: AppColors.textMuted,
+                                  color: AppColors.inkSoft,
                                   fontSize: 13,
                                   height: 1.5,
                                 ),
@@ -353,7 +353,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                               child: Text(
                                 e.value.after,
                                 style: const TextStyle(
-                                  color: AppColors.textPrimary,
+                                  color: AppColors.ink,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   height: 1.5,
@@ -369,7 +369,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                 if (!isLast)
                   Container(
                       height: 1,
-                      color: AppColors.cardBorder,
+                      color: AppColors.outline,
                       margin:
                           const EdgeInsets.symmetric(horizontal: 18)),
               ],
@@ -389,9 +389,9 @@ class _TransformationScreenState extends State<TransformationScreen>
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: BoxDecoration(
-        color: AppColors.cardSurface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: AppColors.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -402,14 +402,14 @@ class _TransformationScreenState extends State<TransformationScreen>
               const Text(
                 'Skill Progression',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.ink,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const Spacer(),
               const Icon(Icons.show_chart_rounded,
-                  color: AppColors.primaryLight, size: 16),
+                  color: AppColors.brandLight, size: 16),
             ],
           ),
           const SizedBox(height: 14),
@@ -424,7 +424,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                   size: Size.infinite,
                   painter: _ProgressGraphPainter(
                     progress: animation.value,
-                    bgColor: AppColors.cardSurface,
+                    bgColor: AppColors.surface,
                   ),
                 ),
               );
@@ -456,8 +456,8 @@ class _TransformationScreenState extends State<TransformationScreen>
                         labels[i],
                         style: TextStyle(
                           color: reached
-                              ? AppColors.textSecondary
-                              : AppColors.textMuted,
+                              ? AppColors.inkMuted
+                              : AppColors.inkSoft,
                           fontSize: 10.5,
                           fontWeight:
                               reached ? FontWeight.w600 : FontWeight.w400,
@@ -479,11 +479,11 @@ class _TransformationScreenState extends State<TransformationScreen>
   Color _levelColor(String level) {
     switch (level) {
       case 'Intermediate':
-        return AppColors.amber;
+        return AppColors.sun;
       case 'Advanced':
-        return AppColors.violetLight;
+        return AppColors.brandLight;
       default:
-        return AppColors.emerald;
+        return AppColors.success;
     }
   }
 
@@ -492,13 +492,13 @@ class _TransformationScreenState extends State<TransformationScreen>
       width: 38,
       height: 38,
       decoration: BoxDecoration(
-        color: AppColors.cardSurface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: AppColors.cardBorder, width: 1),
+        border: Border.all(color: AppColors.outline, width: 1),
       ),
       child: const Icon(
         Icons.arrow_back_ios_new_rounded,
-        color: AppColors.textSecondary,
+        color: AppColors.inkMuted,
         size: 16,
       ),
     );

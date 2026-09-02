@@ -36,7 +36,7 @@ class _DifficultySectionState extends State<DifficultySection> {
         Text(
           'Difficulty',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.textPrimary,
+                color: AppColors.ink,
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -62,17 +62,17 @@ class _DifficultySectionState extends State<DifficultySection> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : Colors.transparent,
+                    color: isSelected ? AppColors.brand : Colors.transparent,
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.border,
+                      color: isSelected ? AppColors.brand : AppColors.outline,
                       width: 1,
                     ),
                   ),
                   child: Text(
                     _difficulties[index],
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                          color: isSelected ? AppColors.ink : AppColors.inkMuted,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                         ),
                   ),

@@ -34,7 +34,7 @@ class _SkillLevelScreenState extends State<SkillLevelScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s24),
@@ -47,7 +47,7 @@ class _SkillLevelScreenState extends State<SkillLevelScreen> {
               const Text(
                 'How comfortable are\nyou in conversations?',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.ink,
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                   height: 1.25,
@@ -56,7 +56,7 @@ class _SkillLevelScreenState extends State<SkillLevelScreen> {
               const SizedBox(height: AppSpacing.s8),
               const Text(
                 'Be honest — we personalise your path',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                style: TextStyle(color: AppColors.inkMuted, fontSize: 14),
               ),
               const SizedBox(height: AppSpacing.s32),
               ...List.generate(
@@ -78,7 +78,7 @@ class _SkillLevelScreenState extends State<SkillLevelScreen> {
                             _slideRoute(const FirstRoleplayScreen()),
                           ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.brand,
                     disabledBackgroundColor: AppColors.surface,
                     foregroundColor: Colors.white,
                     elevation: 0,
@@ -111,7 +111,7 @@ class _SkillLevelScreenState extends State<SkillLevelScreen> {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
+            color: isSelected ? AppColors.brand : AppColors.outline,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -122,13 +122,13 @@ class _SkillLevelScreenState extends State<SkillLevelScreen> {
               height: 44,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.15)
-                    : AppColors.background,
+                    ? AppColors.brand.withValues(alpha: 0.15)
+                    : AppColors.bg,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 option.icon,
-                color: isSelected ? AppColors.primaryLight : AppColors.textMuted,
+                color: isSelected ? AppColors.brandLight : AppColors.inkSoft,
                 size: 22,
               ),
             ),
@@ -141,8 +141,8 @@ class _SkillLevelScreenState extends State<SkillLevelScreen> {
                     option.value,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
+                          ? AppColors.ink
+                          : AppColors.inkMuted,
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),
@@ -151,14 +151,14 @@ class _SkillLevelScreenState extends State<SkillLevelScreen> {
                   Text(
                     option.description,
                     style: const TextStyle(
-                        color: AppColors.textMuted, fontSize: 13),
+                        color: AppColors.inkSoft, fontSize: 13),
                   ),
                 ],
               ),
             ),
             if (isSelected)
               const Icon(Icons.check_circle_rounded,
-                  color: AppColors.primaryLight, size: 20),
+                  color: AppColors.brandLight, size: 20),
           ],
         ),
       ),
@@ -184,7 +184,7 @@ Widget _buildProgressDots(int activeIndex) {
         width: i == activeIndex ? 20 : 6,
         height: 6,
         decoration: BoxDecoration(
-          color: i == activeIndex ? AppColors.primary : AppColors.border,
+          color: i == activeIndex ? AppColors.brand : AppColors.outline,
           borderRadius: BorderRadius.circular(3),
         ),
       ),

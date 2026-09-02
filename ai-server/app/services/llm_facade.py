@@ -17,6 +17,7 @@ Backend options for both:
 """
 
 import logging
+import re
 from typing import Any, Optional
 
 import httpx
@@ -25,6 +26,61 @@ from groq import AsyncGroq
 from app.config import settings
 
 logger = logging.getLogger("communiq")
+
+
+# ── Reasoning models ──────────────────────────────────────────────────────────
+#
+# Some hosted models think before they answer, and that thinking is billed
+# against max_tokens. Ask gpt-oss-20b for an 80-token greeting and it spends
+# ~78 of them reasoning, then returns finish_reason="length" with content="".
+# Every conversation turn in the app failed this way once the models moved to
+# the gpt-oss family — the caller saw an empty string and raised a 502.
+#
+# Two defences, applied here so no call site has to know about any of it:
+#   1. Send reasoning_effort so the thinking stays short.
+#   2. Floor max_tokens, leaving room for thinking plus the actual reply.
+
+_REASONING_MODEL_MARKERS = ("gpt-oss", "qwen3", "deepseek-r1", "o1", "o3")
+
+# Some models emit their scratchpad inline as <think>...</think> instead of
+# putting it in a separate field. It must never reach the user or a JSON parser.
+_THINK_BLOCK = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+_UNCLOSED_THINK = re.compile(r"<think>.*$", re.DOTALL | re.IGNORECASE)
+
+
+def is_reasoning_model(model: str) -> bool:
+    """True when `model` spends output tokens thinking before it answers."""
+    m = (model or "").lower()
+    return any(marker in m for marker in _REASONING_MODEL_MARKERS)
+
+
+def _budget_for(model: str, max_tokens: int) -> int:
+    """Token budget, raised to leave room for a reasoning model's thinking."""
+    if is_reasoning_model(model):
+        return max(max_tokens, settings.reasoning_token_floor)
+    return max_tokens
+
+
+def content_of(response) -> str:
+    """
+    The assistant's actual words, with any reasoning stripped out.
+
+    Call sites used to read `response.choices[0].message.content` directly and
+    treat an empty string as a hard failure. That is exactly what a reasoning
+    model returns when it runs out of budget mid-thought, so the read is
+    centralised here: scratchpad tags are removed, and the separate `reasoning`
+    field is never substituted for a real answer — an empty result stays empty
+    so the caller can still tell that the model produced nothing usable.
+    """
+    try:
+        message = response.choices[0].message
+    except (AttributeError, IndexError):
+        return ""
+
+    text = getattr(message, "content", None) or ""
+    text = _THINK_BLOCK.sub("", text)
+    text = _UNCLOSED_THINK.sub("", text)
+    return text.strip()
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -44,7 +100,7 @@ async def chat_completion(
         groq=groq,
         model=model,
         messages=messages,
-        max_tokens=max_tokens,
+        max_tokens=_budget_for(model, max_tokens),
         temperature=temperature,
         timeout=timeout,
     )
@@ -69,7 +125,7 @@ async def eval_chat_completion(
         groq=groq,
         model=settings.eval_llm_model,
         messages=messages,
-        max_tokens=max_tokens,
+        max_tokens=_budget_for(settings.eval_llm_model, max_tokens),
         temperature=temperature,
         timeout=timeout,
     )
@@ -92,14 +148,35 @@ async def _dispatch(
                 "LLM path uses Groq but the Groq client was not initialised. "
                 "Set GROQ_API_KEY or switch LLM_BACKEND / EVAL_LLM_BACKEND to ollama/vllm."
             )
-        return await groq.chat.completions.create(
+        kwargs: dict[str, Any] = {}
+        if is_reasoning_model(model):
+            # Keeps the scratchpad to ~10-15 tokens instead of consuming the
+            # whole budget. Unsupported values are rejected by the API, so the
+            # setting is validated at startup rather than here.
+            kwargs["reasoning_effort"] = settings.llm_reasoning_effort
+
+        response = await groq.chat.completions.create(
             model=model,
             messages=messages,
             stream=False,
             max_tokens=max_tokens,
             temperature=temperature,
             timeout=timeout,
+            **kwargs,
         )
+
+        if not content_of(response):
+            # Worth a loud log: an empty reply is almost always the reasoning
+            # budget running out, and the fix is a config change rather than a
+            # retry.
+            finish = getattr(response.choices[0], "finish_reason", "?")
+            logger.error(
+                "LLM returned no content — model=%s finish=%s max_tokens=%d "
+                "effort=%s. If finish=length, raise REASONING_TOKEN_FLOOR or "
+                "lower LLM_REASONING_EFFORT.",
+                model, finish, max_tokens, kwargs.get("reasoning_effort", "n/a"),
+            )
+        return response
 
     if backend == "ollama":
         return await _openai_compat_chat(

@@ -20,7 +20,7 @@ Widget buildProgressBar(int step, {int total = 6}) {
           margin: EdgeInsets.only(right: i < total - 1 ? 5 : 0),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(2),
-            color: filled ? AppColors.primary : AppColors.surfaceVariant,
+            color: filled ? AppColors.brand : AppColors.surfaceAlt,
           ),
         ),
       );
@@ -72,7 +72,7 @@ class OnboardingBackground extends StatelessWidget {
           left: -80,
           child: _GlowOrb(
             size: 280,
-            color: AppColors.primary.withValues(alpha: 0.10),
+            color: AppColors.brand.withValues(alpha: 0.10),
           ),
         ),
         // Bottom-right violet orb
@@ -81,7 +81,7 @@ class OnboardingBackground extends StatelessWidget {
           right: -60,
           child: _GlowOrb(
             size: 220,
-            color: AppColors.violet.withValues(alpha: 0.07),
+            color: AppColors.brand.withValues(alpha: 0.07),
           ),
         ),
         child,
@@ -141,13 +141,13 @@ class OnboardingSelectCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.cardSurface,
+              ? AppColors.brand.withValues(alpha: 0.08)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
-                ? AppColors.primaryLight.withValues(alpha: 0.55)
-                : AppColors.cardBorder,
+                ? AppColors.brandLight.withValues(alpha: 0.55)
+                : AppColors.outline,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -160,15 +160,15 @@ class OnboardingSelectCard extends StatelessWidget {
                 height: 42,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.primary.withValues(alpha: 0.18)
+                      ? AppColors.brand.withValues(alpha: 0.18)
                       : const Color(0xFF131D2E),
                   borderRadius: BorderRadius.circular(11),
                 ),
                 child: Icon(
                   icon,
                   color: isSelected
-                      ? AppColors.primaryLight
-                      : AppColors.textMuted,
+                      ? AppColors.brandLight
+                      : AppColors.inkSoft,
                   size: 20,
                 ),
               ),
@@ -182,8 +182,8 @@ class OnboardingSelectCard extends StatelessWidget {
                     label,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
+                          ? AppColors.ink
+                          : AppColors.inkMuted,
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
                       letterSpacing: 0.1,
@@ -195,8 +195,8 @@ class OnboardingSelectCard extends StatelessWidget {
                       subtitle!,
                       style: TextStyle(
                         color: isSelected
-                            ? AppColors.textSecondary
-                            : AppColors.textMuted,
+                            ? AppColors.inkMuted
+                            : AppColors.inkSoft,
                         fontSize: 13,
                         height: 1.4,
                       ),
@@ -212,11 +212,11 @@ class OnboardingSelectCard extends StatelessWidget {
               height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                color: isSelected ? AppColors.brand : Colors.transparent,
                 border: Border.all(
                   color: isSelected
-                      ? AppColors.primary
-                      : AppColors.cardBorder,
+                      ? AppColors.brand
+                      : AppColors.outline,
                   width: 1.5,
                 ),
               ),
@@ -281,17 +281,17 @@ class _OnboardingButtonState extends State<OnboardingButton> {
           decoration: BoxDecoration(
             gradient: widget.enabled
                 ? LinearGradient(
-                    colors: AppColors.primaryGradient,
+                    colors: [AppColors.brand, AppColors.brandLight],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   )
                 : null,
-            color: widget.enabled ? null : AppColors.surfaceVariant,
+            color: widget.enabled ? null : AppColors.surfaceAlt,
             borderRadius: AppRadius.buttonRadius,
             boxShadow: widget.enabled
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
+                      color: AppColors.brand.withValues(alpha: 0.35),
                       blurRadius: 18,
                       offset: const Offset(0, 6),
                     ),
@@ -302,7 +302,7 @@ class _OnboardingButtonState extends State<OnboardingButton> {
             child: Text(
               widget.label,
               style: TextStyle(
-                color: widget.enabled ? Colors.white : AppColors.textMuted,
+                color: widget.enabled ? Colors.white : AppColors.inkSoft,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.3,
@@ -328,13 +328,13 @@ Widget buildOnboardingHeader(BuildContext context, int step, {int total = 6}) {
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: AppColors.cardSurface,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(11),
-            border: Border.all(color: AppColors.cardBorder, width: 1),
+            border: Border.all(color: AppColors.outline, width: 1),
           ),
           child: const Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: AppColors.textSecondary,
+            color: AppColors.inkMuted,
             size: 16,
           ),
         ),
@@ -355,17 +355,17 @@ Widget buildStepLabel(int step, {int total = 6}) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
     decoration: BoxDecoration(
-      color: AppColors.primary.withValues(alpha: 0.12),
+      color: AppColors.brand.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(20),
       border: Border.all(
-        color: AppColors.primary.withValues(alpha: 0.25),
+        color: AppColors.brand.withValues(alpha: 0.25),
         width: 1,
       ),
     ),
     child: Text(
       'STEP $step OF $total',
       style: const TextStyle(
-        color: AppColors.primaryLight,
+        color: AppColors.brandLight,
         fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.2,

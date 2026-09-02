@@ -76,7 +76,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
   void _showPicker(String title, List<String> options, String currentValue, ValueChanged<String> onSelected) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -90,7 +90,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                 Text(
                   title,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.ink,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -110,17 +110,17 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : AppColors.surface,
+                          color: isSelected ? AppColors.brand : AppColors.surface,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isSelected ? AppColors.primary : AppColors.border,
+                            color: isSelected ? AppColors.brand : AppColors.outline,
                           ),
                         ),
                         child: Center(
                           child: Text(
                             option,
                             style: TextStyle(
-                              color: isSelected ? Colors.white : AppColors.textSecondary,
+                              color: isSelected ? Colors.white : AppColors.inkMuted,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                               fontSize: 16,
                             ),
@@ -248,14 +248,14 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Roleplay', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 18)),
+        title: const Text('Roleplay', style: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600, fontSize: 18)),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.ink, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -274,7 +274,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.outline),
                     ),
                     child: Column(
                       children: [
@@ -282,7 +282,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                           "Create Your Scenario",
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: AppColors.textPrimary,
+                            color: AppColors.ink,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
@@ -294,7 +294,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                           maxLines: 4,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: _setupScenarioDesc.isEmpty ? AppColors.primaryLight : AppColors.textSecondary,
+                            color: _setupScenarioDesc.isEmpty ? AppColors.brandLight : AppColors.inkMuted,
                             fontSize: 16,
                           ),
                         ),
@@ -309,7 +309,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                       _setupScenarioTitle,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: AppColors.textPrimary,
+                        color: AppColors.ink,
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                       ),
@@ -319,7 +319,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                       _setupScenarioDesc,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: AppColors.textSecondary,
+                        color: AppColors.inkMuted,
                         fontSize: 16,
                         height: 1.4,
                       ),
@@ -341,7 +341,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Text('•', style: TextStyle(color: AppColors.textMuted, fontSize: 18)),
+                      child: Text('•', style: TextStyle(color: AppColors.inkSoft, fontSize: 18)),
                     ),
                     _ControlChip(
                       label: '${_getLevelEmoji(_selectedLevel)} $_selectedLevel',
@@ -349,7 +349,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Text('•', style: TextStyle(color: AppColors.textMuted, fontSize: 18)),
+                      child: Text('•', style: TextStyle(color: AppColors.inkSoft, fontSize: 18)),
                     ),
                     _ControlChip(
                       label: '${_getModeEmoji(_selectedMode)} $_selectedMode',
@@ -369,7 +369,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                   key: ValueKey('${_getDynamicPrompt()}$_selectedPartner$_selectedLevel$_selectedMode'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.ink,
                     fontSize: 18,
                     fontStyle: FontStyle.italic,
                     fontWeight: FontWeight.w500,
@@ -384,7 +384,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                 _getMicroInsight(),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: AppColors.textMuted,
+                  color: AppColors.inkSoft,
                   fontSize: 13,
                 ),
               ),
@@ -398,11 +398,11 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                   width: double.infinity,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: AppColors.brand,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
+                        color: AppColors.brand.withOpacity(0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 4),
                       )
@@ -438,7 +438,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                     icon: const Text('⚡', style: TextStyle(fontSize: 16)),
                     label: const Text(
                       'Quick Start',
-                      style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: AppColors.inkMuted, fontWeight: FontWeight.w600),
                     ),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -451,7 +451,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                     icon: const Text('🎲', style: TextStyle(fontSize: 16)),
                     label: const Text(
                       'Surprise Me',
-                      style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: AppColors.inkMuted, fontWeight: FontWeight.w600),
                     ),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -484,12 +484,12 @@ class _ControlChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(100),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.outline),
         ),
         child: Text(
           label,
           style: const TextStyle(
-            color: AppColors.textPrimary,
+            color: AppColors.ink,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -526,19 +526,19 @@ class _CustomScenarioEditorScreenState extends State<_CustomScenarioEditorScreen
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.bg,
         elevation: 0,
-        title: const Text('Custom Scenario', style: TextStyle(color: AppColors.textPrimary, fontSize: 18)),
+        title: const Text('Custom Scenario', style: TextStyle(color: AppColors.ink, fontSize: 18)),
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.textPrimary),
+          icon: const Icon(Icons.close, color: AppColors.ink),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, _controller.text),
-            child: const Text('Save', style: TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold, fontSize: 16)),
+            child: const Text('Save', style: TextStyle(color: AppColors.brandLight, fontWeight: FontWeight.bold, fontSize: 16)),
           ),
         ],
       ),
@@ -548,10 +548,10 @@ class _CustomScenarioEditorScreenState extends State<_CustomScenarioEditorScreen
           controller: _controller,
           autofocus: true,
           maxLines: null,
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 18, height: 1.5),
+          style: const TextStyle(color: AppColors.ink, fontSize: 18, height: 1.5),
           decoration: const InputDecoration(
             hintText: 'Enter your custom roleplay scenario...',
-            hintStyle: TextStyle(color: AppColors.textMuted),
+            hintStyle: TextStyle(color: AppColors.inkSoft),
             border: InputBorder.none,
           ),
         ),

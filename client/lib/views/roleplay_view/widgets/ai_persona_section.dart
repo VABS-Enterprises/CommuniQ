@@ -53,7 +53,7 @@ class _AiPersonaSectionState extends State<AiPersonaSection> {
         Text(
           'AI Persona',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.textPrimary,
+                color: AppColors.ink,
                 fontWeight: FontWeight.bold,
               ),
         ),
@@ -84,13 +84,13 @@ class _AiPersonaSectionState extends State<AiPersonaSection> {
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.border,
+                      color: isSelected ? AppColors.brand : AppColors.outline,
                       width: isSelected ? 1.5 : 1.0,
                     ),
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.1),
+                              color: AppColors.brand.withValues(alpha: 0.1),
                               blurRadius: 10,
                               spreadRadius: 2,
                             ),
@@ -103,16 +103,16 @@ class _AiPersonaSectionState extends State<AiPersonaSection> {
                         padding: const EdgeInsets.all(AppSpacing.s8),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.background,
+                          color: AppColors.bg,
                           border: Border.all(
                             color: isSelected
-                                ? AppColors.primary.withValues(alpha: 0.3)
+                                ? AppColors.brand.withValues(alpha: 0.3)
                                 : Colors.transparent,
                           ),
                         ),
                         child: Icon(
                           _personas[index]['icon'] as IconData,
-                          color: isSelected ? AppColors.primaryLight : AppColors.textMuted,
+                          color: isSelected ? AppColors.brandLight : AppColors.inkSoft,
                           size: 24,
                         ),
                       ),
@@ -125,7 +125,7 @@ class _AiPersonaSectionState extends State<AiPersonaSection> {
                             Text(
                               _personas[index]['name'] as String,
                               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    color: AppColors.textPrimary,
+                                    color: AppColors.ink,
                                     fontWeight: FontWeight.bold,
                                   ),
                               maxLines: 1,
@@ -136,8 +136,8 @@ class _AiPersonaSectionState extends State<AiPersonaSection> {
                               _personas[index]['label'] as String,
                               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: isSelected
-                                        ? AppColors.primaryLight
-                                        : AppColors.textMuted,
+                                        ? AppColors.brandLight
+                                        : AppColors.inkSoft,
                                     fontSize: 8,
                                     letterSpacing: 1.0,
                                     fontWeight: FontWeight.bold,

@@ -24,12 +24,12 @@ class StartRoleplayCard extends StatelessWidget {
           color: const Color(0xFF0F1520),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.25),
+            color: AppColors.brand.withValues(alpha: 0.25),
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.12),
+              color: AppColors.brand.withValues(alpha: 0.12),
               blurRadius: 28,
               spreadRadius: 0,
               offset: const Offset(0, 6),
@@ -45,7 +45,7 @@ class StartRoleplayCard extends StatelessWidget {
                   Text(
                     isCustom ? 'Custom Roleplay' : 'Start Selected',
                     style: const TextStyle(
-                      color: AppColors.textPrimary,
+                      color: AppColors.ink,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -0.3,
@@ -57,7 +57,7 @@ class StartRoleplayCard extends StatelessWidget {
                         ? 'Design your own scenario and start practicing'
                         : 'Configure advanced options or jump right in',
                     style: const TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.inkMuted,
                       height: 1.5,
                       fontSize: 13,
                     ),
@@ -67,7 +67,7 @@ class StartRoleplayCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 11),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: AppColors.brand,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Text(
@@ -88,15 +88,15 @@ class StartRoleplayCard extends StatelessWidget {
               height: 72,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.1),
+                color: AppColors.brand.withValues(alpha: 0.1),
                 border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.22),
+                  color: AppColors.brand.withValues(alpha: 0.22),
                   width: 1.5,
                 ),
               ),
               child: const Icon(
                 Icons.psychology_rounded,
-                color: AppColors.primaryLight,
+                color: AppColors.brandLight,
                 size: 36,
               ),
             ),
