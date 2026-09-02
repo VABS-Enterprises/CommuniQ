@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/app_text_styles.dart';
 import 'package:communiq/core/data/scenario_presets.dart';
-import 'package:communiq/core/routes/app_router.dart';
-import 'package:communiq/core/routes/app_routes.dart';
-import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/roleplay_config.dart';
+import 'package:communiq/core/services/session_service.dart';
+import 'package:communiq/views/roleplay_view/screens/roleplay_conversation_screen.dart';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -198,13 +195,14 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
       );
 
       if (!mounted) return;
-      // Must go through go_router: this screen is a page-based route, and an
-      // imperative Navigator.pushReplacement here throws
-      // "A page-based route cannot be completed using imperative api" —
-      // after the session has already been created on the server.
-      context.pushReplacement(
-        AppRoutes.roleplayConversation,
-        extra: ConversationArgs(config: config, sessionId: sessionId),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RoleplayConversationScreen(
+            config: config,
+            sessionId: sessionId,
+          ),
+        ),
       );
     } catch (e) {
       debugPrint('❌ [SetupScenario] startSession failed: $e');
@@ -228,7 +226,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: const Color(0xFF0F1520),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -242,7 +240,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.outline,
+                  color: AppColors.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -250,7 +248,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
               Text(
                 title,
                 style: AppTextStyles.titleLarge.copyWith(
-                  color: AppColors.ink,
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -263,7 +261,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                   child: GestureDetector(
                     onTap: () {
                       onSelect(e.value);
-                      context.pop();
+                      Navigator.pop(context);
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
@@ -274,19 +272,19 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                         gradient: isSelected
                             ? LinearGradient(
                                 colors: [
-                                  AppColors.brand,
-                                  AppColors.brandLight
+                                  AppColors.primary,
+                                  AppColors.primaryLight
                                 ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               )
                             : null,
-                        color: isSelected ? null : AppColors.bg,
+                        color: isSelected ? null : AppColors.background,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: isSelected
-                              ? AppColors.brandLight
-                              : AppColors.outline,
+                              ? AppColors.primaryLight
+                              : AppColors.border,
                           width: isSelected ? 1.5 : 1,
                         ),
                       ),
@@ -297,8 +295,8 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                             e.value,
                             style: AppTextStyles.bodyLarge.copyWith(
                               color: isSelected
-                                  ? AppColors.inkOnDark
-                                  : AppColors.ink,
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
                               fontWeight: isSelected
                                   ? FontWeight.bold
                                   : FontWeight.w500,
@@ -306,7 +304,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                           ),
                           if (isSelected)
                             const Icon(Icons.check_rounded,
-                                color: AppColors.inkOnDark, size: 22),
+                                color: Colors.white, size: 22),
                         ],
                       ),
                     ),
@@ -327,7 +325,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -370,18 +368,18 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
     return Row(
       children: [
         GestureDetector(
-          onTap: () => context.pop(),
+          onTap: () => Navigator.pop(context),
           child: Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppColors.bgSunk,
+              color: const Color(0xFF141D2C),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.outline),
+              border: Border.all(color: AppColors.border),
             ),
             child: const Center(
               child: Icon(Icons.arrow_back_ios_new_rounded,
-                  color: AppColors.ink, size: 17),
+                  color: AppColors.textPrimary, size: 17),
             ),
           ),
         ),
@@ -398,7 +396,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
             const Text(
               'Configure your practice session',
               style: TextStyle(
-                color: AppColors.inkSoft,
+                color: AppColors.textMuted,
                 fontSize: 12,
               ),
             ),
@@ -414,10 +412,10 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
       height: 180,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.outline, width: 1.5),
+        border: Border.all(color: AppColors.border, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: AppColors.brand.withValues(alpha: 0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -456,12 +454,12 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
         const SizedBox(height: 14),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: const Color(0xFF0F1520),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isEmpty
-                  ? AppColors.outline
-                  : AppColors.brandLight.withValues(alpha: 0.4),
+                  ? AppColors.border
+                  : AppColors.primaryLight.withValues(alpha: 0.4),
               width: isEmpty ? 1 : 1.5,
             ),
           ),
@@ -470,7 +468,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
             onChanged: (_) => setState(() {}),
             maxLines: 5,
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.ink,
+              color: AppColors.textPrimary,
               height: 1.5,
             ),
             decoration: InputDecoration(
@@ -478,7 +476,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
               hintText:
                   'e.g. "I want to practice negotiating my salary with my manager after completing a successful project..."',
               hintStyle: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.inkSoft,
+                color: AppColors.textMuted,
                 height: 1.5,
               ),
               border: InputBorder.none,
@@ -495,7 +493,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                 ? 'Required — describe the conversation you want to practice'
                 : '✓ Scenario described',
             style: AppTextStyles.bodySmall.copyWith(
-              color: isEmpty ? AppColors.inkSoft : AppColors.success,
+              color: isEmpty ? AppColors.textMuted : AppColors.success,
             ),
           ),
         ),
@@ -554,7 +552,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
             decoration: BoxDecoration(
               gradient: isSelected
                   ? LinearGradient(
-                      colors: [AppColors.brand, AppColors.brandLight],
+                      colors: [AppColors.primary, AppColors.primaryLight],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     )
@@ -562,14 +560,14 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
               color: isSelected ? null : AppColors.surface,
               borderRadius: BorderRadius.circular(50),
               border: Border.all(
-                color: isSelected ? AppColors.brandLight : AppColors.outline,
+                color: isSelected ? AppColors.primaryLight : AppColors.border,
                 width: isSelected ? 1.5 : 1,
               ),
             ),
             child: Text(
               trait,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: isSelected ? AppColors.inkOnDark : AppColors.inkMuted,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
@@ -590,22 +588,22 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
             Text(
               '(Optional)',
               style:
-                  AppTextStyles.labelSmall.copyWith(color: AppColors.inkSoft),
+                  AppTextStyles.labelSmall.copyWith(color: AppColors.textMuted),
             ),
           ],
         ),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: const Color(0xFF0F1520),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.outline),
+            border: Border.all(color: AppColors.border),
           ),
           child: TextField(
             controller: _backstoryController,
             maxLines: 2,
             style: AppTextStyles.bodyLarge.copyWith(
-              color: AppColors.ink,
+              color: AppColors.textPrimary,
               height: 1.4,
             ),
             decoration: InputDecoration(
@@ -613,7 +611,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
               hintText:
                   'Extra context for the AI (e.g. "I have 3 years of experience...")',
               hintStyle:
-                  AppTextStyles.bodyMedium.copyWith(color: AppColors.inkSoft),
+                  AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
@@ -631,15 +629,15 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.brand.withValues(alpha: 0.10),
-            AppColors.brandLight.withValues(alpha: 0.05),
+            AppColors.primary.withValues(alpha: 0.10),
+            AppColors.primaryLight.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.brandLight.withValues(alpha: 0.22),
+          color: AppColors.primaryLight.withValues(alpha: 0.22),
           width: 1.2,
         ),
       ),
@@ -649,7 +647,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
           Text(
             'Summary',
             style: AppTextStyles.labelLarge.copyWith(
-              color: AppColors.brandLight,
+              color: AppColors.primaryLight,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -657,7 +655,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
           Text(
             _generateSummary(),
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.inkMuted,
+              color: AppColors.textSecondary,
               height: 1.6,
             ),
           ),
@@ -678,8 +676,8 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
           gradient: active
               ? LinearGradient(
                   colors: [
-                    AppColors.brandDark,
-                    AppColors.brand,
+                    AppColors.primaryDark,
+                    AppColors.primary,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -689,8 +687,8 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: active
-                ? AppColors.brand.withValues(alpha: 0.4)
-                : AppColors.outline,
+                ? AppColors.primary.withValues(alpha: 0.4)
+                : AppColors.border,
           ),
           boxShadow: null,
         ),
@@ -703,20 +701,20 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          color: AppColors.inkOnDark, strokeWidth: 2.5),
+                          color: Colors.white, strokeWidth: 2.5),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'Starting...',
                       style: AppTextStyles.titleMedium.copyWith(
-                          color: AppColors.inkOnDark, fontWeight: FontWeight.bold),
+                          color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ],
                 )
               : Text(
                   'Start Roleplay',
                   style: AppTextStyles.titleMedium.copyWith(
-                    color: active ? AppColors.inkOnDark : AppColors.inkSoft,
+                    color: active ? Colors.white : AppColors.textMuted,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -732,7 +730,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
           width: 3,
           height: 16,
           decoration: BoxDecoration(
-            color: AppColors.brand,
+            color: AppColors.primary,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -740,7 +738,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
         Text(
           text,
           style: AppTextStyles.titleLarge.copyWith(
-            color: AppColors.ink,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.2,
           ),
@@ -773,10 +771,10 @@ class _ConfigCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.brand.withValues(alpha: 0.12)),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.12)),
           boxShadow: [
             BoxShadow(
-              color: AppColors.brand.withValues(alpha: 0.04),
+              color: AppColors.primary.withValues(alpha: 0.04),
               blurRadius: 12,
               offset: const Offset(0, 2),
             ),
@@ -793,7 +791,7 @@ class _ConfigCard extends StatelessWidget {
                 Text(
                   label,
                   style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.inkSoft,
+                    color: AppColors.textMuted,
                     fontWeight: FontWeight.w600,
                     fontSize: 11,
                     letterSpacing: 0.3,
@@ -803,11 +801,11 @@ class _ConfigCard extends StatelessWidget {
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: AppColors.brand.withValues(alpha: 0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Icon(Icons.expand_more_rounded,
-                      color: AppColors.brandLight, size: 14),
+                      color: AppColors.primaryLight, size: 14),
                 ),
               ],
             ),
@@ -815,7 +813,7 @@ class _ConfigCard extends StatelessWidget {
             Text(
               value,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.ink,
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),

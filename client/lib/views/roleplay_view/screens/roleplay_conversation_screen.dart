@@ -7,7 +7,6 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -18,8 +17,6 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/spacing.dart';
-import 'package:communiq/core/routes/app_router.dart';
-import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/services/gaze_detector_service.dart';
 import 'package:communiq/core/services/live_voice_service.dart';
@@ -27,8 +24,6 @@ import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/core/services/visual_analysis_calculator.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/roleplay_config.dart';
-import 'package:communiq/models/session_result_model.dart'
-    show TurnTranscript, TurnAudioChunk, TurnDone, TurnStreamError;
 import 'package:communiq/models/visual_analysis_models.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_feedback_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -83,23 +78,6 @@ class _RoleplayConversationScreenState
   _AiPlaybackStage _aiPlaybackStage = _AiPlaybackStage.none;
   /// Last turn’s AI audio bytes (base64) — replayed once before the next mic (Colab).
   String? _lastAiAudioForReplay;
-
-  /// Sentence clips still waiting to play, in order.
-  ///
-  /// The streamed turn delivers audio one sentence at a time, so playback
-  /// starts on the first clip while the rest are still being synthesised.
-  /// Clips must play strictly in order, and the player's "completed" event
-  /// fires at the end of *each* clip — so a queue is needed to tell "this
-  /// sentence finished" from "the whole reply finished".
-  final List<String> _pendingClips = [];
-
-  /// True while a streamed reply is playing, so the completed handler advances
-  /// the queue instead of returning the mic to the user.
-  bool _streamingPlayback = false;
-
-  /// Set once the server has sent every sentence. Until then an empty queue
-  /// means "waiting for more audio", not "the reply is over".
-  bool _streamClipsComplete = false;
 
   // The text shown in the large conversation card and who is speaking.
   // Updated on every meaningful state change.
@@ -870,182 +848,6 @@ class _RoleplayConversationScreenState
 
   // ─── API: process turn ────────────────────────────────────────────────────────
 
-  /// Peak sample amplitude of a 16-bit PCM WAV, as a 0..1 fraction.
-  ///
-  /// A muted or unrouted microphone still produces a perfectly well-formed
-  /// recording of the right length — it is simply full of near-zero samples.
-  /// Without this check the app happily uploads 30 seconds of silence, gets an
-  /// empty transcript back, and shows the user nothing at all.
-  double _peakAmplitude(Uint8List wav) {
-    const headerBytes = 44; // canonical PCM WAV header
-    if (wav.length <= headerBytes + 1) return 0;
-    var peak = 0;
-    // Step over samples rather than reading every one — a few thousand points
-    // is plenty to tell speech from a noise floor, and this runs on the UI
-    // isolate right before an upload.
-    final stride = ((wav.length - headerBytes) ~/ 2 ~/ 4000).clamp(1, 1 << 20) * 2;
-    for (var i = headerBytes; i + 1 < wav.length; i += stride) {
-      var v = wav[i] | (wav[i + 1] << 8);
-      if (v >= 0x8000) v -= 0x10000; // little-endian signed 16-bit
-      final a = v.abs();
-      if (a > peak) peak = a;
-    }
-    return peak / 32768.0;
-  }
-
-  /// Below this the recording carries no speech — measured at 0.02% on a
-  /// microphone that was delivering nothing but its own noise floor, against
-  /// several percent for even quiet talking.
-  static const double _silenceThreshold = 0.02;
-
-  /// Hands the turn back to the user without consuming it.
-  Future<void> _rejectSilentTurn(String message) async {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.ink,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-      ),
-    );
-    setState(() {
-      _liveTranscript = '';
-      _cardText = '';
-      _cardAnimKey++;
-    });
-    _aiPlaybackStage = _AiPlaybackStage.none;
-    await _startMic();
-  }
-
-  /// Plays the next queued sentence, or finishes the reply if there are none
-  /// left and the server has said it is done.
-  Future<void> _playNextClip() async {
-    if (_pendingClips.isEmpty) {
-      if (_streamClipsComplete) {
-        _streamingPlayback = false;
-        _aiPlaybackStage = _AiPlaybackStage.none;
-        _audioFinishHandled = false;
-        await _onAudioFinished();
-      }
-      // Otherwise: more sentences are still being synthesised. The next
-      // arrival will call back into here.
-      return;
-    }
-    final path = _pendingClips.removeAt(0);
-    try {
-      await _audioPlayer.setFilePath(path);
-      await _audioPlayer.play();
-    } catch (e) {
-      debugPrint('❌ [Conversation] Clip playback failed: $e');
-      await _playNextClip(); // skip the bad clip rather than stall the reply
-    }
-  }
-
-  /// A streamed turn: transcript first, then audio a sentence at a time.
-  ///
-  /// The batch endpoint could not respond until the last sentence had been
-  /// synthesised, which was the bulk of the wait between speaking and hearing
-  /// a reply. Here the transcript is on screen in about half a second and the
-  /// first sentence starts playing while the rest are still being made.
-  Future<void> _sendTurnStreamed(String audioPath, int turnNumber) async {
-    final bytes = await File(audioPath).readAsBytes();
-    final filename = audioPath.split(Platform.pathSeparator).last;
-    final sw = Stopwatch()..start();
-
-    _pendingClips.clear();
-    _streamClipsComplete = false;
-    _streamingPlayback = true;
-    var clipCount = 0;
-    var sawTranscript = false;
-
-    final stream = SessionService.instance.processTurnStreamed(
-      sessionId: widget.sessionId,
-      audioBytes: Uint8List.fromList(bytes),
-      filename: filename,
-      conversationHistory: List.from(_conversationHistory),
-    );
-
-    await for (final event in stream) {
-      if (!mounted) return;
-      switch (event) {
-        case TurnTranscript(:final userTranscript, :final aiReply):
-          sawTranscript = true;
-          debugPrint('📝 [Conversation] Transcript in '
-              '${sw.elapsedMilliseconds}ms — "$userTranscript"');
-
-          if (userTranscript.trim().isEmpty) {
-            _streamingPlayback = false;
-            await _rejectSilentTurn(
-              "I didn't catch that. Speak a little louder, or check your mic.",
-            );
-            return;
-          }
-
-          _conversationHistory.addAll([
-            {'role': 'user', 'transcript': userTranscript},
-            {'role': 'ai', 'transcript': aiReply},
-          ]);
-
-          setState(() {
-            _state = _ConvState.ai_speaking;
-            _cardText = aiReply;
-            _karaokeChunk = '';
-            _karaokeWordCount = 0;
-            _cardAnimKey++;
-            _liveTranscript = '';
-          });
-          _startTimerIfNotStarted();
-          // Karaoke runs alongside playback rather than gating it.
-          unawaited(_streamLocalKaraoke(aiReply));
-
-        case TurnAudioChunk(:final index, :final audioBase64):
-          if (audioBase64.isEmpty) continue;
-          final dir = await getTemporaryDirectory();
-          final path =
-              '${dir.path}/ai_${DateTime.now().millisecondsSinceEpoch}_$index.mp3';
-          _tempFiles.add(path);
-          await File(path).writeAsBytes(base64Decode(audioBase64));
-          _pendingClips.add(path);
-          clipCount++;
-
-          if (clipCount == 1) {
-            debugPrint('🔊 [Conversation] First audio in '
-                '${sw.elapsedMilliseconds}ms — starting playback');
-            _audioFinishHandled = false;
-            await _playNextClip();
-          } else if (_audioPlayer.playing != true &&
-              _pendingClips.isNotEmpty) {
-            // Synthesis fell behind playback; resume as soon as it catches up.
-            await _playNextClip();
-          }
-
-        case TurnDone():
-          _streamClipsComplete = true;
-          debugPrint('✅ [Conversation] Turn #$turnNumber streamed in '
-              '${sw.elapsedMilliseconds}ms ($clipCount clips)');
-          if (_pendingClips.isEmpty && _audioPlayer.playing != true) {
-            await _playNextClip();
-          }
-
-        case TurnStreamError(:final detail):
-          _streamingPlayback = false;
-          _streamClipsComplete = true;
-          throw Exception(detail);
-      }
-    }
-
-    if (!sawTranscript) {
-      _streamingPlayback = false;
-      throw Exception('The turn ended before the AI replied.');
-    }
-    // A stream that closes without a done marker still has to release the mic.
-    _streamClipsComplete = true;
-    if (_pendingClips.isEmpty && _audioPlayer.playing != true) {
-      await _playNextClip();
-    }
-  }
-
   Future<void> _sendTurn(String audioPath) async {
     final turnNumber = _completedUserTurns + 1;
     debugPrint('🔄 [Conversation] Processing turn #$turnNumber...');
@@ -1087,32 +889,6 @@ class _RoleplayConversationScreenState
 
     // ── Real mode ──────────────────────────────────────────────────────────────
     try {
-      // Streamed: the transcript lands in ~0.5s and the first sentence starts
-      // playing while the rest are still being synthesised. The batch call
-      // below is kept as the fallback for a server without the stream route.
-      final probe = await File(audioPath).readAsBytes();
-      final probePeak = _peakAmplitude(probe);
-      debugPrint('📊 [Conversation] Recording peak amplitude: '
-          '${(probePeak * 100).toStringAsFixed(3)}%');
-      if (probePeak < _silenceThreshold) {
-        debugPrint('🔇 [Conversation] Turn #$turnNumber is silent — not sending');
-        setState(() => _state = _ConvState.user_turn);
-        await _rejectSilentTurn(
-          "I couldn't hear anything — check your microphone and try again.",
-        );
-        return;
-      }
-
-      try {
-        await _sendTurnStreamed(audioPath, turnNumber);
-        return;
-      } catch (e) {
-        _streamingPlayback = false;
-        _pendingClips.clear();
-        debugPrint('⚠️ [Conversation] Streamed turn failed, '
-            'falling back to batch: $e');
-      }
-
       final bytes = await File(audioPath).readAsBytes();
       final filename = audioPath.split(Platform.pathSeparator).last;
 
@@ -1127,18 +903,6 @@ class _RoleplayConversationScreenState
         conversationHistory: List.from(_conversationHistory),
       );
       sw.stop();
-
-      // The server heard nothing. Previously this fell straight through: an
-      // empty user turn was appended to the history, the AI replied to it, and
-      // the user was given no clue that their voice never arrived. That is
-      // exactly what "it is not taking my voice input" looks like.
-      if (result.userTranscript.trim().isEmpty) {
-        debugPrint('🔇 [Conversation] Turn #$turnNumber — empty transcript');
-        await _rejectSilentTurn(
-          "I didn't catch that. Speak a little louder, or check your mic.",
-        );
-        return;
-      }
 
       _conversationHistory.addAll([
         {'role': 'user', 'transcript': result.userTranscript},
@@ -1204,14 +968,12 @@ class _RoleplayConversationScreenState
   Future<void> _playBase64Audio(String base64Audio) async {
     if (base64Audio.isEmpty) {
       debugPrint('🔇 [Conversation] No AI audio returned — skipping playback');
-      _audioFinishHandled = false;
       _startTimerIfNotStarted();
       await _onAudioFinished();
       return;
     }
     if (_isMuted) {
       debugPrint('🔇 [Conversation] Muted — skipping AI audio playback');
-      _audioFinishHandled = false;
       _startTimerIfNotStarted();
       await _onAudioFinished();
       return;
@@ -1228,7 +990,6 @@ class _RoleplayConversationScreenState
       await file.writeAsBytes(bytes);
       debugPrint(
           '🔊 [Conversation] Playing AI audio (${bytes.length}B)...');
-      _audioFinishHandled = false;
       await _audioPlayer.setFilePath(filePath);
       await _audioPlayer.play();
     } catch (e) {
@@ -1237,24 +998,9 @@ class _RoleplayConversationScreenState
     }
   }
 
-  /// Guards [_onAudioFinished] against running twice for one clip.
-  ///
-  /// The player's completed event can fire more than once, and the method is
-  /// also invoked directly on the error paths. A second run re-entered
-  /// _startMic after live voice had connected, flipping the mic into the
-  /// no-file-recorder branch and silently ending the conversation.
-  bool _audioFinishHandled = false;
-
   void _onPlayerStateChange(PlayerState state) {
     if (state.processingState == ProcessingState.completed) {
       if (_state != _ConvState.ai_speaking) return;
-      // A streamed reply is many clips. "completed" here means this sentence
-      // ended, not the reply — advance the queue and only finish when the
-      // server has sent everything and nothing is left to play.
-      if (_streamingPlayback) {
-        unawaited(_playNextClip());
-        return;
-      }
       debugPrint(
           '🔊 [Conversation] AI audio finished — returning mic to user');
       _onAudioFinished();
@@ -1263,11 +1009,6 @@ class _RoleplayConversationScreenState
 
   Future<void> _onAudioFinished() async {
     if (!mounted) return;
-    if (_audioFinishHandled) {
-      debugPrint('🔊 [Conversation] Ignoring duplicate audio-finished event');
-      return;
-    }
-    _audioFinishHandled = true;
     switch (_aiPlaybackStage) {
       case _AiPlaybackStage.afterOpening:
         _aiPlaybackStage = _AiPlaybackStage.none;
@@ -1327,8 +1068,6 @@ class _RoleplayConversationScreenState
     _stopMic();
     await _recorder.stop();
     _sessionTimer?.cancel();
-    _streamingPlayback = false;
-    _pendingClips.clear();
 
     // ── Mark level complete in SharedPreferences ───────────────────────────────
     // This fires before any async AI call so the learning view always receives
@@ -1353,9 +1092,10 @@ class _RoleplayConversationScreenState
     if (_isDemoMode) {
       await Future.delayed(const Duration(seconds: 2));
       if (!mounted) return;
-      context.pushReplacement(
-        AppRoutes.roleplayFeedback,
-        extra: FeedbackArgs(
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RoleplayFeedbackScreen(
             config: FeedbackConfig(
               scenarioTitle: widget.config.scenarioTitle.isNotEmpty
                   ? widget.config.scenarioTitle
@@ -1404,6 +1144,7 @@ class _RoleplayConversationScreenState
             leveledUp: false,
             newBadges: const [],
             newStreak: 1,
+          ),
         ),
       );
       return;
@@ -1418,25 +1159,36 @@ class _RoleplayConversationScreenState
       final feedbackConfig =
           result.report.toFeedbackConfig(widget.config.scenarioTitle);
 
+      VisionSessionResult? finalVisualResult = visualResult;
+      if (finalVisualResult != null) {
+        try {
+          debugPrint('⏳ [Conversation] Evaluating & saving roleplay visual report to Firestore...');
+          final aiInsights = await SessionService.instance.evaluateAndSaveVisualReport(finalVisualResult);
+          if (aiInsights != null && aiInsights.isNotEmpty) {
+            finalVisualResult = finalVisualResult.copyWith(insights: aiInsights);
+          }
+        } catch (vErr) {
+          debugPrint('⚠️ [Conversation] Visual report evaluation/save non-fatal error: $vErr');
+        }
+      }
+
       debugPrint('✅ [Conversation] Evaluation received');
       if (!mounted) return;
-      // Must go through go_router. This screen is a page-based route, so an
-      // imperative pushReplacement threw "A page-based route cannot be
-      // completed using imperative api" — *after* the AI evaluation had
-      // already completed. The report was generated and stored, and the user
-      // never saw it, which is why evaluation looked broken.
-      context.pushReplacement(
-        AppRoutes.roleplayFeedback,
-        extra: FeedbackArgs(
-          config: feedbackConfig,
-          report: result.report,
-          conversationHistory: List.from(_conversationHistory),
-          isOnboarding: widget.isOnboarding,
-          xpAwarded: result.xpAwarded,
-          newLevel: result.newLevel,
-          leveledUp: result.leveledUp,
-          newBadges: result.newBadges,
-          newStreak: result.newStreak,
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RoleplayFeedbackScreen(
+            config: feedbackConfig,
+            report: result.report,
+            visualResult: finalVisualResult,
+            conversationHistory: List.from(_conversationHistory),
+            isOnboarding: widget.isOnboarding,
+            xpAwarded: result.xpAwarded,
+            newLevel: result.newLevel,
+            leveledUp: result.leveledUp,
+            newBadges: result.newBadges,
+            newStreak: result.newStreak,
+          ),
         ),
       );
     } catch (e) {
@@ -1459,7 +1211,7 @@ class _RoleplayConversationScreenState
               duration: Duration(seconds: 3),
             ),
           );
-          context.pop();
+          Navigator.pop(context);
         }
         return;
       }
@@ -1514,16 +1266,16 @@ class _RoleplayConversationScreenState
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('End Session?',
             style: TextStyle(
-                color: AppColors.ink,
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold)),
         content: const Text(
             'Leaving now will abandon this session. Progress will not be saved.',
-            style: TextStyle(color: AppColors.inkMuted)),
+            style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Stay',
-                style: TextStyle(color: AppColors.inkMuted)),
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -1546,10 +1298,7 @@ class _RoleplayConversationScreenState
       await _audioPlayer.stop();
       SessionService.instance.abandonSession(widget.sessionId).ignore();
       _cleanupTempFiles();
-      // context.pop, not Navigator.pop: this screen is a go_router page, and
-      // completing it imperatively throws. Abandoning a session used to fail
-      // on the way out for the same reason ending one did.
-      if (mounted) context.pop();
+      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -1603,7 +1352,7 @@ class _RoleplayConversationScreenState
         await _onWillPop();
       },
       child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: const Color(0xFF080B14),
         body: Stack(
           children: [
             _buildAmbientGlow(),
@@ -1708,12 +1457,12 @@ class _RoleplayConversationScreenState
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.bgSunk,
+                color: const Color(0xFF141D2C),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.outline),
+                border: Border.all(color: AppColors.border),
               ),
               child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: AppColors.ink, size: 16),
+                  color: AppColors.textPrimary, size: 16),
             ),
             onPressed: _onWillPop,
             padding: EdgeInsets.zero,
@@ -1723,7 +1472,7 @@ class _RoleplayConversationScreenState
               Text(
                 widget.config.persona,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.ink,
+                      color: AppColors.textPrimary,
                       fontWeight: FontWeight.bold,
                     ),
               ),
@@ -1737,7 +1486,7 @@ class _RoleplayConversationScreenState
                       width: 6,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: AppColors.brandLight.withValues(
+                        color: AppColors.primaryLight.withValues(
                             alpha: 0.5 + 0.5 * _pulseController.value),
                         shape: BoxShape.circle,
                       ),
@@ -1747,7 +1496,7 @@ class _RoleplayConversationScreenState
                   Text(
                     'LIVE SESSION',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.brandLight,
+                          color: AppColors.primaryLight,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
                         ),
@@ -1794,9 +1543,9 @@ class _RoleplayConversationScreenState
 
   Widget _buildTimerPill() {
     final remaining = _secondsRemaining;
-    Color pillBg = AppColors.bgSunk;
-    Color pillBorder = AppColors.outline;
-    Color textColor = AppColors.ink;
+    Color pillBg = const Color(0xFF141D2C);
+    Color pillBorder = AppColors.border;
+    Color textColor = AppColors.textPrimary;
 
     if (remaining != null) {
       if (remaining <= 10) {
@@ -1834,7 +1583,7 @@ class _RoleplayConversationScreenState
   }
 
   // ─── Animated dots loader ─────────────────────────────────────────────────────
-  Widget _buildDotsLoader({Color color = AppColors.brand, double size = 9}) {
+  Widget _buildDotsLoader({Color color = AppColors.primary, double size = 9}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(3, (i) {
@@ -1877,33 +1626,33 @@ class _RoleplayConversationScreenState
           // dimmed slightly when AI is speaking to hint whose turn it is.
           switch (_state) {
             case _ConvState.user_turn:
-              orbColor = AppColors.brand;
-              glowColor = AppColors.brandLight;
+              orbColor = AppColors.primary;
+              glowColor = AppColors.primaryLight;
               scale = 1.0 + (pulse * 0.14); // more pulse = user is expected to speak
             case _ConvState.ai_speaking:
               // Mic still on — just dim the orb so the AI's side feels dominant.
-              orbColor = AppColors.brand.withValues(alpha: 0.45);
-              glowColor = AppColors.brandLight.withValues(alpha: 0.3);
+              orbColor = AppColors.primary.withValues(alpha: 0.45);
+              glowColor = AppColors.primaryLight.withValues(alpha: 0.3);
               scale = 1.0 + (pulse * 0.04);
             case _ConvState.processing:
             case _ConvState.ending:
-              orbColor = AppColors.brandDark;
-              glowColor = AppColors.brand;
+              orbColor = AppColors.primaryDark;
+              glowColor = AppColors.primary;
               scale = 1.0;
           }
         } else {
           switch (_state) {
             case _ConvState.user_turn:
-              orbColor = AppColors.brand;
-              glowColor = AppColors.brandLight;
+              orbColor = AppColors.primary;
+              glowColor = AppColors.primaryLight;
               scale = 1.0 + (pulse * 0.12);
             case _ConvState.ai_speaking:
               orbColor = const Color(0xFF3B82F6);
               glowColor = const Color(0xFF93C5FD);
             case _ConvState.processing:
             case _ConvState.ending:
-              orbColor = AppColors.brandDark;
-              glowColor = AppColors.brand;
+              orbColor = AppColors.primaryDark;
+              glowColor = AppColors.primary;
               scale = 1.0;
           }
         }
@@ -1961,13 +1710,13 @@ class _RoleplayConversationScreenState
             _state == _ConvState.ending
                 ? Icons.analytics_outlined
                 : Icons.hourglass_top_rounded,
-            color: AppColors.inkOnDark.withValues(alpha: 0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             size: 28,
           ),
         );
       case _ConvState.user_turn:
         return const Center(
-          child: Icon(Icons.mic, color: AppColors.inkOnDark, size: 34),
+          child: Icon(Icons.mic, color: Colors.white, size: 34),
         );
       case _ConvState.ai_speaking:
         // In live voice the mic stays on even while AI speaks — show mic icon
@@ -1975,14 +1724,14 @@ class _RoleplayConversationScreenState
         if (_isLiveVoiceActive) {
           return Center(
             child: Icon(Icons.mic,
-                color: AppColors.inkOnDark.withValues(alpha: 0.45), size: 34),
+                color: Colors.white.withValues(alpha: 0.45), size: 34),
           );
         }
         return Center(
           child: Icon(
             _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
             color:
-                _isMuted ? AppColors.inkOnDark.withValues(alpha: 0.35) : AppColors.inkOnDark,
+                _isMuted ? Colors.white.withValues(alpha: 0.35) : Colors.white,
             size: 32,
           ),
         );
@@ -1997,21 +1746,21 @@ class _RoleplayConversationScreenState
 
     switch (_state) {
       case _ConvState.user_turn:
-        borderColor = AppColors.brand.withValues(alpha: 0.35);
-        accentColor = AppColors.brand;
+        borderColor = AppColors.primary.withValues(alpha: 0.35);
+        accentColor = AppColors.primary;
       case _ConvState.ai_speaking:
         borderColor = const Color(0xFF3B82F6).withValues(alpha: 0.35);
         accentColor = const Color(0xFF3B82F6);
       case _ConvState.processing:
       case _ConvState.ending:
-        borderColor = AppColors.outline;
-        accentColor = AppColors.inkSoft;
+        borderColor = AppColors.border;
+        accentColor = AppColors.textMuted;
     }
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF0D1119),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: borderColor,
@@ -2115,10 +1864,10 @@ class _RoleplayConversationScreenState
         padding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: AppColors.brand.withValues(alpha: 0.10),
+          color: AppColors.primary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: AppColors.brand.withValues(alpha: 0.28)),
+              color: AppColors.primary.withValues(alpha: 0.28)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -2128,7 +1877,7 @@ class _RoleplayConversationScreenState
               height: 6,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.brand.withValues(
+                color: AppColors.primary.withValues(
                     alpha: 0.5 + 0.5 * _pulseController.value),
               ),
             ),
@@ -2136,7 +1885,7 @@ class _RoleplayConversationScreenState
             Text(
               'REC  $timeStr',
               style: TextStyle(
-                color: AppColors.brandLight,
+                color: AppColors.primaryLight,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.4,
@@ -2245,7 +1994,7 @@ class _RoleplayConversationScreenState
             child: Text(
               label,
               style: const TextStyle(
-                color: AppColors.inkSoft,
+                color: AppColors.textMuted,
                 fontSize: 14,
                 letterSpacing: 0.2,
               ),
@@ -2289,7 +2038,7 @@ class _RoleplayConversationScreenState
                       key: ValueKey<String>(
                           isUserTurn ? userDisplayText : aiDisplayText),
                       style: const TextStyle(
-                        color: AppColors.ink,
+                        color: AppColors.textPrimary,
                         fontSize: 19,
                         fontWeight: FontWeight.w400,
                         height: 1.6,
@@ -2313,7 +2062,7 @@ class _RoleplayConversationScreenState
               ? '${widget.config.persona} is speaking'
               : (_isLiveVoiceActive ? 'Listening — speak anytime' : 'Speak clearly'),
           style: const TextStyle(
-            color: AppColors.inkSoft,
+            color: AppColors.textMuted,
             fontSize: 12,
             letterSpacing: 0.1,
           ),
@@ -2328,7 +2077,7 @@ class _RoleplayConversationScreenState
       key: const ValueKey('placeholder'),
       isUserTurn ? 'Say something...' : '...',
       style: const TextStyle(
-        color: AppColors.inkSoft,
+        color: AppColors.textMuted,
         fontSize: 17,
         fontStyle: FontStyle.italic,
         height: 1.6,
@@ -2359,7 +2108,7 @@ class _RoleplayConversationScreenState
               height: height,
               margin: const EdgeInsets.symmetric(horizontal: 2.5),
               decoration: BoxDecoration(
-                color: AppColors.brandLight
+                color: AppColors.primaryLight
                     .withValues(alpha: 0.5 + 0.5 * amp),
                 borderRadius: BorderRadius.circular(2),
               ),
@@ -2387,20 +2136,20 @@ class _RoleplayConversationScreenState
           _buildIconButton(
             icon: _isMuted ? Icons.volume_off : Icons.volume_up,
             color:
-                _isMuted ? AppColors.inkSoft : AppColors.ink,
+                _isMuted ? AppColors.textMuted : AppColors.textPrimary,
             onTap: _toggleMute,
             tooltip: _isMuted ? 'Unmute AI' : 'Mute AI',
           ),
           _buildCenterAction(),
           _buildIconButton(
             icon: Icons.call_end_rounded,
-            color: _canEndCall ? AppColors.inkOnDark : AppColors.inkSoft,
+            color: _canEndCall ? Colors.white : AppColors.textMuted,
             backgroundColor: _canEndCall
                 ? const Color(0xFFEF4444)
                 : AppColors.surface,
             borderColor: _canEndCall
                 ? const Color(0xFFEF4444)
-                : AppColors.outline,
+                : AppColors.border,
             glow: _canEndCall
                 ? const Color(0xFFEF4444).withValues(alpha: 0.4)
                 : null,
@@ -2429,9 +2178,9 @@ class _RoleplayConversationScreenState
         width: 140,
         height: 56,
         decoration: BoxDecoration(
-          color: AppColors.bgSunk,
+          color: const Color(0xFF141D2C),
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: AppColors.outline),
+          border: Border.all(color: AppColors.border),
         ),
         child: Center(child: _buildDotsLoader(size: 7)),
       );
@@ -2485,11 +2234,11 @@ class _RoleplayConversationScreenState
             width: 140,
             height: 60,
             decoration: BoxDecoration(
-              color: AppColors.brand,
+              color: AppColors.primary,
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.brand.withValues(alpha: 0.4),
+                  color: AppColors.primary.withValues(alpha: 0.4),
                   blurRadius: 16,
                   spreadRadius: 2,
                   offset: const Offset(0, 4),
@@ -2499,12 +2248,12 @@ class _RoleplayConversationScreenState
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.send_rounded, color: AppColors.inkOnDark, size: 18),
+                const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   'SEND',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.inkOnDark,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
                       ),
@@ -2525,7 +2274,7 @@ class _RoleplayConversationScreenState
 
     final Color barColor = isAi
         ? const Color(0xFF3B82F6)
-        : AppColors.brand;
+        : AppColors.primary;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -2533,12 +2282,12 @@ class _RoleplayConversationScreenState
       height: 56,
       decoration: BoxDecoration(
         color: isLoading
-            ? AppColors.bgSunk
+            ? const Color(0xFF141D2C)
             : barColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
           color: isLoading
-              ? AppColors.outline
+              ? AppColors.border
               : barColor.withValues(alpha: 0.25),
           width: 1.5,
         ),
@@ -2599,8 +2348,8 @@ class _RoleplayConversationScreenState
         height: 54,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: backgroundColor ?? AppColors.bgSunk,
-          border: Border.all(color: borderColor ?? AppColors.outline),
+          color: backgroundColor ?? const Color(0xFF141D2C),
+          border: Border.all(color: borderColor ?? AppColors.border),
           boxShadow: glow != null
               ? [BoxShadow(color: glow, blurRadius: 12, spreadRadius: 1)]
               : [],

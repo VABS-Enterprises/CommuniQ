@@ -12,6 +12,10 @@ import 'package:communiq/models/visual_analysis_models.dart';
 import 'package:communiq/core/data/scenario_presets.dart';
 import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
 import 'package:communiq/views/roleplay_view/screens/setup_scenario_page.dart';
+import 'package:communiq/views/visual_analysis/widgets/gaze_radar_widget.dart';
+import 'package:communiq/views/visual_analysis/widgets/gaze_distribution_chart.dart';
+import 'package:communiq/views/visual_analysis/widgets/head_orientation_chart.dart';
+import 'package:communiq/views/visual_analysis/screens/visual_analysis_results_screen.dart';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 // One set of constants so every colour decision is in one place.
@@ -534,126 +538,447 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
   }
 
   Widget _visualAnalyticsCard(VisionSessionResult res) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _kDivider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final score = res.visualEngagementScore;
+    Color scoreColor = AppColors.scoreExcellent;
+    String ratingLabel = 'EXCELLENT COMMUNICATION';
+
+    if (score < 60) {
+      scoreColor = AppColors.scoreNeedsWork;
+      ratingLabel = 'NEEDS FOCUS & ALIGNMENT';
+    } else if (score < 80) {
+      scoreColor = AppColors.gold;
+      ratingLabel = 'GOOD PRESENTATION';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── 1. Hero Score Card ────────────────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _kCardBg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: scoreColor.withValues(alpha: 0.4)),
+            boxShadow: [
+              BoxShadow(
+                color: scoreColor.withValues(alpha: 0.1),
+                blurRadius: 16,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Column(
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
+                      color: scoreColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: scoreColor.withValues(alpha: 0.4)),
                     ),
-                    child: const Icon(Icons.remove_red_eye_rounded, color: AppColors.primaryLight, size: 20),
+                    child: Text(
+                      ratingLabel,
+                      style: TextStyle(
+                        color: scoreColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${res.visualEngagementScore}% Overall Score',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          value: score / 100.0,
+                          strokeWidth: 8,
+                          backgroundColor: AppColors.bgSunk,
+                          valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
+                        ),
+                        Text(
+                          '$score%',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Eye Focus & Posture Score',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Evaluated live during your roleplay session. ${res.insights.length} AI coaching points generated.',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: AppSpacing.s16),
+
+        // ── 2. Eye Contact & Gaze Delivery Card ──────────────────────────────
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _kCardBg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _kDivider),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.remove_red_eye_rounded, color: AppColors.primaryLight, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Eye Contact & Gaze Delivery',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildVisualStatItem(
+                      'Eye Contact',
+                      '${res.eyeContactPercentage.round()}%',
+                      AppColors.primaryLight,
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Expanded(
+                    child: _buildVisualStatItem(
+                      'Gaze Stability',
+                      '${res.gazeStabilityPercentage.round()}%',
+                      AppColors.secondary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              GazeRadarWidget(
+                distribution: res.gazeDistribution,
+                eyeContactPct: res.eyeContactPercentage,
+              ),
+              const SizedBox(height: 16),
+              GazeDistributionChart(distribution: res.gazeDistribution),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: AppSpacing.s16),
+
+        // ── 3. Posture Breakdown Card ─────────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _kCardBg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _kDivider),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
                     children: [
+                      Icon(Icons.accessibility_new_rounded, color: AppColors.scoreExcellent, size: 20),
+                      SizedBox(width: 8),
                       Text(
-                        'Visual Engagement',
+                        'Vision Posture Breakdown',
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        'Camera Gaze & Eye Contact',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                      ),
                     ],
                   ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.emerald.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.emerald.withValues(alpha: 0.4)),
-                ),
-                child: Text(
-                  '${res.visualEngagementScore}% Score',
-                  style: const TextStyle(
-                    color: AppColors.emerald,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(color: _kDivider, height: 1),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildVisualStatItem(
-                  'Eye Contact',
-                  '${res.eyeContactPercentage.round()}%',
-                  AppColors.primaryLight,
-                ),
-              ),
-              Expanded(
-                child: _buildVisualStatItem(
-                  'Gaze Stability',
-                  '${res.gazeStabilityPercentage.round()}%',
-                  AppColors.secondary,
-                ),
-              ),
-              Expanded(
-                child: _buildVisualStatItem(
-                  'Upright Posture',
-                  '${res.spineAlignmentPercentage.round()}%',
-                  AppColors.emerald,
-                ),
-              ),
-              Expanded(
-                child: _buildVisualStatItem(
-                  'Gestures',
-                  '${res.handMovementPercentage.round()}%',
-                  AppColors.gold,
-                ),
-              ),
-            ],
-          ),
-          if (res.insights.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.lightbulb_outline_rounded, color: AppColors.gold, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.scoreExcellent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     child: Text(
-                      res.insights.first.description,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
+                      '${res.overallPostureScore}/100',
+                      style: const TextStyle(
+                        color: AppColors.scoreExcellent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              _buildPostureMetricBar('Spine & Head Vertical Alignment', res.spineAlignmentPercentage, AppColors.primary),
+              const SizedBox(height: 12),
+              _buildPostureMetricBar('Shoulder Level & Symmetry', res.shoulderSymmetryPercentage, AppColors.secondary),
+              const SizedBox(height: 12),
+              _buildPostureMetricBar('Chest Openness Ratio', res.chestOpennessPercentage, AppColors.scoreExcellent),
+              const SizedBox(height: 12),
+              _buildPostureMetricBar('Head Tilt Stability', res.headTiltStabilityPercentage, AppColors.sun),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: AppSpacing.s16),
+
+        // ── 4. Hand Movement & Head Orientation ──────────────────────────────
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _kCardBg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _kDivider),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.screen_rotation_rounded, color: AppColors.secondary, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Head Orientation & Stability',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              HeadOrientationChart(distribution: res.headOrientationDistribution),
+              const SizedBox(height: 16),
+              const Divider(color: _kDivider, height: 1),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Hand Gesture Expressiveness',
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '${res.handMovementPercentage.round()}%',
+                    style: const TextStyle(color: AppColors.gold, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: (res.handMovementPercentage.round().clamp(0, 100)) / 100.0,
+                  minHeight: 8,
+                  backgroundColor: AppColors.bgSunk,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ── 5. AI LLM Executive Insights ─────────────────────────────────────
+        if (res.insights.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.s16),
+          _buildVisualAiInsightsList(res.insights),
+        ],
+
+        const SizedBox(height: AppSpacing.s16),
+
+        // ── 6. Full Interactive Report Launcher Button ────────────────────────
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => VisualAnalysisResultsScreen(sessionResult: res),
+                ),
+              );
+            },
+            icon: const Icon(Icons.analytics_rounded, color: AppColors.brandLight),
+            label: const Text(
+              'Open Full Interactive Visual Analysis Report',
+              style: TextStyle(color: AppColors.brandLight, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.brandLight),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPostureMetricBar(String title, double percentage, Color color) {
+    final pctInt = percentage.round().clamp(0, 100);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            Text(
+              '$pctInt%',
+              style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ],
-        ],
-      ),
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: pctInt / 100.0,
+            minHeight: 8,
+            backgroundColor: AppColors.bgSunk,
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVisualAiInsightsList(List<VisualInsight> insights) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'AI VISUAL COACHING INSIGHTS',
+          style: TextStyle(
+            color: AppColors.brandLight,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...insights.map((insight) {
+          Color borderClr = AppColors.brandLight;
+          IconData icon = Icons.lightbulb_outline_rounded;
+          Color bgClr = AppColors.brandLight.withValues(alpha: 0.1);
+
+          if (insight.type == InsightType.positive) {
+            borderClr = AppColors.emerald;
+            icon = Icons.check_circle_outline_rounded;
+            bgClr = AppColors.emerald.withValues(alpha: 0.1);
+          } else if (insight.type == InsightType.warning) {
+            borderClr = AppColors.warning;
+            icon = Icons.warning_amber_rounded;
+            bgClr = AppColors.warning.withValues(alpha: 0.1);
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _kCardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: borderClr.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: bgClr,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: borderClr, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        insight.title,
+                        style: TextStyle(
+                          color: borderClr,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        insight.description,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 

@@ -50,7 +50,7 @@ class LiveStatusPanel extends StatelessWidget {
         ],
         GlassCard(
           padding: const EdgeInsets.all(16),
-          borderAlpha: 0.5,
+          borderColor: AppColors.glassBorder.withValues(alpha: 0.5),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
