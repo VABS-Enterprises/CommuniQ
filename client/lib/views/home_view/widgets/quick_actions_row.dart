@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/common_widgets/glass_card.dart';
+import 'package:communiq/views/visual_analysis/screens/visual_analysis_camera_screen.dart';
 
 class QuickActionsRow extends StatelessWidget {
   const QuickActionsRow({super.key});
@@ -11,6 +12,14 @@ class QuickActionsRow extends StatelessWidget {
     switch (label) {
       case 'Roleplay':
         SwitchToRoleplayTabNotification().dispatch(context);
+      case 'Practice':
+      case 'Visual Analysis':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const VisualAnalysisCameraScreen(),
+          ),
+        );
       case 'Learn':
         SwitchToLearningTabNotification().dispatch(context);
       default:

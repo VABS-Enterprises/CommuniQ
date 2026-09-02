@@ -6,6 +6,7 @@ import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/session_result_model.dart';
 import 'package:communiq/models/onboarding_data.dart';
+import 'package:communiq/models/visual_analysis_models.dart';
 import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
 
@@ -24,6 +25,7 @@ const _kAiLabel = Color(0xFF475569);            // slate-600
 class RoleplayFeedbackScreen extends StatefulWidget {
   final FeedbackConfig config;
   final SessionReport? report;
+  final VisionSessionResult? visualResult;
 
   /// Turn-by-turn history — [{role: 'user'|'ai', transcript: '...'}]
   final List<Map<String, String>> conversationHistory;
@@ -39,6 +41,7 @@ class RoleplayFeedbackScreen extends StatefulWidget {
     super.key,
     required this.config,
     this.report,
+    this.visualResult,
     this.conversationHistory = const [],
     this.isOnboarding = false,
     this.xpAwarded = 0,
@@ -148,6 +151,13 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                     const SizedBox(height: AppSpacing.s12),
                     _insightsCard(),
                     const SizedBox(height: AppSpacing.s28),
+
+                    if (widget.visualResult != null) ...[
+                      _sectionLabel('VISUAL COMMUNICATION ANALYTICS'),
+                      const SizedBox(height: AppSpacing.s12),
+                      _visualAnalyticsCard(widget.visualResult!),
+                      const SizedBox(height: AppSpacing.s28),
+                    ],
 
                     // 5. Improve next time
                     _sectionLabel('IMPROVE NEXT TIME'),
@@ -498,6 +508,146 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               fontSize: 13,
               fontWeight: FontWeight.bold,
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _visualAnalyticsCard(VisionSessionResult res) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _kCardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _kDivider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.remove_red_eye_rounded, color: AppColors.primaryLight, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Visual Engagement',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Camera Gaze & Eye Contact',
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.emerald.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.emerald.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  '${res.visualEngagementScore}% Score',
+                  style: const TextStyle(
+                    color: AppColors.emerald,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: _kDivider, height: 1),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildVisualStatItem(
+                  'Eye Contact',
+                  '${res.eyeContactPercentage.round()}%',
+                  AppColors.primaryLight,
+                ),
+              ),
+              Expanded(
+                child: _buildVisualStatItem(
+                  'Gaze Stability',
+                  '${res.gazeStabilityPercentage.round()}%',
+                  AppColors.secondary,
+                ),
+              ),
+              Expanded(
+                child: _buildVisualStatItem(
+                  'Head Forward',
+                  '${res.headOrientationPercentage.round()}%',
+                  AppColors.emerald,
+                ),
+              ),
+            ],
+          ),
+          if (res.insights.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.lightbulb_outline_rounded, color: AppColors.gold, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      res.insights.first.description,
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVisualStatItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
           ),
         ),
       ],

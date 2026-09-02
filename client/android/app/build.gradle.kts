@@ -9,7 +9,7 @@ plugins {
 android {
     namespace = "com.vabs.communiq"
     compileSdk = 36
-    ndkVersion = "27.1.12297006"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

@@ -14,6 +14,7 @@ import 'package:communiq/views/home_view/widgets/ai_insight_card.dart';
 import 'package:communiq/views/home_view/widgets/contest_card.dart';
 import 'package:communiq/views/home_view/widgets/continue_card.dart';
 import 'package:communiq/views/home_view/widgets/quick_actions_row.dart';
+import 'package:communiq/views/home_view/widgets/visual_analysis_card.dart';
 import 'package:communiq/views/contest_view/screens/leaderboard_page.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -178,6 +179,11 @@ class _HomeViewState extends State<HomeView> {
 
                   // ── 3. Continue Learning ────────────────────────────────
                   const ContinueCard(),
+
+                  const SizedBox(height: 16),
+
+                  // ── 3b. Visual Analysis Card ──────────────────────────────
+                  const VisualAnalysisCard(),
 
                   const SizedBox(height: 16),
 
