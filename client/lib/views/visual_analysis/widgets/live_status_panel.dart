@@ -50,7 +50,7 @@ class LiveStatusPanel extends StatelessWidget {
         ],
         GlassCard(
           padding: const EdgeInsets.all(16),
-          borderAlpha: 0.5,
+          borderColor: AppColors.glassBorder.withValues(alpha: 0.5),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -82,7 +82,7 @@ class LiveStatusPanel extends StatelessWidget {
                     ],
                   ),
                   const Text(
-                    'Camera-based Gaze',
+                    'Gaze, Posture & Gestures',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 11,
@@ -149,14 +149,25 @@ class LiveStatusPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 _buildStatusRow(
-                  label: 'Head',
+                  label: 'Posture',
                   value: frame != null && frame.faceDetected
-                      ? (frame.headOrientation == HeadOrientation.forward ? '✓ Forward' : frame.headOrientation.label)
+                      ? (frame.postureState == PostureState.upright ? '✓ Upright' : frame.postureState.label)
                       : 'UNKNOWN',
-                  isPositive: frame?.headOrientation == HeadOrientation.forward,
-                  color: frame?.headOrientation == HeadOrientation.forward
+                  isPositive: frame?.postureState == PostureState.upright,
+                  color: frame?.postureState == PostureState.upright
                       ? AppColors.emerald
-                      : AppColors.secondary,
+                      : AppColors.amber,
+                ),
+                const SizedBox(height: 8),
+                _buildStatusRow(
+                  label: 'Gestures',
+                  value: frame != null && frame.faceDetected
+                      ? frame.handGestureState.label
+                      : 'UNKNOWN',
+                  isPositive: frame?.handGestureState == HandGestureState.active,
+                  color: frame?.handGestureState == HandGestureState.active
+                      ? AppColors.secondary
+                      : AppColors.textMuted,
                 ),
               ],
             ],

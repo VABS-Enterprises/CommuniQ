@@ -23,6 +23,7 @@ import 'package:communiq/core/services/leaderboard_service.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/user_profile.dart';
 import 'package:communiq/views/home_view/widgets/continue_card.dart';
+import 'package:communiq/views/home_view/widgets/visual_analysis_card.dart';
 
 /// The app's landing screen: who you are, what your streak and XP look like,
 /// what to do next, and how you've been performing.
@@ -219,6 +220,9 @@ class _HomeViewState extends State<HomeView> {
                 const SizedBox(height: AppSpacing.s20),
 
                 const ContinueCard(),
+                const SizedBox(height: AppSpacing.s16),
+
+                const VisualAnalysisCard(),
                 const SizedBox(height: AppSpacing.s16),
 
                 if (_isLoading)

@@ -1,5 +1,3 @@
-import 'dart:io' show Platform;
-
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -15,9 +13,7 @@ String _resolveServerUrl() {
   const defined = String.fromEnvironment('SERVER_URL');
   if (defined.isNotEmpty) return defined;
   if (kDebugMode) {
-    return Platform.isAndroid
-        ? 'http://10.0.2.2:3000'
-        : 'http://localhost:3000';
+    return 'http://localhost:3000';
   }
   return 'https://communiq.onrender.com';
 }

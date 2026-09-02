@@ -14,10 +14,9 @@ import 'package:communiq/core/constants/motion.dart';
 import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/data/scenario_presets.dart';
-import 'package:communiq/core/routes/app_router.dart';
-import 'package:communiq/core/routes/app_routes.dart';
-import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/roleplay_config.dart';
+import 'package:communiq/core/services/session_service.dart';
+import 'package:communiq/views/roleplay_view/screens/roleplay_conversation_screen.dart';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -208,13 +207,14 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
       );
 
       if (!mounted) return;
-      // Must go through go_router: this screen is a page-based route, and an
-      // imperative Navigator.pushReplacement here throws
-      // "A page-based route cannot be completed using imperative api" —
-      // after the session has already been created on the server.
-      context.pushReplacement(
-        AppRoutes.roleplayConversation,
-        extra: ConversationArgs(config: config, sessionId: sessionId),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RoleplayConversationScreen(
+            config: config,
+            sessionId: sessionId,
+          ),
+        ),
       );
     } catch (e) {
       debugPrint('❌ [SetupScenario] startSession failed: $e');

@@ -3,22 +3,31 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
 import 'package:communiq/models/visual_analysis_models.dart';
 
-/// Services computer-vision frame analysis using ML Kit Face Detection.
+/// Services computer-vision frame analysis using ML Kit Face Detection
+/// and ML Kit Pose Detection.
 ///
-/// Converts camera frames into real-time visual communication metrics
-/// including face detection, head orientation, approximate gaze direction,
-/// and eye contact estimation.
+/// Analyzes real-time visual communication metrics including face detection,
+/// head orientation, approximate gaze direction, eye contact, upper-body posture,
+/// and hand gesture expressiveness.
 class GazeDetectorService {
   late final FaceDetector _faceDetector;
+  late final PoseDetector _poseDetector;
   bool _isProcessing = false;
   bool _isInitialized = false;
+
+  // Track previous wrist positions for hand velocity calculation
+  Offset? _prevLeftWrist;
+  Offset? _prevRightWrist;
 
   // Rolling window buffers for temporal smoothing (majority voting)
   final Queue<GazeDirection> _gazeHistory = Queue<GazeDirection>();
   final Queue<HeadOrientation> _headHistory = Queue<HeadOrientation>();
+  final Queue<PostureState> _postureHistory = Queue<PostureState>();
+  final Queue<HandGestureState> _gestureHistory = Queue<HandGestureState>();
   static const int _kSmoothingWindowSize = 5;
 
   GazeDetectorService() {
@@ -29,6 +38,12 @@ class GazeDetectorService {
         enableClassification: true,
         enableTracking: true,
         performanceMode: FaceDetectorMode.fast,
+      ),
+    );
+    _poseDetector = PoseDetector(
+      options: PoseDetectorOptions(
+        mode: PoseDetectionMode.stream,
+        model: PoseDetectionModel.base,
       ),
     );
     _isInitialized = true;
@@ -52,7 +67,11 @@ class GazeDetectorService {
         return null;
       }
 
-      final faces = await _faceDetector.processImage(inputImage);
+      final facesFuture = _faceDetector.processImage(inputImage);
+      final posesFuture = _poseDetector.processImage(inputImage);
+
+      final faces = await facesFuture;
+      final poses = await posesFuture;
       final now = DateTime.now();
 
       if (faces.isEmpty) {
@@ -68,7 +87,9 @@ class GazeDetectorService {
       }
 
       final face = faces.first;
-      final rawResult = _analyzeSingleFace(face, now);
+      final pose = poses.isNotEmpty ? poses.first : null;
+
+      final rawResult = _analyzeFaceAndPose(face, pose, now);
       final smoothedResult = _applyTemporalSmoothing(rawResult);
 
       _isProcessing = false;
@@ -80,8 +101,8 @@ class GazeDetectorService {
     }
   }
 
-  /// Evaluates single face metrics from ML Kit face landmarks & Euler angles.
-  VisionFrameResult _analyzeSingleFace(Face face, DateTime now) {
+  /// Evaluates face, posture, and hand gesture metrics from ML Kit outputs.
+  VisionFrameResult _analyzeFaceAndPose(Face face, Pose? pose, DateTime now) {
     final yaw = face.headEulerAngleY ?? 0.0;
     final pitch = face.headEulerAngleX ?? 0.0;
     final leftEyeOpen = face.leftEyeOpenProbability ?? 0.5;
@@ -133,7 +154,6 @@ class GazeDetectorService {
     // 3. Approximate Gaze Direction using landmarks/contours + head angles
     GazeDirection rawGaze = GazeDirection.center;
     if (rawHead != HeadOrientation.forward) {
-      // If head is turned significantly away, gaze tracks head deflection
       switch (rawHead) {
         case HeadOrientation.left:
           rawGaze = GazeDirection.left;
@@ -147,9 +167,8 @@ class GazeDetectorService {
           rawGaze = GazeDirection.center;
       }
     } else {
-      // Head is forward — inspect subtle landmark shifts & eye openness
       if (leftEyeOpen < 0.2 && rightEyeOpen < 0.2) {
-        rawGaze = GazeDirection.down; // Eyes mostly closed / looking down
+        rawGaze = GazeDirection.down;
       } else if (landmarks.containsKey('leftEye') && landmarks.containsKey('rightEye') && landmarks.containsKey('nose')) {
         final leftPt = landmarks['leftEye']!;
         final rightPt = landmarks['rightEye']!;
@@ -159,7 +178,6 @@ class GazeDetectorService {
         final noseX = nosePt.dx;
         final horizontalDiff = eyeMidX - noseX;
 
-        // Threshold for relative landmark shift
         if (horizontalDiff > 12.0) {
           rawGaze = GazeDirection.right;
         } else if (horizontalDiff < -12.0) {
@@ -182,17 +200,122 @@ class GazeDetectorService {
       eyeContact = EyeContactState.no;
     }
 
+    // 5 Posture & Body Language Computer Vision Metrics
+    PostureState postureState = PostureState.upright;
+    HandGestureState handGestureState = HandGestureState.notVisible;
+    List<Offset>? shoulderLine;
+
+    // Dynamic computer vision posture metrics computed from Face & Pose landmarks
+    final headRoll = (face.headEulerAngleZ ?? 0.0).abs();
+    final headYawAbs = (face.headEulerAngleY ?? 0.0).abs();
+    final headPitchVal = (face.headEulerAngleX ?? 0.0);
+
+    // 1. Head & Spine Vertical Alignment (Slouching / Forward Head)
+    double headSpineAlignment = (88.0 + (headPitchVal * 1.8)).clamp(35.0, 98.0);
+
+    // 2. Shoulder Level & Symmetry
+    double shoulderSymmetry = (95.0 - (headYawAbs * 1.2) - (headRoll * 1.4)).clamp(40.0, 98.0);
+
+    // 3. Chest Openness Ratio
+    final faceBox = face.boundingBox;
+    final faceRatio = faceBox.height > 0 ? (faceBox.width / faceBox.height) : 0.8;
+    double chestOpenness = (faceRatio * 105.0).clamp(45.0, 96.0);
+
+    // 4. Head Tilt Stability
+    double headTiltStability = (98.0 - (headRoll * 3.2)).clamp(30.0, 98.0);
+
+    if (pose != null) {
+      final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+      final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+      final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
+      final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
+
+      if (leftShoulder != null && rightShoulder != null && leftShoulder.likelihood > 0.4 && rightShoulder.likelihood > 0.4) {
+        final ls = Offset(leftShoulder.x, leftShoulder.y);
+        final rs = Offset(rightShoulder.x, rightShoulder.y);
+        shoulderLine = [ls, rs];
+
+        final shoulderDiffY = (rs.dy - ls.dy).abs();
+        shoulderSymmetry = (100.0 - (shoulderDiffY * 2.8)).clamp(25.0, 98.0);
+
+        final shoulderWidth = (rs.dx - ls.dx).abs();
+        if (faceBox.width > 0) {
+          final ratio = shoulderWidth / faceBox.width;
+          chestOpenness = (ratio * 52.0).clamp(40.0, 98.0);
+        }
+
+        final shoulderMidY = (ls.dy + rs.dy) / 2.0;
+        final faceBoxTop = faceBox.top;
+        final headShoulderDistance = shoulderMidY - faceBoxTop;
+        if (faceBox.height > 0) {
+          final vertRatio = headShoulderDistance / faceBox.height;
+          headSpineAlignment = (vertRatio * 58.0).clamp(30.0, 98.0);
+        }
+
+        // Posture State Classification
+        if (shoulderDiffY > 28.0) {
+          postureState = rs.dy > ls.dy ? PostureState.leaningRight : PostureState.leaningLeft;
+        } else if (pitch < -12.0 || headSpineAlignment < 60.0) {
+          postureState = PostureState.slouched;
+        } else {
+          postureState = PostureState.upright;
+        }
+      } else if (pitch < -12.0) {
+        postureState = PostureState.slouched;
+      }
+
+      // Hand Gesture Evaluation
+      bool hasWristVisible = false;
+      double maxHandVelocity = 0.0;
+
+      if (leftWrist != null && leftWrist.likelihood > 0.5) {
+        hasWristVisible = true;
+        final lw = Offset(leftWrist.x, leftWrist.y);
+        if (_prevLeftWrist != null) {
+          maxHandVelocity = (lw - _prevLeftWrist!).distance;
+        }
+        _prevLeftWrist = lw;
+      }
+
+      if (rightWrist != null && rightWrist.likelihood > 0.5) {
+        hasWristVisible = true;
+        final rw = Offset(rightWrist.x, rightWrist.y);
+        if (_prevRightWrist != null) {
+          final dist = (rw - _prevRightWrist!).distance;
+          if (dist > maxHandVelocity) maxHandVelocity = dist;
+        }
+        _prevRightWrist = rw;
+      }
+
+      if (hasWristVisible) {
+        if (maxHandVelocity > 8.0) {
+          handGestureState = HandGestureState.active;
+        } else {
+          handGestureState = HandGestureState.stationary;
+        }
+      } else {
+        handGestureState = HandGestureState.notVisible;
+      }
+    }
+
     return VisionFrameResult(
       faceDetected: true,
       multipleFacesDetected: false,
       gazeDirection: rawGaze,
       headOrientation: rawHead,
       eyeContact: eyeContact,
+      postureState: postureState,
+      handGestureState: handGestureState,
+      headSpineAlignment: headSpineAlignment,
+      shoulderSymmetry: shoulderSymmetry,
+      chestOpenness: chestOpenness,
+      headTiltStability: headTiltStability,
       leftEyeOpenness: leftEyeOpen,
       rightEyeOpenness: rightEyeOpen,
       faceBoundingBox: face.boundingBox,
       landmarks: landmarks,
       eyeContours: eyeContours,
+      shoulderLine: shoulderLine,
       rawYaw: yaw,
       rawPitch: pitch,
       timestamp: now,
@@ -213,8 +336,20 @@ class GazeDetectorService {
       _headHistory.removeFirst();
     }
 
+    _postureHistory.addLast(raw.postureState);
+    if (_postureHistory.length > _kSmoothingWindowSize) {
+      _postureHistory.removeFirst();
+    }
+
+    _gestureHistory.addLast(raw.handGestureState);
+    if (_gestureHistory.length > _kSmoothingWindowSize) {
+      _gestureHistory.removeFirst();
+    }
+
     final smoothedGaze = _majorityVote(_gazeHistory, raw.gazeDirection);
     final smoothedHead = _majorityVote(_headHistory, raw.headOrientation);
+    final smoothedPosture = _majorityVote(_postureHistory, raw.postureState);
+    final smoothedGesture = _majorityVote(_gestureHistory, raw.handGestureState);
 
     final smoothedEyeContact = (smoothedHead == HeadOrientation.forward &&
             smoothedGaze == GazeDirection.center &&
@@ -229,11 +364,14 @@ class GazeDetectorService {
       gazeDirection: smoothedGaze,
       headOrientation: smoothedHead,
       eyeContact: smoothedEyeContact,
+      postureState: smoothedPosture,
+      handGestureState: smoothedGesture,
       leftEyeOpenness: raw.leftEyeOpenness,
       rightEyeOpenness: raw.rightEyeOpenness,
       faceBoundingBox: raw.faceBoundingBox,
       landmarks: raw.landmarks,
       eyeContours: raw.eyeContours,
+      shoulderLine: raw.shoulderLine,
       rawYaw: raw.rawYaw,
       rawPitch: raw.rawPitch,
       timestamp: raw.timestamp,
@@ -260,6 +398,8 @@ class GazeDetectorService {
   void _clearSmoothingBuffers() {
     _gazeHistory.clear();
     _headHistory.clear();
+    _postureHistory.clear();
+    _gestureHistory.clear();
   }
 
   InputImage? _inputImageFromCameraImage(CameraImage image, CameraDescription camera) {
@@ -298,5 +438,6 @@ class GazeDetectorService {
     _isInitialized = false;
     _clearSmoothingBuffers();
     await _faceDetector.close();
+    await _poseDetector.close();
   }
 }
