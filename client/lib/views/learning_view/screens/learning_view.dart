@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:communiq/common_widgets/chunky_button.dart';
 import 'package:communiq/common_widgets/chunky_card.dart';
 import 'package:communiq/common_widgets/chunky_progress_bar.dart';
 import 'package:communiq/common_widgets/confetti_overlay.dart';
 import 'package:communiq/common_widgets/level_path.dart';
-import 'package:communiq/common_widgets/mascot/mascot.dart';
 import 'package:communiq/common_widgets/playful_background.dart';
 import 'package:communiq/common_widgets/stat_pill.dart';
 import 'package:communiq/common_widgets/state_views.dart';
@@ -17,33 +15,21 @@ import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/routes/app_router.dart';
 import 'package:communiq/core/routes/app_routes.dart';
-import 'package:communiq/core/services/learning_service.dart';
+import 'package:communiq/core/services/learning_progress_store.dart';
 import 'package:communiq/core/services/level_service.dart';
 import 'package:communiq/models/communiq_level.dart';
-
-/// Minimum coins from Journey 1 required to unlock levels 11–20.
-const _kMinCoinsForJourney2 = 450;
-
-/// Where the two journeys split.
-const _kJourney2StartIndex = 10;
-
-/// Named hubs, one per level, shown on the node's detail sheet.
-const _kHubNames = [
-  'Introduction Hub', 'Conversation Hub', 'Professional Hub',
-  'Influence Hub', 'Expression Hub', 'Pro Skills Hub',
-  'Dialogue Hub', 'Office Hub', 'Social Hub', 'Work–Life Hub',
-  'Crisis Hub', 'High-Stakes Hub', 'Leadership Hub',
-  'Power Hub', 'Legacy Hub', 'Mastery Hub',
-  'Elite Hub', 'Pinnacle Hub', 'Visionary Hub', 'Apex Hub',
-];
 
 /// The path is one colour end to end: [AppColors.brand] for the level you can
 /// play, success green for the ones you've finished, muted for locked. Cycling
 /// hues per node would make the journey read as unrelated stops.
 const _kNodeColor = AppColors.brand;
 
-/// The learning journey: a winding path of levels, gated so each unlocks the
-/// next, with a coin wall between the two journeys.
+/// The learning journey: a winding path of levels, each unlocking the next,
+/// grouped into themed journeys.
+///
+/// Progress is read from [LearningProgressStore], which the session screen
+/// updates as each answer is graded — so a level's counter moves while the
+/// user is still inside it, and the map is already correct when they return.
 class LearningView extends StatefulWidget {
   const LearningView({super.key});
 
@@ -52,20 +38,17 @@ class LearningView extends StatefulWidget {
 }
 
 class _LearningViewState extends State<LearningView> {
-  List<CommuniqLevel> _levels = [];
-  Set<int> _done = {};
-  Map<int, int> _levelCoins = {};
-  int _totalCoins = 0;
+  Curriculum? _curriculum;
 
   bool _loading = true;
   String? _loadError;
-
-  /// True when the server reconciliation failed and cached progress is shown.
-  bool _syncFailed = false;
-
   bool _celebrate = false;
 
   final ScrollController _scroll = ScrollController();
+
+  LearningProgressStore get _store => LearningProgressStore.instance;
+
+  List<CommuniqLevel> get _levels => _curriculum?.levels ?? const [];
 
   @override
   void initState() {
@@ -86,28 +69,16 @@ class _LearningViewState extends State<LearningView> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final levels = await LevelService.instance.fetchLevels();
-
-      // Seed from cache for an instant first paint. This is read-only — the
-      // server reconciliation below is what actually gates unlocks.
-      final cachedDone = (prefs.getStringList('completed_level_ids') ?? [])
-          .map(int.tryParse)
-          .whereType<int>()
-          .toSet();
-
+      final curriculum = await LevelService.instance.fetchCurriculum();
       if (!mounted) return;
       setState(() {
-        _levels = levels;
-        _done = cachedDone;
-        _totalCoins = prefs.getInt('total_coins_cache') ?? 0;
-        _levelCoins = {
-          for (final id in cachedDone) id: prefs.getInt('level_${id}_coins') ?? 0,
-        };
+        _curriculum = curriculum;
         _loading = false;
       });
 
-      await _refreshFromServer();
+      // Non-fatal: the store keeps whatever it already had and flags itself
+      // stale, so the path still renders behind a retry banner.
+      await _store.refresh();
       _scrollToCurrent();
     } catch (e) {
       debugPrint('[LearningView] load failed: $e');
@@ -119,57 +90,33 @@ class _LearningViewState extends State<LearningView> {
     }
   }
 
-  /// The server is the sole source of truth for anything that gates unlocks.
-  /// A failure here is non-fatal — cached progress stays on screen behind a
-  /// retry banner rather than blocking the tab.
-  Future<void> _refreshFromServer() async {
-    try {
-      final progress = await LearningService.getProgress();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(
-        'completed_level_ids',
-        progress.completedLevelIds.map((id) => '$id').toList(),
-      );
-      await prefs.setInt('total_coins_cache', progress.coins);
+  // ── Gating ─────────────────────────────────────────────────────────────────
+  //
+  // Purely sequential: finish a level to open the next one. There used to be
+  // an additional 450-coin wall in front of level 11, which was effectively
+  // impassable — the written-response coins were never persisted server-side,
+  // so the server's total topped out below the threshold no matter how well
+  // the user did. Coins are a reward now, not a gate.
 
-      if (!mounted) return;
-      setState(() {
-        _done = progress.completedLevelIds;
-        _totalCoins = progress.coins;
-        _syncFailed = false;
-      });
-    } catch (e) {
-      debugPrint('[LearningView] progress sync failed, showing cache: $e');
-      if (mounted) setState(() => _syncFailed = true);
-    }
-  }
-
-  /// Index of the first level not yet completed.
   int get _currentIndex {
     for (var i = 0; i < _levels.length; i++) {
-      if (!_done.contains(_levels[i].id)) return i;
+      if (!_store.isComplete(_levels[i].id)) return i;
     }
     return _levels.length - 1;
   }
 
-  bool _isLocked(int i) {
-    if (i == 0) return false;
-    // Journey 2 additionally requires a coin threshold from Journey 1.
-    if (i == _kJourney2StartIndex && _totalCoins < _kMinCoinsForJourney2) {
-      return true;
-    }
-    return !_done.contains(_levels[i - 1].id);
-  }
+  bool _isLocked(int i) => i > 0 && !_store.isComplete(_levels[i - 1].id);
 
   LevelNodeState _stateFor(int i) {
-    if (_done.contains(_levels[i].id)) return LevelNodeState.done;
+    if (_store.isComplete(_levels[i].id)) return LevelNodeState.done;
     if (_isLocked(i)) return LevelNodeState.locked;
     return i == _currentIndex ? LevelNodeState.current : LevelNodeState.locked;
   }
 
+  static const double _rowHeight = 148;
+
   void _scrollToCurrent() {
     if (!_scroll.hasClients || _levels.isEmpty) return;
-    // The path is laid out top-to-bottom, one row per level.
     final target = (_currentIndex * _rowHeight - 220.0)
         .clamp(0.0, _scroll.position.maxScrollExtent);
     _scroll.animateTo(
@@ -179,94 +126,70 @@ class _LearningViewState extends State<LearningView> {
     );
   }
 
-  static const double _rowHeight = 148;
-
   void _onNodeTap(int i) {
     if (_isLocked(i)) {
-      final needsCoins =
-          i == _kJourney2StartIndex && _totalCoins < _kMinCoinsForJourney2;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            needsCoins
-                ? 'Earn $_kMinCoinsForJourney2 coins in Journey 1 to unlock '
-                    'Journey 2 — you have $_totalCoins.'
-                : 'Finish the previous level first.',
-          ),
+          content: Text('Finish "${_levels[i - 1].title}" first.'),
+          backgroundColor: AppColors.ink,
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
-    _openSheet(_levels[i], i);
+    _openSheet(_levels[i]);
   }
 
-  void _openSheet(CommuniqLevel level, int index) {
-    final isDone = _done.contains(level.id);
+  void _openSheet(CommuniqLevel level) {
+    final journey = _curriculum?.journeyFor(level.id);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.transparent,
       builder: (sheetContext) => _LevelSheet(
         level: level,
-        hub: _kHubNames[index.clamp(0, _kHubNames.length - 1)],
-        color: _kNodeColor,
-        isDone: isDone,
-        onStart: () async {
+        journeyTitle: journey?.title ?? level.journeyTitle,
+        isDone: _store.isComplete(level.id),
+        stepsSolved: _store.stepsSolved(level.id),
+        coinsEarned: _store.coinsFor(level.id),
+        onStart: () {
           Navigator.pop(sheetContext);
-          final res = await context.push<dynamic>(
-            AppRoutes.learningSession,
-            extra: LearningSessionArgs(
-              level: level,
-              isAlreadyCompleted: isDone,
-              initialCoins: _totalCoins,
-            ),
-          );
-          if (res is Map) {
-            final coins = res['coins'] as int? ?? 0;
-            final score = res['score'] as int?;
-            if (coins > 0) await _onLevelComplete(level, coins, score);
-          }
+          _startLevel(level);
         },
       ),
     );
   }
 
-  Future<void> _onLevelComplete(
-    CommuniqLevel level,
-    int earnedCoins,
-    int? aiScore,
-  ) async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> _startLevel(CommuniqLevel level) async {
+    final wasDone = _store.isComplete(level.id);
 
-    // Optimistic local update so the celebration is instant; the server
-    // reconciliation immediately after is authoritative. The session screen
-    // already called POST /learning/levels/:id/complete before returning.
-    if (mounted) {
-      setState(() {
-        _done.add(level.id);
-        _levelCoins[level.id] = earnedCoins;
-        _celebrate = true;
-      });
-    }
-
-    await prefs.setStringList(
-      'completed_level_ids',
-      _done.map((id) => '$id').toList(),
+    final result = await context.push<dynamic>(
+      AppRoutes.learningSession,
+      extra: LearningSessionArgs(
+        level: level,
+        isAlreadyCompleted: wasDone,
+        initialCoins: _store.coins,
+      ),
     );
-    await prefs.setInt('level_${level.id}_coins', earnedCoins);
-    if (aiScore != null) {
-      await prefs.setInt('level_${level.id}_score', aiScore);
-    }
+    if (!mounted) return;
 
-    await _refreshFromServer();
+    // The session screen has already folded every graded answer into the
+    // store, so the path is correct before this runs. Reconcile anyway — it
+    // is the cheap way to pick up anything a failed request left behind.
+    await _store.refresh();
+    if (!mounted) return;
 
-    if (mounted) {
-      // Reset the trigger so a later completion fires another burst.
+    final justFinished =
+        result is Map && result['completed'] == true && !wasDone;
+    if (justFinished) {
+      setState(() => _celebrate = true);
       Future.delayed(const Duration(milliseconds: 2500), () {
         if (mounted) setState(() => _celebrate = false);
       });
     }
   }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -276,7 +199,14 @@ class _LearningViewState extends State<LearningView> {
         seed: 2,
         child: Scaffold(
           backgroundColor: AppColors.transparent,
-          body: SafeArea(bottom: false, child: _body()),
+          body: SafeArea(
+            bottom: false,
+            // Repaints whenever a graded answer lands, so progress is live.
+            child: AnimatedBuilder(
+              animation: _store,
+              builder: (_, __) => _body(),
+            ),
+          ),
         ),
       ),
     );
@@ -304,54 +234,81 @@ class _LearningViewState extends State<LearningView> {
       );
     }
 
-    final doneCount = _levels.where((l) => _done.contains(l.id)).length;
+    final doneCount = _levels.where((l) => _store.isComplete(l.id)).length;
 
     return Column(
       children: [
         _Header(
-          coins: _totalCoins,
+          coins: _store.coins,
           doneCount: doneCount,
           total: _levels.length,
-          syncFailed: _syncFailed,
-          onRetrySync: _refreshFromServer,
+          syncFailed: _store.isStale,
+          onRetrySync: _store.refresh,
         ),
         Expanded(
-          child: ListView.builder(
-            controller: _scroll,
-            padding: const EdgeInsets.only(
-              top: AppSpacing.s16,
-              bottom: AppSpacing.navClearance,
-            ),
-            itemCount: _levels.length,
-            itemBuilder: (context, i) => _PathRow(
-              index: i,
-              isLast: i == _levels.length - 1,
-              // A segment is "travelled" when the level above it is done. Both
-              // halves of one segment must agree, so the incoming half of row i
-              // and the outgoing half of row i-1 read the same level.
-              trailReached: _done.contains(_levels[i].id),
-              incomingReached:
-                  i > 0 && _done.contains(_levels[i - 1].id),
-              level: _levels[i],
-              hub: _kHubNames[i.clamp(0, _kHubNames.length - 1)],
-              color: _kNodeColor,
-              state: _stateFor(i),
-              coins: _levelCoins[_levels[i].id],
-              rowHeight: _rowHeight,
-              // A visible gate between the two journeys, rather than a level
-              // that silently refuses to open.
-              gate: i == _kJourney2StartIndex
-                  ? _JourneyGate(
-                      unlocked: _totalCoins >= _kMinCoinsForJourney2,
-                      coins: _totalCoins,
-                      required: _kMinCoinsForJourney2,
-                    )
-                  : null,
-              onTap: () => _onNodeTap(i),
+          child: RefreshIndicator(
+            color: AppColors.brand,
+            onRefresh: () async {
+              LevelService.instance.clearCache();
+              await _load();
+            },
+            child: ListView.builder(
+              controller: _scroll,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(
+                top: AppSpacing.s16,
+                bottom: AppSpacing.navClearance,
+              ),
+              itemCount: _levels.length,
+              itemBuilder: (context, i) => _rowFor(i),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _rowFor(int i) {
+    final level = _levels[i];
+    final journey = _curriculum?.journeyFor(level.id);
+
+    // A banner introduces each journey, shown above its first level.
+    final previousJourney =
+        i == 0 ? null : _curriculum?.journeyFor(_levels[i - 1].id);
+    final startsJourney = journey != null && journey.id != previousJourney?.id;
+
+    final mcqCount = level.mcqs.length;
+    final solved = _store.stepsSolved(level.id);
+    final isDone = _store.isComplete(level.id);
+
+    return _PathRow(
+      index: i,
+      isLast: i == _levels.length - 1,
+      // A segment is "travelled" when the level above it is done. Both halves
+      // of one segment must agree, so the incoming half of row i and the
+      // outgoing half of row i-1 read the same level.
+      trailReached: isDone,
+      incomingReached: i > 0 && _store.isComplete(_levels[i - 1].id),
+      level: level,
+      color: _kNodeColor,
+      state: _stateFor(i),
+      coins: isDone ? _store.coinsFor(level.id) : null,
+      // Partial progress, so a half-finished level reads as in progress
+      // rather than untouched.
+      progressLabel: !isDone && solved > 0 ? '$solved/${mcqCount + 1}' : null,
+      rowHeight: _rowHeight,
+      banner: startsJourney
+          ? _JourneyBanner(
+              journey: journey,
+              doneInJourney: _levels
+                  .where((l) =>
+                      journey.contains(l.id) && _store.isComplete(l.id))
+                  .length,
+              totalInJourney:
+                  _levels.where((l) => journey.contains(l.id)).length,
+            )
+          : null,
+      onTap: () => _onNodeTap(i),
     );
   }
 }
@@ -455,13 +412,13 @@ class _PathRow extends StatelessWidget {
     required this.trailReached,
     required this.incomingReached,
     required this.level,
-    required this.hub,
     required this.color,
     required this.state,
     required this.coins,
     required this.rowHeight,
     required this.onTap,
-    this.gate,
+    this.progressLabel,
+    this.banner,
   });
 
   final int index;
@@ -475,13 +432,16 @@ class _PathRow extends StatelessWidget {
   final bool incomingReached;
 
   final CommuniqLevel level;
-  final String hub;
   final Color color;
   final LevelNodeState state;
   final int? coins;
+
+  /// "2/5" for a level in progress; null when untouched or finished.
+  final String? progressLabel;
+
   final double rowHeight;
   final VoidCallback onTap;
-  final Widget? gate;
+  final Widget? banner;
 
   /// Horizontal placement, cycling left → centre → right → centre so the path
   /// visibly winds rather than running straight down.
@@ -496,9 +456,11 @@ class _PathRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locked = state == LevelNodeState.locked;
+
     return Column(
       children: [
-        if (gate != null)
+        if (banner != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.page,
@@ -506,7 +468,7 @@ class _PathRow extends StatelessWidget {
               AppSpacing.page,
               AppSpacing.s16,
             ),
-            child: gate!,
+            child: banner!,
           ),
         SizedBox(
           height: rowHeight,
@@ -544,7 +506,7 @@ class _PathRow extends StatelessWidget {
               Align(
                 alignment: Alignment(_align > 0 ? -0.92 : 0.92, 0),
                 child: SizedBox(
-                  width: 128,
+                  width: 132,
                   child: Column(
                     crossAxisAlignment: _align > 0
                         ? CrossAxisAlignment.start
@@ -552,7 +514,7 @@ class _PathRow extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        hub,
+                        '${level.emoji}  ${level.skill}',
                         textAlign:
                             _align > 0 ? TextAlign.left : TextAlign.right,
                         style: AppTextStyles.labelSmall,
@@ -565,11 +527,29 @@ class _PathRow extends StatelessWidget {
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.titleSmall.copyWith(
-                          color: state == LevelNodeState.locked
-                              ? AppColors.inkSoft
-                              : AppColors.ink,
+                          color: locked ? AppColors.inkSoft : AppColors.ink,
                         ),
                       ),
+                      if (progressLabel != null) ...[
+                        const SizedBox(height: AppSpacing.s6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.s8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.brandSoft,
+                            borderRadius: AppRadius.pillRadius,
+                            border:
+                                Border.all(color: AppColors.brand, width: 1.5),
+                          ),
+                          child: Text(
+                            'In progress · $progressLabel',
+                            style: AppTextStyles.labelSmall
+                                .copyWith(color: AppColors.brandDark),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -582,54 +562,68 @@ class _PathRow extends StatelessWidget {
   }
 }
 
-// ── Journey gate ───────────────────────────────────────────────────────────
+// ── Journey banner ─────────────────────────────────────────────────────────
 
-class _JourneyGate extends StatelessWidget {
-  const _JourneyGate({
-    required this.unlocked,
-    required this.coins,
-    required this.required,
+/// Introduces each themed group of levels.
+///
+/// This replaces a coin-gated wall that could not be passed: the threshold was
+/// checked against a server coin total that the written-response coins never
+/// reached, because they were only ever added client-side.
+class _JourneyBanner extends StatelessWidget {
+  const _JourneyBanner({
+    required this.journey,
+    required this.doneInJourney,
+    required this.totalInJourney,
   });
 
-  final bool unlocked;
-  final int coins;
-  // ignore: avoid_field_initializers_in_const_classes
-  final int required;
+  final CommuniqJourney journey;
+  final int doneInJourney;
+  final int totalInJourney;
 
   @override
   Widget build(BuildContext context) {
+    final complete = totalInJourney > 0 && doneInJourney == totalInJourney;
+
     return ChunkyCard(
-      fill: unlocked ? AppColors.successSoft : AppColors.sunSoft,
-      borderColor: unlocked ? AppColors.success : AppColors.sun,
+      fill: complete ? AppColors.successSoft : AppColors.surfaceAlt,
+      borderColor: complete ? AppColors.success : AppColors.sun,
       child: Row(
         children: [
-          Icon(
-            unlocked ? Icons.lock_open_rounded : Icons.lock_rounded,
-            color: unlocked ? AppColors.success : AppColors.sunDark,
-            size: 26,
-          ),
+          Text(journey.emoji, style: const TextStyle(fontSize: 30)),
           const SizedBox(width: AppSpacing.s12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Journey 2', style: AppTextStyles.titleMedium),
+                Text(journey.title, style: AppTextStyles.titleMedium),
                 const SizedBox(height: 2),
                 Text(
-                  unlocked
-                      ? 'Unlocked — keep going!'
-                      : '$coins / $required coins to unlock',
+                  journey.subtitle.isNotEmpty
+                      ? journey.subtitle
+                      : '$doneInJourney of $totalInJourney complete',
                   style: AppTextStyles.bodySmall,
                 ),
-                if (!unlocked) ...[
-                  const SizedBox(height: AppSpacing.s8),
-                  ChunkyProgressBar(
-                    value: coins / required,
-                    color: AppColors.sun,
-                    height: 10,
-                  ),
-                ],
+                const SizedBox(height: AppSpacing.s8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ChunkyProgressBar(
+                        value: totalInJourney == 0
+                            ? 0
+                            : doneInJourney / totalInJourney,
+                        color:
+                            complete ? AppColors.success : AppColors.brand,
+                        height: 10,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                    Text(
+                      '$doneInJourney/$totalInJourney',
+                      style: AppTextStyles.labelSmall,
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -644,20 +638,24 @@ class _JourneyGate extends StatelessWidget {
 class _LevelSheet extends StatelessWidget {
   const _LevelSheet({
     required this.level,
-    required this.hub,
-    required this.color,
+    required this.journeyTitle,
     required this.isDone,
+    required this.stepsSolved,
+    required this.coinsEarned,
     required this.onStart,
   });
 
   final CommuniqLevel level;
-  final String hub;
-  final Color color;
+  final String journeyTitle;
   final bool isDone;
+  final int stepsSolved;
+  final int coinsEarned;
   final VoidCallback onStart;
 
   @override
   Widget build(BuildContext context) {
+    final inProgress = !isDone && stepsSolved > 0;
+
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
@@ -687,48 +685,102 @@ class _LevelSheet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.s16),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Mascot(
-                mood: isDone ? MascotMood.happy : MascotMood.thinking,
-                size: 64,
-                color: color,
-              ),
+              Text(level.emoji, style: const TextStyle(fontSize: 40)),
               const SizedBox(width: AppSpacing.s12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(hub, style: AppTextStyles.eyebrow),
+                    Text(journeyTitle.toUpperCase(),
+                        style: AppTextStyles.eyebrow),
                     const SizedBox(height: 2),
                     Text(level.title, style: AppTextStyles.headlineSmall),
                   ],
                 ),
               ),
+              if (isDone)
+                const Icon(Icons.check_circle_rounded,
+                    color: AppColors.success, size: 26),
             ],
           ),
-          const SizedBox(height: AppSpacing.s16),
-          Text(level.scenario, style: AppTextStyles.bodyMedium),
+          if (level.goal.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s12),
+            Text(
+              level.goal,
+              style:
+                  AppTextStyles.bodyMedium.copyWith(color: AppColors.inkMuted),
+            ),
+          ],
           const SizedBox(height: AppSpacing.s12),
-          Row(
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.s12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceAlt,
+              borderRadius: AppRadius.chipRadius,
+            ),
+            child: Text(
+              level.scenario,
+              style: AppTextStyles.bodySmall.copyWith(height: 1.5),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Wrap(
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
             children: [
               _Chip(
                 icon: Icons.quiz_rounded,
                 label: '${level.mcqs.length} questions',
               ),
-              const SizedBox(width: AppSpacing.s8),
-              const _Chip(icon: Icons.mic_rounded, label: '1 spoken answer'),
+              const _Chip(icon: Icons.edit_rounded, label: '1 written answer'),
+              if (coinsEarned > 0)
+                _Chip(
+                  icon: Icons.monetization_on_rounded,
+                  label: '$coinsEarned earned',
+                ),
             ],
           ),
+          if (inProgress) ...[
+            const SizedBox(height: AppSpacing.s14),
+            ChunkyProgressBar(
+              value: stepsSolved / level.totalSteps,
+              color: AppColors.brand,
+              height: 12,
+            ),
+            const SizedBox(height: AppSpacing.s6),
+            Text(
+              '$stepsSolved of ${level.totalSteps} steps done — you can pick up '
+              'where you left off.',
+              style: AppTextStyles.bodySmall,
+            ),
+          ],
           const SizedBox(height: AppSpacing.s20),
           ChunkyButton(
-            label: isDone ? 'Practise again' : 'Start level',
+            label: isDone
+                ? 'Practise again'
+                : inProgress
+                    ? 'Resume level'
+                    : 'Start level',
             icon: Icons.play_arrow_rounded,
+            expand: true,
             variant: isDone
                 ? ChunkyButtonVariant.secondary
                 : ChunkyButtonVariant.primary,
             onPressed: onStart,
           ),
+          if (isDone) ...[
+            const SizedBox(height: AppSpacing.s8),
+            Center(
+              child: Text(
+                'Replaying is free — and pays no coins.',
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.inkSoft),
+              ),
+            ),
+          ],
         ],
       ),
     );

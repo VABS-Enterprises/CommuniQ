@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:communiq/common_widgets/chunky_card.dart';
 import 'package:communiq/common_widgets/chunky_progress_bar.dart';
@@ -10,6 +9,7 @@ import 'package:communiq/core/constants/app_text_styles.dart';
 import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/routes/app_routes.dart';
+import 'package:communiq/core/services/learning_progress_store.dart';
 import 'package:communiq/core/services/level_service.dart';
 import 'package:communiq/models/communiq_level.dart';
 
@@ -28,50 +28,55 @@ class _ContinueCardState extends State<ContinueCard> {
   int _total = 0;
   bool _loading = true;
 
-  /// Hub names, one per level block — mirrors the order in learning_view.
-  static const _hubNames = [
-    'Introduction Hub', 'Conversation Hub', 'Professional Hub',
-    'Influence Hub', 'Expression Hub', 'Pro Skills Hub',
-    'Dialogue Hub', 'Office Hub', 'Social Hub', 'Work–Life Hub',
-    'Crisis Hub', 'High-Stakes Hub', 'Leadership Hub',
-    'Power Hub', 'Legacy Hub', 'Mastery Hub',
-    'Elite Hub', 'Pinnacle Hub', 'Visionary Hub', 'Apex Hub',
-  ];
+  Curriculum? _curriculum;
 
-  String _hubFor(int levelId) =>
-      _hubNames[(levelId - 1).clamp(0, _hubNames.length - 1)];
+  LearningProgressStore get _store => LearningProgressStore.instance;
+
+  /// The journey a level belongs to, straight from the curriculum. This used
+  /// to be a hardcoded table of 20 invented "Hub" names that had nothing to do
+  /// with the content and drifted the moment a level was renamed.
+  String _journeyTitleFor(CommuniqLevel level) =>
+      _curriculum?.journeyFor(level.id)?.title ?? level.journeyTitle;
 
   @override
   void initState() {
     super.initState();
+    _store.addListener(_onProgressChanged);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _store.removeListener(_onProgressChanged);
+    super.dispose();
+  }
+
+  /// Progress is shared state now, so finishing a level in the Learn tab
+  /// updates this card without it having to re-fetch anything.
+  void _onProgressChanged() {
+    if (mounted) setState(_recompute);
+  }
+
+  void _recompute() {
+    final levels = _curriculum?.levels ?? const <CommuniqLevel>[];
+    _total = levels.length;
+    _completed = levels.where((l) => _store.isComplete(l.id)).length;
+    _level = levels.cast<CommuniqLevel?>().firstWhere(
+          (l) => l != null && !_store.isComplete(l.id),
+          orElse: () => null,
+        );
   }
 
   Future<void> _load() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final doneIds = (prefs.getStringList('completed_level_ids') ?? [])
-          .map(int.tryParse)
-          .whereType<int>()
-          .toSet();
-      final levels = await LevelService.instance.fetchLevels();
-      final journey = levels.take(20).toList();
-
-      CommuniqLevel? current;
-      for (final l in journey) {
-        if (!doneIds.contains(l.id)) {
-          current = l;
-          break;
-        }
-      }
-
+      final curriculum = await LevelService.instance.fetchCurriculum();
       if (!mounted) return;
       setState(() {
-        _level = current;
-        _completed = journey.where((l) => doneIds.contains(l.id)).length;
-        _total = journey.length;
+        _curriculum = curriculum;
+        _recompute();
         _loading = false;
       });
+      if (!_store.isLoaded) await _store.refresh();
     } catch (e) {
       debugPrint('[ContinueCard] load failed: $e');
       if (mounted) setState(() => _loading = false);
@@ -144,7 +149,7 @@ class _ContinueCardState extends State<ContinueCard> {
         children: [
           Row(
             children: [
-              _LevelThumb(asset: level.imageAsset),
+              _LevelThumb(emoji: level.emoji),
               const SizedBox(width: AppSpacing.s14),
               Expanded(
                 child: Column(
@@ -155,7 +160,7 @@ class _ContinueCardState extends State<ContinueCard> {
                         style: AppTextStyles.titleMedium),
                     const SizedBox(height: 2),
                     Text(
-                      '${_hubFor(level.id)} · Level ${level.id}',
+                      '${_journeyTitleFor(level)} · Level ${level.id}',
                       style: AppTextStyles.labelSmall,
                     ),
                     const SizedBox(height: 3),
@@ -213,34 +218,27 @@ class _ContinueCardState extends State<ContinueCard> {
   }
 }
 
-/// The scenario artwork is dark, high-contrast illustration that would clash
-/// directly on the cream card. Framing it in its own dark tile presents it as
-/// a deliberate thumbnail instead.
+/// The level's own emoji, in a soft brand tile.
+///
+/// This used to render an unrelated roleplay illustration picked by
+/// `(id - 1) % 12`, so level 13 showed the "cold call" artwork for no reason.
 class _LevelThumb extends StatelessWidget {
-  const _LevelThumb({required this.asset});
+  const _LevelThumb({required this.emoji});
 
-  final String asset;
+  final String emoji;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 56,
       height: 56,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.ink,
+        color: AppColors.brandSoft,
         borderRadius: AppRadius.chipRadius,
-        border: Border.all(color: AppColors.outline, width: 2),
+        border: Border.all(color: AppColors.brand, width: 2),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Image.asset(
-        asset,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Icon(
-          Icons.school_rounded,
-          color: AppColors.brand,
-          size: 26,
-        ),
-      ),
+      child: Text(emoji, style: const TextStyle(fontSize: 28)),
     );
   }
 }
