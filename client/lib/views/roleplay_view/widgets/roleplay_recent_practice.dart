@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:communiq/core/constants/app_colors.dart';
-import 'package:communiq/core/services/session_service.dart';
-import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:communiq/common_widgets/chunky_card.dart';
+import 'package:communiq/common_widgets/icon_tile.dart';
+import 'package:communiq/common_widgets/mascot/mascot.dart';
+import 'package:communiq/common_widgets/state_views.dart';
+import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/constants/app_text_styles.dart';
+import 'package:communiq/core/constants/radius.dart';
+import 'package:communiq/core/constants/spacing.dart';
+import 'package:communiq/core/routes/app_routes.dart';
+import 'package:communiq/core/services/session_service.dart';
+
+/// Completed practice sessions, most recent first.
 class RoleplayRecentPractice extends StatefulWidget {
   const RoleplayRecentPractice({super.key});
 
@@ -28,221 +38,172 @@ class _RoleplayRecentPracticeState extends State<RoleplayRecentPractice> {
     });
     try {
       final sessions = await SessionService.instance.fetchSessionHistory();
-      if (mounted) {
-        setState(() {
-          _sessions = sessions
-              .where((s) => s['status'] == 'completed')
-              .take(4) // Show 4 items
-              .toList();
-          _loading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _error = true;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _sessions = sessions
+            .where((s) => s['status'] == 'completed')
+            .take(4)
+            .toList();
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('[RoleplayRecentPractice] load failed: $e');
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = true;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Recent Practice',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (_loading)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2),
-            ),
-          )
-        else if (_error)
-          _buildErrorState(context)
-        else if (_sessions.isEmpty)
-          _buildEmptyState(context)
-        else
-          ..._sessions.map((s) => _buildCompactRow(context, s)),
-      ],
-    );
-  }
-
-  String _formatSubtitle(Map<String, dynamic> session) {
-    final startedAt = session['startedAt'];
-    if (startedAt == null) return 'Completed';
-    try {
-      final dt = DateTime.parse(startedAt.toString());
-      final diff = DateTime.now().difference(dt);
-      if (diff.inDays == 0) return 'Today • Completed';
-      if (diff.inDays == 1) return '1 day ago • Completed';
-      return '${diff.inDays} days ago • Completed';
-    } catch (_) {
-      return 'Completed';
-    }
-  }
-
-  String _formatScore(Map<String, dynamic> session) {
-    final score = session['overallScore'];
-    return score != null ? '$score%' : '--';
-  }
-
-  Widget _buildErrorState(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Center(
-        child: Column(
-          children: [
-            const Icon(Icons.wifi_off_rounded, color: AppColors.textMuted, size: 28),
-            const SizedBox(height: 8),
-            const Text(
-              'Could not load recent practice.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: _load,
-              child: const Text('Retry', style: TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w600)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Center(
-        child: Column(
-          children: [
-            const Icon(Icons.mic_none_rounded, color: AppColors.textMuted, size: 32),
-            const SizedBox(height: 10),
-            const Text(
-              'No practice sessions yet\nStart your first roleplay!',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompactRow(BuildContext context, Map<String, dynamic> session) {
-    final title = session['scenarioTitle'] as String? ?? 'Session';
-    final subtitle = _formatSubtitle(session);
-    final score = _formatScore(session);
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => RoleplaySetupScreen(
-              mode: 'prefilled',
-              category: 'Custom',
-              scenario: title,
-              persona: session['persona'] ?? 'Friendly Colleague',
-              difficulty: session['difficulty'] ?? 'Medium',
-            ),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
+    if (_loading) {
+      return Column(
+        children: List.generate(
+          2,
+          (_) => Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.item),
+            child: ChunkyCard(
+              padding: const EdgeInsets.all(AppSpacing.s14),
               child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.25),
-                        width: 1,
-                      ),
-                    ),
-                    child: const Icon(Icons.psychology_rounded,
-                        color: AppColors.primaryLight, size: 22),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
+                children: const [
+                  SkeletonBox(width: 40, height: 40),
+                  SizedBox(width: AppSpacing.s12),
+                  Expanded(child: SkeletonBox(height: 16)),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            Row(
-              children: [
-                Text(
-                  score,
-                  style: const TextStyle(
-                    color: AppColors.primaryLight,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
-              ],
+          ),
+        ),
+      );
+    }
+
+    if (_error) {
+      return ChunkyCard(
+        fill: AppColors.errorSoft,
+        borderColor: AppColors.error,
+        padding: const EdgeInsets.all(AppSpacing.s14),
+        child: Row(
+          children: [
+            const Icon(Icons.cloud_off_rounded,
+                color: AppColors.error, size: 20),
+            const SizedBox(width: AppSpacing.s10),
+            Expanded(
+              child: Text(
+                "Couldn't load your history.",
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.ink),
+              ),
             ),
+            TextButton(onPressed: _load, child: const Text('Retry')),
           ],
         ),
+      );
+    }
+
+    if (_sessions.isEmpty) {
+      return ChunkyCard(
+        padding: EdgeInsets.zero,
+        child: EmptyState(
+          title: 'Nothing yet',
+          message: 'Finish a session and it will show up here.',
+          mood: MascotMood.encouraging,
+          actionLabel: 'Start one',
+          onAction: () => context.push(AppRoutes.roleplaySetup),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        for (final s in _sessions)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.item),
+            child: _PracticeRow(session: s),
+          ),
+      ],
+    );
+  }
+}
+
+class _PracticeRow extends StatelessWidget {
+  const _PracticeRow({required this.session});
+
+  final Map<String, dynamic> session;
+
+  /// Firestore documents are untyped, so every field is defensively read.
+  String get _title {
+    final t = session['scenarioTitle'] ?? session['scenarioId'];
+    return t is String && t.isNotEmpty ? t : 'Practice session';
+  }
+
+  int? get _score {
+    final raw = session['overallScore'] ?? session['score'];
+    return raw is num ? raw.round() : null;
+  }
+
+  String get _when {
+    final raw = session['createdAt'] ?? session['endedAt'];
+    DateTime? dt;
+    if (raw is String) dt = DateTime.tryParse(raw);
+    if (raw is int) {
+      // Firestore may hand back seconds rather than milliseconds.
+      dt = DateTime.fromMillisecondsSinceEpoch(
+        raw > 100000000000 ? raw : raw * 1000,
+      );
+    }
+    if (dt == null) return '';
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.day}/${dt.month}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final score = _score;
+    final tint = score != null ? AppColors.forScore(score) : AppColors.inkSoft;
+
+    return ChunkyCard(
+      padding: const EdgeInsets.all(AppSpacing.s14),
+      child: Row(
+        children: [
+          IconTile(icon: Icons.mic_rounded, color: tint, size: 40),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _title,
+                  style: AppTextStyles.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (_when.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(_when, style: AppTextStyles.bodySmall),
+                ],
+              ],
+            ),
+          ),
+          if (score != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: tint,
+                borderRadius: AppRadius.pillRadius,
+              ),
+              child: Text(
+                '$score',
+                style: AppTextStyles.numeralSmall.copyWith(
+                  color: AppColors.inkOnDark,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

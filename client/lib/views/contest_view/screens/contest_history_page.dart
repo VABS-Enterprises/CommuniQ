@@ -1,235 +1,113 @@
 import 'package:flutter/material.dart';
-import 'package:communiq/core/constants/app_colors.dart';
-import 'package:communiq/views/contest_view/contest_state.dart';
+import 'package:go_router/go_router.dart';
 
-class ContestHistoryPage extends StatelessWidget {
-  final List<ContestHistory> history;
-  const ContestHistoryPage({super.key, required this.history});
+import 'package:communiq/common_widgets/mascot/mascot.dart';
+import 'package:communiq/common_widgets/playful_background.dart';
+import 'package:communiq/common_widgets/state_views.dart';
+import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/constants/motion.dart';
+import 'package:communiq/core/constants/spacing.dart';
+import 'package:communiq/core/services/contest_service.dart';
+import 'package:communiq/models/contest_models.dart';
+import 'package:communiq/views/contest_view/screens/contest_hub_page.dart';
+
+/// Every contest attempt this user has made, newest first.
+///
+/// Replaces the old page that rendered a hardcoded list of three invented
+/// contests from contest_state.dart.
+class ContestHistoryPage extends StatefulWidget {
+  const ContestHistoryPage({super.key});
+
+  @override
+  State<ContestHistoryPage> createState() => _ContestHistoryPageState();
+}
+
+class _ContestHistoryPageState extends State<ContestHistoryPage> {
+  List<ContestAttempt> _attempts = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final attempts = await ContestService.instance.history(limit: 50);
+      if (!mounted) return;
+      setState(() {
+        _attempts = attempts;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Header ─────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.surface,
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: AppColors.textSecondary, size: 16),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('📋 Contest History',
-                          style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold)),
-                      SizedBox(height: 2),
-                      Text('All past competitions',
-                          style: TextStyle(
-                              color: AppColors.textSecondary, fontSize: 12)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+    return PlayfulBackground(
+      seed: 10,
+      child: Scaffold(
+        backgroundColor: AppColors.transparent,
+        appBar: AppBar(
+          title: const Text('Contest history'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: _body(),
+      ),
+    );
+  }
 
-            const SizedBox(height: 20),
+  Widget _body() {
+    if (_loading) return const LoadingStateView();
 
-            // ── Stats summary row ──────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _SummaryChip(
-                      label: 'Participated',
-                      value: '${history.length}',
-                      icon: Icons.sports_esports_rounded,
-                      color: AppColors.primaryLight,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SummaryChip(
-                      label: 'Best Rank',
-                      value: '#${history.map((h) => h.rank).reduce((a, b) => a < b ? a : b)}',
-                      icon: Icons.emoji_events_rounded,
-                      color: AppColors.scoreNeedsWork,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SummaryChip(
-                      label: 'Top Score',
-                      value: '${history.map((h) => h.bestScore).reduce((a, b) => a > b ? a : b)}%',
-                      icon: Icons.speed_rounded,
-                      color: AppColors.scoreExcellent,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    if (_error != null) {
+      return ErrorStateView(message: _error, onRetry: _load);
+    }
 
-            const SizedBox(height: 20),
+    if (_attempts.isEmpty) {
+      return const EmptyState(
+        title: 'No attempts yet',
+        message: 'Your contest scores will appear here.',
+        mood: MascotMood.encouraging,
+      );
+    }
 
-            // ── List ──────────────────────────────────────────────────────
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: history.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, i) =>
-                    _HistoryCard(item: history[i], index: i),
-              ),
-            ),
-
-            const SizedBox(height: 30),
-          ],
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppColors.brand,
+      backgroundColor: AppColors.surface,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.page,
+          AppSpacing.s12,
+          AppSpacing.page,
+          AppSpacing.s32,
+        ),
+        itemCount: _attempts.length,
+        itemBuilder: (context, i) => FadeInUp(
+          delay: AppMotion.staggerFor(i),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.item),
+            child: ContestAttemptRow(attempt: _attempts[i]),
+          ),
         ),
       ),
-    );
-  }
-}
-
-class _SummaryChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _SummaryChip(
-      {required this.label,
-      required this.value,
-      required this.icon,
-      required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(children: [
-        Icon(icon, color: color, size: 18),
-        const SizedBox(height: 6),
-        Text(value,
-            style: TextStyle(
-                color: color, fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 2),
-        Text(label,
-            style:
-                const TextStyle(color: AppColors.textSecondary, fontSize: 10),
-            textAlign: TextAlign.center),
-      ]),
-    );
-  }
-}
-
-class _HistoryCard extends StatelessWidget {
-  final ContestHistory item;
-  final int index;
-
-  const _HistoryCard({required this.item, required this.index});
-
-  @override
-  Widget build(BuildContext context) {
-    final scoreColor = item.bestScore >= 80
-        ? AppColors.scoreExcellent
-        : item.bestScore >= 65
-            ? AppColors.primaryLight
-            : AppColors.scoreNeedsWork;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          // Index circle
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-              border:
-                  Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-            ),
-            child: Center(
-              child: Text('${index + 1}',
-                  style: const TextStyle(
-                      color: AppColors.primaryLight,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16)),
-            ),
-          ),
-
-          const SizedBox(width: 14),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.name,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14)),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    _pill('Rank #${item.rank}', AppColors.primaryLight,
-                        AppColors.primaryLight.withValues(alpha: 0.12)),
-                    const SizedBox(width: 8),
-                    _pill('Best ${item.bestScore}%', scoreColor,
-                        scoreColor.withValues(alpha: 0.1)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _pill(String text, Color color, Color bg) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(text,
-          style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 }

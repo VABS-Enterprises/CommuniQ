@@ -1,172 +1,272 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
+import '../constants/radius.dart';
+import '../constants/spacing.dart';
 
+/// The app's single ThemeData.
+///
+/// CommuniQ is light-only by design — the playful identity depends on a warm
+/// cream ground and saturated fills that have no meaningful dark counterpart.
+/// There is no `darkTheme`; `MaterialApp.themeMode` stays at `ThemeMode.light`.
 class AppTheme {
-  static ThemeData get darkTheme {
-    return ThemeData(
+  static ThemeData get light {
+    final base = ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.background,
-      primaryColor: AppColors.primary,
+      brightness: Brightness.light,
+      fontFamily: AppTextStyles.fontFamily,
+      scaffoldBackgroundColor: AppColors.bg,
+      canvasColor: AppColors.bg,
 
-      // 🎹 Linear Precision Ripple
-      splashFactory: InkRipple.splashFactory,
+      // Chunky surfaces own their own press animation (translate + shadow
+      // collapse), so Material's ink splash would double up on the feedback.
+      splashFactory: NoSplash.splashFactory,
+      highlightColor: AppColors.transparent,
 
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.primary,
-        onPrimary: Colors.white,
-        primaryContainer: AppColors.primaryDark,
-        secondary: AppColors.secondary,
-        onSecondary: Colors.white,
+      colorScheme: const ColorScheme.light(
+        primary: AppColors.brand,
+        onPrimary: AppColors.inkOnDark,
+        primaryContainer: AppColors.brandSoft,
+        onPrimaryContainer: AppColors.brandDark,
+        secondary: AppColors.brand,
+        onSecondary: AppColors.inkOnDark,
+        secondaryContainer: AppColors.brandSoft,
+        tertiary: AppColors.brand,
+        onTertiary: AppColors.inkOnDark,
         surface: AppColors.surface,
-        onSurface: AppColors.textPrimary,
-        surfaceContainerHighest: AppColors.surfaceVariant,
+        onSurface: AppColors.ink,
+        surfaceContainerHighest: AppColors.surfaceAlt,
+        surfaceContainerLow: AppColors.bgSunk,
         error: AppColors.error,
-        outline: AppColors.border,
+        onError: AppColors.inkOnDark,
+        outline: AppColors.outline,
+        scrim: AppColors.scrim,
       ),
+    );
 
-      // 🖥️ Studio App Bar
+    return base.copyWith(
+      textTheme: _textTheme,
+      primaryTextTheme: _textTheme,
+
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.background,
-        surfaceTintColor: Colors.transparent,
+        backgroundColor: AppColors.bg,
+        foregroundColor: AppColors.ink,
+        surfaceTintColor: AppColors.transparent,
         elevation: 0,
-        centerTitle: false, // Professional left-aligned
-        titleTextStyle: TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 17,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.2,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: AppTextStyles.headlineSmall,
+        iconTheme: IconThemeData(color: AppColors.ink, size: 24),
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: AppColors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
         ),
-        iconTheme: IconThemeData(color: AppColors.textSecondary, size: 20),
       ),
 
-      // 🏗️ Technical Cards
       cardTheme: CardThemeData(
         color: AppColors.surface,
+        surfaceTintColor: AppColors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12), // Sharper, more precise
-          side: const BorderSide(color: AppColors.border, width: 1.0),
+          borderRadius: AppRadius.cardRadius,
+          side: const BorderSide(color: AppColors.outline, width: 2),
         ),
       ),
 
-      // 🔘 Solid Studio Buttons
+      // Screens should prefer `ChunkyButton`; this keeps stray Material
+      // buttons on-brand rather than falling back to Material defaults.
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.brand,
+          foregroundColor: AppColors.inkOnDark,
+          disabledBackgroundColor: AppColors.bgSunk,
+          disabledForegroundColor: AppColors.inkSoft,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(8), // Professional sharp rounding
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s24,
+            vertical: AppSpacing.s16,
           ),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.1,
-          ),
-        ).copyWith(
-          overlayColor: WidgetStateProperty.all(Colors.white.withAlpha(20)),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.buttonRadius),
+          textStyle: AppTextStyles.labelLarge,
         ),
       ),
 
-      // 📥 Minimalist Input Fields
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.brand,
+          textStyle: AppTextStyles.labelLarge,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s16,
+            vertical: AppSpacing.s12,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.chipRadius),
+        ),
+      ),
+
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.ink,
+          side: const BorderSide(color: AppColors.outline, width: 2),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s24,
+            vertical: AppSpacing.s16,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.buttonRadius),
+          textStyle: AppTextStyles.labelLarge,
+        ),
+      ),
+
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceVariant,
-        hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
-        labelStyle:
-            const TextStyle(color: AppColors.textSecondary, fontSize: 14),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.border, width: 1),
+        fillColor: AppColors.surface,
+        hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.inkSoft),
+        labelStyle: AppTextStyles.titleSmall.copyWith(color: AppColors.inkMuted),
+        floatingLabelStyle: AppTextStyles.titleSmall.copyWith(
+          color: AppColors.brand,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.border, width: 1),
+        errorStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s16,
+          vertical: AppSpacing.s16,
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-        ),
+        border: _inputBorder(AppColors.outline),
+        enabledBorder: _inputBorder(AppColors.outline),
+        focusedBorder: _inputBorder(AppColors.brand, width: 2.5),
+        errorBorder: _inputBorder(AppColors.error),
+        focusedErrorBorder: _inputBorder(AppColors.error, width: 2.5),
+        disabledBorder: _inputBorder(AppColors.bgSunk),
       ),
 
-      // 📖 Clean Typography
-      textTheme: const TextTheme(
-        displayLarge: AppTextStyles.displayLarge,
-        displayMedium: AppTextStyles.displayMedium,
-        displaySmall: AppTextStyles.displaySmall,
-        headlineLarge: AppTextStyles.headlineLarge,
-        headlineMedium: AppTextStyles.headlineMedium,
-        headlineSmall: AppTextStyles.headlineSmall,
-        titleLarge: AppTextStyles.titleLarge,
-        titleMedium: AppTextStyles.titleMedium,
-        titleSmall: AppTextStyles.titleSmall,
-        bodyLarge: AppTextStyles.bodyLarge,
-        bodyMedium: AppTextStyles.bodyMedium,
-        bodySmall: AppTextStyles.bodySmall,
-        labelLarge: AppTextStyles.labelLarge,
-        labelMedium: AppTextStyles.labelMedium,
-        labelSmall: AppTextStyles.labelSmall,
-      )
-          .apply(
-            bodyColor: AppColors.textPrimary,
-            displayColor: AppColors.textPrimary,
-            fontFamily: 'Roboto', // Professional standard
-          )
-          .copyWith(
-            titleLarge: const TextStyle(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
-              fontSize: 20,
-            ),
-            bodyMedium: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-            ),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.surface,
+        selectedColor: AppColors.brandSoft,
+        side: const BorderSide(color: AppColors.outline, width: 2),
+        labelStyle: AppTextStyles.labelMedium,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s12,
+          vertical: AppSpacing.s8,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.chipRadius),
+      ),
+
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: AppColors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.cardRadius,
+          side: const BorderSide(color: AppColors.outline, width: 2),
+        ),
+        titleTextStyle: AppTextStyles.headlineSmall,
+        contentTextStyle: AppTextStyles.bodyMedium,
+      ),
+
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: AppColors.transparent,
+        elevation: 0,
+        modalBarrierColor: AppColors.scrim,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.sheet),
           ),
-
-      // 🧭 Studio Navigation Bar
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.background,
-        indicatorColor: Colors.transparent,
-        height: 64,
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
-                fontSize: 11);
-          }
-          return const TextStyle(color: AppColors.textMuted, fontSize: 11);
-        }),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: AppColors.primary, size: 24);
-          }
-          return const IconThemeData(color: AppColors.textMuted, size: 22);
-        }),
+        ),
       ),
 
-      // ➕ Studio FAB
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.ink,
+        contentTextStyle: AppTextStyles.titleSmall.copyWith(
+          color: AppColors.inkOnDark,
+        ),
+        actionTextColor: AppColors.sun,
+        behavior: SnackBarBehavior.floating,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.chipRadius),
+      ),
+
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: AppColors.brand,
+        foregroundColor: AppColors.inkOnDark,
+        elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 0,
+        highlightElevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.buttonRadius),
       ),
 
-      // 📏 Precise Divider
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.brand,
+        linearTrackColor: AppColors.bgSunk,
+        circularTrackColor: AppColors.bgSunk,
+      ),
+
       dividerTheme: const DividerThemeData(
-        color: AppColors.border,
-        thickness: 1,
-        space: 1,
+        color: AppColors.outline,
+        thickness: 2,
+        space: AppSpacing.s24,
+      ),
+
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? AppColors.surface
+              : AppColors.surface,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? AppColors.success
+              : AppColors.bgSunk,
+        ),
+        trackOutlineColor: WidgetStateProperty.all(AppColors.outline),
+      ),
+
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: AppColors.ink,
+          borderRadius: AppRadius.chipRadius,
+        ),
+        textStyle: AppTextStyles.bodySmall.copyWith(
+          color: AppColors.inkOnDark,
+        ),
+      ),
+
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: ZoomPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
       ),
     );
   }
+
+  static OutlineInputBorder _inputBorder(Color color, {double width = 2}) =>
+      OutlineInputBorder(
+        borderRadius: AppRadius.buttonRadius,
+        borderSide: BorderSide(color: color, width: width),
+      );
+
+  static const TextTheme _textTheme = TextTheme(
+    displayLarge: AppTextStyles.displayLarge,
+    displayMedium: AppTextStyles.displayMedium,
+    displaySmall: AppTextStyles.displaySmall,
+    headlineLarge: AppTextStyles.headlineLarge,
+    headlineMedium: AppTextStyles.headlineMedium,
+    headlineSmall: AppTextStyles.headlineSmall,
+    titleLarge: AppTextStyles.titleLarge,
+    titleMedium: AppTextStyles.titleMedium,
+    titleSmall: AppTextStyles.titleSmall,
+    bodyLarge: AppTextStyles.bodyLarge,
+    bodyMedium: AppTextStyles.bodyMedium,
+    bodySmall: AppTextStyles.bodySmall,
+    labelLarge: AppTextStyles.labelLarge,
+    labelMedium: AppTextStyles.labelMedium,
+    labelSmall: AppTextStyles.labelSmall,
+  );
+
+  @Deprecated('CommuniQ is light-only now — use AppTheme.light')
+  static ThemeData get darkTheme => light;
 }
