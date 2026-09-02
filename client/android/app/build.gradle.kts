@@ -28,7 +28,10 @@ android {
         // 23, not Flutter's default 21: the `record` plugin's Android
         // implementation (record_android) requires API 23+ for audio capture,
         // which the practice-session mic flow depends on.
-        minSdk = flutter.minSdkVersion
+        // record_android (microphone capture) declares minSdk 23, so the
+        // Flutter default of 21 fails the manifest merge and nothing builds.
+        // The merge reverted this; it was pinned deliberately.
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
