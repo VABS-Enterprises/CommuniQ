@@ -115,6 +115,8 @@ def main() -> None:
             per_device_train_batch_size=args.batch_size,
             gradient_accumulation_steps=4,
             num_train_epochs=args.epochs,
+            warmup_ratio=0.06,  # unlike train_colab.ipynb's old hardcoded warmup_steps=10,
+                                # this scales with dataset size automatically
             learning_rate=2e-4,
             fp16=not use_bf16,
             bf16=use_bf16,

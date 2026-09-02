@@ -8,7 +8,8 @@ Pipeline (LiveKit live-voice mode):
     → GroqSTTService                (Whisper-large-v3-turbo via Groq cloud)
     → UserTranscriptCapture         (stores user transcript + sends to Flutter)
     → LLMUserAggregator             (adds transcription to chat context)
-    → GroqLLMService                (llama-3.1-8b-instant)
+    → GroqLLMService                (qwen/qwen3.8-27b — see model choice note
+                                     near the LLM instantiation below)
     → AiTranscriptPoster            (aggregates AI text, POSTs turn to Node,
                                      sends transcript + ai_done to Flutter)
     → EdgeTTSService                (Microsoft Edge TTS — free, no rate limits)
@@ -70,6 +71,7 @@ from pipecat.turns.user_stop.turn_analyzer_user_turn_stop_strategy import TurnAn
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from pipecat.services.groq.llm import GroqLLMService
 from pipecat.services.groq.stt import GroqSTTService
+from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
 from pipecat.transports.livekit.transport import LiveKitParams, LiveKitTransport
@@ -721,17 +723,42 @@ async def run_bot(
     )
 
     # ── LLM ───────────────────────────────────────────────────────────────────
-    llm = GroqLLMService(
-        api_key=api_key,
-        settings=GroqLLMService.Settings(
-            model="llama-3.1-8b-instant",
-            # 320 tokens allows ~4 spoken sentences on a detailed answer
-            # while the voice_suffix instruction prevents unnecessary padding
-            # on short user inputs.
-            max_completion_tokens=320,
-            temperature=0.75,
-        ),
-    )
+    # LLM_BACKEND=groq (default, unchanged) or LLM_BACKEND=openai_compat to route
+    # the *conversational* LLM only through any OpenAI-compatible endpoint (local
+    # Ollama serving a fine-tuned model, a Modal-hosted vLLM server, etc.) — STT
+    # (Groq Whisper) and TTS (Edge-TTS) below are untouched either way. Mirrors
+    # ai-server/app/services/llm_facade.py's backend-selection naming for
+    # consistency across the app.
+    llm_backend = os.getenv("LLM_BACKEND", "groq").strip().lower()
+    if llm_backend == "openai_compat":
+        llm = OpenAILLMService(
+            base_url=os.getenv("LLM_BASE_URL", "http://localhost:11434/v1"),
+            api_key=os.getenv("OPENAI_COMPAT_API_KEY", "not-needed"),
+            model=os.getenv("LLM_MODEL", "communiq:8b"),
+        )
+        logger.info(
+            "[%s] LLM backend = openai_compat (base_url=%s, model=%s)",
+            session_id, os.getenv("LLM_BASE_URL", "http://localhost:11434/v1"),
+            os.getenv("LLM_MODEL", "communiq:8b"),
+        )
+    else:
+        llm = GroqLLMService(
+            api_key=api_key,
+            settings=GroqLLMService.Settings(
+                # llama-3.1-8b-instant was removed from Groq's model catalog.
+                # qwen/qwen3.8-27b benchmarked 2026-09-02 against this exact
+                # voice-mode prompt: fastest (~0.36s) of the current catalog and
+                # the only candidate that both kept replies short+question-ended
+                # and didn't leak <think> reasoning tokens into spoken output
+                # (ruled out qwen3.6-27b for that reason).
+                model="qwen/qwen3.8-27b",
+                # 320 tokens allows ~4 spoken sentences on a detailed answer
+                # while the voice_suffix instruction prevents unnecessary padding
+                # on short user inputs.
+                max_completion_tokens=320,
+                temperature=0.75,
+            ),
+        )
 
     # ── TTS ───────────────────────────────────────────────────────────────────
     # Using Microsoft Edge TTS (free, no rate limits).

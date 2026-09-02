@@ -196,8 +196,8 @@ ASR_BACKEND=groq
 LLM_BACKEND=groq
 TTS_BACKEND=edge
 EVAL_LLM_BACKEND=groq
-LLM_MODEL=llama-3.1-8b-instant
-EVAL_LLM_MODEL=llama-3.1-8b-instant
+LLM_MODEL=qwen/qwen3.8-27b
+EVAL_LLM_MODEL=openai/gpt-oss-120b
 ```
 
 ---
@@ -314,8 +314,8 @@ This adds all built-in HR, Technical, GD, and Sales scenarios to Firestore.
 | `ASR_BACKEND` | No | `groq` (default) |
 | `LLM_BACKEND` | No | `groq` (default) |
 | `TTS_BACKEND` | No | `edge` (default) |
-| `LLM_MODEL` | No | Groq model for conversation (default `llama-3.1-8b-instant`) |
-| `EVAL_LLM_MODEL` | No | Groq model for evaluation (default `llama-3.1-8b-instant`) |
+| `LLM_MODEL` | No | Groq model for conversation (default `qwen/qwen3.8-27b`) |
+| `EVAL_LLM_MODEL` | No | Groq model for evaluation (default `openai/gpt-oss-120b`) |
 
 ### `pipecat-worker/.env`
 

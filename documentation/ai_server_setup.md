@@ -51,14 +51,14 @@ python tests/test_groq.py
 
 Expected output: a short response from the LLM printed to the terminal. If you see `GROQ_API_KEY is not set`, the `.env` file is not being found — make sure you are running from the `ai-server/` directory.
 
-### Groq Free Tier Limits (as of 2026)
+### Groq Free Tier Limits
 
-| Model | Requests/min | Tokens/min | Tokens/day |
-|---|---|---|---|
-| llama-3.1-8b-instant | 30 | 131,072 | 1,000,000 |
-| whisper-large-v3 | 20 | — | 7,200 minutes/day |
-
-This is more than sufficient for a development prototype.
+Groq's model catalog and per-model rate limits change over time (e.g. `llama-3.1-8b-instant`,
+previously listed here, was removed from the catalog entirely — see `ai-server/app/config.py`'s
+comment for the current default, `qwen/qwen3.8-27b`, and why). Check current limits for whatever
+model `LLM_MODEL`/`EVAL_LLM_MODEL` is set to at https://console.groq.com/settings/limits rather
+than trusting a hardcoded table here. As of this writing, free-tier limits are more than
+sufficient for a development prototype.
 
 ### Optional — hosted model via OpenAI-compatible API
 

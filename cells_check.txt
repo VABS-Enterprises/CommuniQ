@@ -1,0 +1,158 @@
+=== CELL 1 ===
+# @title ⚡ QUICK START — Reload after session restart (skip retraining)
+# Use this cell when the session restarted but model is already trained on Drive.
+# After this cell finishes, scroll down and run Step 8b + Step 8c only.
+
+import subprocess
+
+def run(cmd):
+    r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    print('OK:', cmd[:60]) if r.returncode == 0 else print('ERR:', r.stderr[-300:])
+
+print('📦 Installing unsloth (takes ~3 min)...')
+run('pip install unsloth --quiet')
+run('pip install --force-reinstall --no-cache-dir unsloth --quiet')
+
+from google.colab import drive, userdata
+from huggingface_hub import login
+from unsloth import FastLanguageModel
+import torch, os
+
+print('📁 Mounting Drive...')
+drive.mount('/content/drive')
+
+print('🔑 Logging into HuggingFace...')
+login(token=userdata.get('HF_TOKEN'), add_to_git_credential=False)
+
+OUTPUT_DIR    = '/content/drive/MyDrive/communiq/lora_output'
+MAX_SEQ_LENGTH = 4096
+DATA_DIR      = '/content/drive/MyDrive/communiq/data'
+TRAIN_PATH    = f'{DATA_DIR}/train.jsonl'
+VAL_PATH      = f'{DATA_DIR}/val.jsonl'
+
+print('🧠 Loading fine-tuned model from Drive...')
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name=OUTPUT_DIR,
+    max_seq_length=MAX_SEQ_LENGTH,
+    load_in_4bit=True,
+    dtype=None,
+)
+
+from IPython.display import display, HTML
+display(HTML('''
+<div style="font-family:'Segoe UI',sans-serif;background:#052e16;border-radius:10px;padding:16px 20px;border:1px solid #166534;margin-top:8px;">
+  <span style="color:#4ade80;font-size:15px;font-weight:600;">✅ Fine-tuned model loaded from Drive — no retraining needed!</span><br>
+  <span style="color:#86efac;font-size:13px;">Now scroll down and run <b>Step 8b</b> (fine-tuned responses) and <b>Step 8c</b> (base vs fine-tuned comparison).</span>
+</div>
+'''))
+
+=== CELL 4 ===
+# @title Step 2 — Mount Google Drive
+from google.colab import drive
+drive.mount('/content/drive')
+
+import os
+DATA_DIR = '/content/drive/MyDrive/communiq/data'
+OUTPUT_DIR = '/content/drive/MyDrive/communiq/lora_output'
+os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+TRAIN_PATH = f'{DATA_DIR}/train.jsonl'
+VAL_PATH   = f'{DATA_DIR}/val.jsonl'
+
+print(f'Train: {TRAIN_PATH} — exists: {os.path.exists(TRAIN_PATH)}')
+print(f'Val:   {VAL_PATH} — exists: {os.path.exists(VAL_PATH)}')
+print(f'Output dir: {OUTPUT_DIR}')
+
+=== CELL 6 ===
+# @title Step 4 — Load base model in 4-bit with Unsloth
+from unsloth import FastLanguageModel
+import torch
+
+# ── Config ───────────────────────────────────────────────────────────────────
+BASE_MODEL      = 'meta-llama/Meta-Llama-3.1-8B-Instruct'
+MAX_SEQ_LENGTH  = 4096   # Reduce to 2048 if you get OOM on T4
+LOAD_IN_4BIT    = True
+LORA_R          = 16
+LORA_ALPHA      = 16
+LORA_DROPOUT    = 0.05
+TARGET_MODULES  = ['q_proj', 'k_proj', 'v_proj', 'o_proj',
+                   'gate_proj', 'up_proj', 'down_proj']
+# ─────────────────────────────────────────────────────────────────────────────
+
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name=BASE_MODEL,
+    max_seq_length=MAX_SEQ_LENGTH,
+    load_in_4bit=LOAD_IN_4BIT,
+    dtype=None,  # auto-detect bf16/fp16
+)
+
+model = FastLanguageModel.get_peft_model(
+    model,
+    r=LORA_R,
+    target_modules=TARGET_MODULES,
+    lora_alpha=LORA_ALPHA,
+    lora_dropout=LORA_DROPOUT,
+    bias='none',
+    use_gradient_checkpointing='unsloth',  # saves VRAM
+    random_state=42,
+)
+
+print(model.print_trainable_parameters())
+
+=== CELL 7 ===
+# @title Step 5 — Load and format the dataset
+import json
+from datasets import Dataset
+
+def load_jsonl(path):
+    rows = []
+    with open(path, encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                obj = json.loads(line)
+                if isinstance(obj, dict) and 'messages' in obj:
+                    rows.append(obj)
+    return rows
+
+train_rows = load_jsonl(TRAIN_PATH)
+val_rows   = load_jsonl(VAL_PATH) if os.path.exists(VAL_PATH) else []
+
+print(f'Train examples: {len(train_rows)}')
+print(f'Val examples:   {len(val_rows)}')
+
+if len(train_rows) == 0:
+    raise RuntimeError(f'No training data found at {TRAIN_PATH}. Upload your train.jsonl to Drive.')
+
+# Apply Llama 3.1 chat template
+def format_examples(examples):
+    texts = []
+    for messages in examples['messages']:
+        texts.append(
+            tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=False,
+            )
+        )
+    return {'text': texts}
+
+train_ds = Dataset.from_list(train_rows).map(format_examples, batched=True, remove_columns=['messages'])
+val_ds   = Dataset.from_list(val_rows).map(format_examples, batched=True, remove_columns=['messages']) if val_rows else None
+
+print(f'\nSample formatted text (first 300 chars):')
+print(train_ds[0]['text'][:300])
+
+=== CELL 9 ===
+# @title Step 7 — Save LoRA adapter to Google Drive
+model.save_pretrained(OUTPUT_DIR)
+tokenizer.save_pretrained(OUTPUT_DIR)
+print(f'LoRA adapter saved to {OUTPUT_DIR}')
+
+# List saved files
+import os
+for f in os.listdir(OUTPUT_DIR):
+    size = os.path.getsize(f'{OUTPUT_DIR}/{f}') / 1e6
+    print(f'  {f}  ({size:.1f} MB)')
+
