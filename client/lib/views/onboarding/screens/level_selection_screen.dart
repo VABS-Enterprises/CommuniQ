@@ -29,7 +29,6 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
       icon: Icons.spa_rounded,
       filledBars: 1,
       accent: Color(0xFF10B981),
-      gradient: [Color(0xFF0C221A), Color(0xFF0D1525)],
       badge: 'Start here',
     ),
     _Level(
@@ -40,7 +39,6 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
       icon: Icons.trending_up_rounded,
       filledBars: 2,
       accent: Color(0xFFF59E0B),
-      gradient: [Color(0xFF221A0C), Color(0xFF0D1525)],
       badge: 'Most common',
     ),
     _Level(
@@ -51,7 +49,6 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
       icon: Icons.local_fire_department_rounded,
       filledBars: 3,
       accent: Color(0xFF818CF8),
-      gradient: [Color(0xFF130D2E), Color(0xFF0D1525)],
       badge: 'Go further',
     ),
   ];
@@ -226,7 +223,7 @@ class _LevelCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.brand.withValues(alpha: 0.18)
-                    : const Color(0xFF131D2E),
+                    : AppColors.bgSunk,
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Icon(
@@ -360,7 +357,6 @@ class _Level {
   final IconData icon;
   final int filledBars;
   final Color accent;
-  final List<Color> gradient;
   final String badge;
   const _Level({
     required this.label,
@@ -369,7 +365,6 @@ class _Level {
     required this.icon,
     required this.filledBars,
     required this.accent,
-    required this.gradient,
     required this.badge,
   });
 }

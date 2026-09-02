@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/app_text_styles.dart';
 import 'package:communiq/core/data/scenario_presets.dart';
-import 'package:communiq/models/roleplay_config.dart';
+import 'package:communiq/core/routes/app_router.dart';
+import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/services/session_service.dart';
-import 'package:communiq/views/roleplay_view/screens/roleplay_conversation_screen.dart';
+import 'package:communiq/models/roleplay_config.dart';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -195,14 +198,13 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
       );
 
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => RoleplayConversationScreen(
-            config: config,
-            sessionId: sessionId,
-          ),
-        ),
+      // Must go through go_router: this screen is a page-based route, and an
+      // imperative Navigator.pushReplacement here throws
+      // "A page-based route cannot be completed using imperative api" —
+      // after the session has already been created on the server.
+      context.pushReplacement(
+        AppRoutes.roleplayConversation,
+        extra: ConversationArgs(config: config, sessionId: sessionId),
       );
     } catch (e) {
       debugPrint('❌ [SetupScenario] startSession failed: $e');
@@ -226,7 +228,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF0F1520),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -261,7 +263,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                   child: GestureDetector(
                     onTap: () {
                       onSelect(e.value);
-                      Navigator.pop(context);
+                      context.pop();
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
@@ -295,7 +297,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                             e.value,
                             style: AppTextStyles.bodyLarge.copyWith(
                               color: isSelected
-                                  ? Colors.white
+                                  ? AppColors.inkOnDark
                                   : AppColors.ink,
                               fontWeight: isSelected
                                   ? FontWeight.bold
@@ -304,7 +306,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                           ),
                           if (isSelected)
                             const Icon(Icons.check_rounded,
-                                color: Colors.white, size: 22),
+                                color: AppColors.inkOnDark, size: 22),
                         ],
                       ),
                     ),
@@ -368,12 +370,12 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
     return Row(
       children: [
         GestureDetector(
-          onTap: () => Navigator.pop(context),
+          onTap: () => context.pop(),
           child: Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFF141D2C),
+              color: AppColors.bgSunk,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.outline),
             ),
@@ -454,7 +456,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
         const SizedBox(height: 14),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF0F1520),
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isEmpty
@@ -567,7 +569,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
             child: Text(
               trait,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: isSelected ? Colors.white : AppColors.inkMuted,
+                color: isSelected ? AppColors.inkOnDark : AppColors.inkMuted,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
@@ -595,7 +597,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF0F1520),
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.outline),
           ),
@@ -701,20 +703,20 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2.5),
+                          color: AppColors.inkOnDark, strokeWidth: 2.5),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'Starting...',
                       style: AppTextStyles.titleMedium.copyWith(
-                          color: Colors.white, fontWeight: FontWeight.bold),
+                          color: AppColors.inkOnDark, fontWeight: FontWeight.bold),
                     ),
                   ],
                 )
               : Text(
                   'Start Roleplay',
                   style: AppTextStyles.titleMedium.copyWith(
-                    color: active ? Colors.white : AppColors.inkSoft,
+                    color: active ? AppColors.inkOnDark : AppColors.inkSoft,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

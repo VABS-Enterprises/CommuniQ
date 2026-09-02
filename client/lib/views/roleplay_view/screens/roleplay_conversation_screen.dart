@@ -1230,7 +1230,7 @@ class _RoleplayConversationScreenState
         await _onWillPop();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF080B14),
+        backgroundColor: AppColors.bg,
         body: Stack(
           children: [
             _buildAmbientGlow(),
@@ -1281,7 +1281,7 @@ class _RoleplayConversationScreenState
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFF141D2C),
+                color: AppColors.bgSunk,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.outline),
               ),
@@ -1337,7 +1337,7 @@ class _RoleplayConversationScreenState
 
   Widget _buildTimerPill() {
     final remaining = _secondsRemaining;
-    Color pillBg = const Color(0xFF141D2C);
+    Color pillBg = AppColors.bgSunk;
     Color pillBorder = AppColors.outline;
     Color textColor = AppColors.ink;
 
@@ -1504,13 +1504,13 @@ class _RoleplayConversationScreenState
             _state == _ConvState.ending
                 ? Icons.analytics_outlined
                 : Icons.hourglass_top_rounded,
-            color: Colors.white.withValues(alpha: 0.7),
+            color: AppColors.inkOnDark.withValues(alpha: 0.7),
             size: 28,
           ),
         );
       case _ConvState.user_turn:
         return const Center(
-          child: Icon(Icons.mic, color: Colors.white, size: 34),
+          child: Icon(Icons.mic, color: AppColors.inkOnDark, size: 34),
         );
       case _ConvState.ai_speaking:
         // In live voice the mic stays on even while AI speaks — show mic icon
@@ -1518,14 +1518,14 @@ class _RoleplayConversationScreenState
         if (_isLiveVoiceActive) {
           return Center(
             child: Icon(Icons.mic,
-                color: Colors.white.withValues(alpha: 0.45), size: 34),
+                color: AppColors.inkOnDark.withValues(alpha: 0.45), size: 34),
           );
         }
         return Center(
           child: Icon(
             _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
             color:
-                _isMuted ? Colors.white.withValues(alpha: 0.35) : Colors.white,
+                _isMuted ? AppColors.inkOnDark.withValues(alpha: 0.35) : AppColors.inkOnDark,
             size: 32,
           ),
         );
@@ -1554,7 +1554,7 @@ class _RoleplayConversationScreenState
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1119),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: borderColor,
@@ -1937,7 +1937,7 @@ class _RoleplayConversationScreenState
           _buildCenterAction(),
           _buildIconButton(
             icon: Icons.call_end_rounded,
-            color: _canEndCall ? Colors.white : AppColors.inkSoft,
+            color: _canEndCall ? AppColors.inkOnDark : AppColors.inkSoft,
             backgroundColor: _canEndCall
                 ? const Color(0xFFEF4444)
                 : AppColors.surface,
@@ -1972,7 +1972,7 @@ class _RoleplayConversationScreenState
         width: 140,
         height: 56,
         decoration: BoxDecoration(
-          color: const Color(0xFF141D2C),
+          color: AppColors.bgSunk,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: AppColors.outline),
         ),
@@ -2042,12 +2042,12 @@ class _RoleplayConversationScreenState
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                const Icon(Icons.send_rounded, color: AppColors.inkOnDark, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   'SEND',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white,
+                        color: AppColors.inkOnDark,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
                       ),
@@ -2076,7 +2076,7 @@ class _RoleplayConversationScreenState
       height: 56,
       decoration: BoxDecoration(
         color: isLoading
-            ? const Color(0xFF141D2C)
+            ? AppColors.bgSunk
             : barColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
@@ -2142,7 +2142,7 @@ class _RoleplayConversationScreenState
         height: 54,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: backgroundColor ?? const Color(0xFF141D2C),
+          color: backgroundColor ?? AppColors.bgSunk,
           border: Border.all(color: borderColor ?? AppColors.outline),
           boxShadow: glow != null
               ? [BoxShadow(color: glow, blurRadius: 12, spreadRadius: 1)]

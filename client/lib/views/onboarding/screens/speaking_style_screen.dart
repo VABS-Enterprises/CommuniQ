@@ -28,35 +28,30 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
       tagline: 'You choose words carefully, speak softly',
       icon: Icons.air_rounded,
       accent: Color(0xFF38BDF8),   // sky blue
-      gradient: [Color(0xFF0C2233), Color(0xFF0D1525)],
     ),
     _Style(
       label: 'Fast & Energetic',
       tagline: 'Your mind races and the words keep up',
       icon: Icons.bolt_rounded,
       accent: Color(0xFFF59E0B),   // amber
-      gradient: [Color(0xFF231A0C), Color(0xFF0D1525)],
     ),
     _Style(
       label: 'Confident & Direct',
       tagline: 'You say what you mean, no filler words',
       icon: Icons.arrow_forward_rounded,
       accent: Color(0xFF5B52F0),   // indigo
-      gradient: [Color(0xFF130D2E), Color(0xFF0D1525)],
     ),
     _Style(
       label: 'Hesitant & Unsure',
       tagline: 'You second-guess yourself before speaking',
       icon: Icons.help_outline_rounded,
       accent: Color(0xFFA78BFA),   // violet
-      gradient: [Color(0xFF1A0D2E), Color(0xFF0D1525)],
     ),
     _Style(
       label: 'Friendly & Casual',
       tagline: 'Easy-going, warm and approachable tone',
       icon: Icons.tag_faces_rounded,
       accent: Color(0xFF10B981),   // emerald
-      gradient: [Color(0xFF0C2218), Color(0xFF0D1525)],
     ),
   ];
 
@@ -278,7 +273,7 @@ class _StyleCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.brand.withValues(alpha: 0.18)
-                    : const Color(0xFF131D2E),
+                    : AppColors.bgSunk,
                 borderRadius: BorderRadius.circular(11),
               ),
               child: Icon(
@@ -352,12 +347,10 @@ class _Style {
   final String tagline;
   final IconData icon;
   final Color accent;
-  final List<Color> gradient;
   const _Style({
     required this.label,
     required this.tagline,
     required this.icon,
     required this.accent,
-    required this.gradient,
   });
 }

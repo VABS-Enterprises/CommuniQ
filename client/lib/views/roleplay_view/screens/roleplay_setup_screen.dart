@@ -120,7 +120,7 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                           child: Text(
                             option,
                             style: TextStyle(
-                              color: isSelected ? Colors.white : AppColors.inkMuted,
+                              color: isSelected ? AppColors.inkOnDark : AppColors.inkMuted,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                               fontSize: 16,
                             ),
@@ -413,12 +413,12 @@ class _RoleplaySetupScreenState extends State<RoleplaySetupScreen> {
                         ? const SizedBox(
                             width: 24,
                             height: 24,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            child: CircularProgressIndicator(color: AppColors.inkOnDark, strokeWidth: 2),
                           )
                         : const Text(
                             "Start Speaking",
                             style: TextStyle(
-                              color: Colors.white,
+                              color: AppColors.inkOnDark,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),

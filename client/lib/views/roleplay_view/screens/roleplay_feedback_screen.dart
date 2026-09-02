@@ -13,11 +13,11 @@ import 'package:communiq/views/roleplay_view/screens/roleplay_setup_screen.dart'
 // One set of constants so every colour decision is in one place.
 
 const _kBarColor = AppColors.brand;          // indigo — all skill bars
-const _kTrackColor = Color(0xFF1E293B);         // dark slate track
-const _kCardBg = Color(0xFF0F172A);             // surface card
-const _kDivider = Color(0xFF1E293B);            // subtle divider
+const _kTrackColor = AppColors.bgSunk;         // dark slate track
+const _kCardBg = AppColors.surface;             // surface card
+const _kDivider = AppColors.bgSunk;            // subtle divider
 const _kUserLabel = AppColors.brand;
-const _kAiLabel = Color(0xFF475569);            // slate-600
+const _kAiLabel = AppColors.inkMuted;            // slate-600
 
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
@@ -647,8 +647,8 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg,
-          style: const TextStyle(color: Colors.white, fontSize: 13)),
-      backgroundColor: const Color(0xFF1E293B),
+          style: const TextStyle(color: AppColors.inkOnDark, fontSize: 13)),
+      backgroundColor: AppColors.ink,
       duration: const Duration(seconds: 3),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -846,7 +846,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               child: Text(
                 widget.isOnboarding ? 'Continue' : 'Practice Again',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.inkOnDark,
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
                   letterSpacing: -0.1,

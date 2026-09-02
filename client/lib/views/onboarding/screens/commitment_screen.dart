@@ -302,7 +302,7 @@ class _OptionCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.brand.withValues(alpha: 0.18)
-                    : const Color(0xFF131D2E),
+                    : AppColors.bgSunk,
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Icon(

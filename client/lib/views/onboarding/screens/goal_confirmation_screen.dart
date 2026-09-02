@@ -26,35 +26,30 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
       tagline: 'Stop second-guessing every word you say',
       icon: Icons.emoji_events_rounded,
       accent: Color(0xFFF59E0B),
-      gradient: [Color(0xFF221A0C), Color(0xFF0D1525)],
     ),
     _Goal(
       label: 'Clarity',
       tagline: 'Say exactly what you mean, every single time',
       icon: Icons.record_voice_over_rounded,
       accent: Color(0xFF38BDF8),
-      gradient: [Color(0xFF0C2233), Color(0xFF0D1525)],
     ),
     _Goal(
       label: 'Tough Conversations',
       tagline: 'Face the hard talks without backing down',
       icon: Icons.shield_rounded,
       accent: Color(0xFF818CF8),
-      gradient: [Color(0xFF130D2E), Color(0xFF0D1525)],
     ),
     _Goal(
       label: 'Public Speaking',
       tagline: 'Command attention the moment you start',
       icon: Icons.mic_external_on_rounded,
       accent: Color(0xFF5B52F0),
-      gradient: [Color(0xFF0F0C2A), Color(0xFF0D1525)],
     ),
     _Goal(
       label: 'Persuasion',
       tagline: 'Get people to genuinely believe in your ideas',
       icon: Icons.handshake_rounded,
       accent: Color(0xFF10B981),
-      gradient: [Color(0xFF0C221A), Color(0xFF0D1525)],
     ),
   ];
 
@@ -246,7 +241,7 @@ class _GoalCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.brand.withValues(alpha: 0.18)
-                    : const Color(0xFF131D2E),
+                    : AppColors.bgSunk,
                 borderRadius: BorderRadius.circular(11),
               ),
               child: Icon(
@@ -315,12 +310,10 @@ class _Goal {
   final String tagline;
   final IconData icon;
   final Color accent;
-  final List<Color> gradient;
   const _Goal({
     required this.label,
     required this.tagline,
     required this.icon,
     required this.accent,
-    required this.gradient,
   });
 }

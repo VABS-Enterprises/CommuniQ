@@ -65,7 +65,7 @@ class OnboardingBackground extends StatelessWidget {
     return Stack(
       children: [
         // Base fill
-        const ColoredBox(color: Color(0xFF060918)),
+        const Positioned.fill(child: ColoredBox(color: AppColors.bg)),
         // Top-left ambient orb
         Positioned(
           top: -80,
@@ -161,7 +161,7 @@ class OnboardingSelectCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.brand.withValues(alpha: 0.18)
-                      : const Color(0xFF131D2E),
+                      : AppColors.bgSunk,
                   borderRadius: BorderRadius.circular(11),
                 ),
                 child: Icon(
