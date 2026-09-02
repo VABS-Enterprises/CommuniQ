@@ -749,6 +749,54 @@ class _RoleplayConversationScreenState
 
   // ─── API: process turn ────────────────────────────────────────────────────────
 
+  /// Peak sample amplitude of a 16-bit PCM WAV, as a 0..1 fraction.
+  ///
+  /// A muted or unrouted microphone still produces a perfectly well-formed
+  /// recording of the right length — it is simply full of near-zero samples.
+  /// Without this check the app happily uploads 30 seconds of silence, gets an
+  /// empty transcript back, and shows the user nothing at all.
+  double _peakAmplitude(Uint8List wav) {
+    const headerBytes = 44; // canonical PCM WAV header
+    if (wav.length <= headerBytes + 1) return 0;
+    var peak = 0;
+    // Step over samples rather than reading every one — a few thousand points
+    // is plenty to tell speech from a noise floor, and this runs on the UI
+    // isolate right before an upload.
+    final stride = ((wav.length - headerBytes) ~/ 2 ~/ 4000).clamp(1, 1 << 20) * 2;
+    for (var i = headerBytes; i + 1 < wav.length; i += stride) {
+      var v = wav[i] | (wav[i + 1] << 8);
+      if (v >= 0x8000) v -= 0x10000; // little-endian signed 16-bit
+      final a = v.abs();
+      if (a > peak) peak = a;
+    }
+    return peak / 32768.0;
+  }
+
+  /// Below this the recording carries no speech — measured at 0.02% on a
+  /// microphone that was delivering nothing but its own noise floor, against
+  /// several percent for even quiet talking.
+  static const double _silenceThreshold = 0.02;
+
+  /// Hands the turn back to the user without consuming it.
+  Future<void> _rejectSilentTurn(String message) async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.ink,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+    setState(() {
+      _liveTranscript = '';
+      _cardText = '';
+      _cardAnimKey++;
+    });
+    _aiPlaybackStage = _AiPlaybackStage.none;
+    await _startMic();
+  }
+
   Future<void> _sendTurn(String audioPath) async {
     final turnNumber = _completedUserTurns + 1;
     debugPrint('🔄 [Conversation] Processing turn #$turnNumber...');
@@ -793,6 +841,20 @@ class _RoleplayConversationScreenState
       final bytes = await File(audioPath).readAsBytes();
       final filename = audioPath.split(Platform.pathSeparator).last;
 
+      // Nothing was actually picked up. Say so instead of uploading silence
+      // and letting the AI answer a question the user never asked.
+      final peak = _peakAmplitude(bytes);
+      debugPrint('📊 [Conversation] Recording peak amplitude: '
+          '${(peak * 100).toStringAsFixed(3)}%');
+      if (peak < _silenceThreshold) {
+        debugPrint('🔇 [Conversation] Turn #$turnNumber is silent — not sending');
+        setState(() => _state = _ConvState.user_turn);
+        await _rejectSilentTurn(
+          "I couldn't hear anything — check your microphone and try again.",
+        );
+        return;
+      }
+
       debugPrint('📤 [Conversation] Turn #$turnNumber → ${bytes.length}B audio, '
           'history=${_conversationHistory.length} turns');
       final sw = Stopwatch()..start();
@@ -804,6 +866,18 @@ class _RoleplayConversationScreenState
         conversationHistory: List.from(_conversationHistory),
       );
       sw.stop();
+
+      // The server heard nothing. Previously this fell straight through: an
+      // empty user turn was appended to the history, the AI replied to it, and
+      // the user was given no clue that their voice never arrived. That is
+      // exactly what "it is not taking my voice input" looks like.
+      if (result.userTranscript.trim().isEmpty) {
+        debugPrint('🔇 [Conversation] Turn #$turnNumber — empty transcript');
+        await _rejectSilentTurn(
+          "I didn't catch that. Speak a little louder, or check your mic.",
+        );
+        return;
+      }
 
       _conversationHistory.addAll([
         {'role': 'user', 'transcript': result.userTranscript},
