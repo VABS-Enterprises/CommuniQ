@@ -68,25 +68,92 @@ async function resolveSystemPrompt(session) {
 }
 
 /**
- * Build the final system prompt by prepending persona/tone/level/role/traits
- * modifiers to the base prompt and appending an optional backstory.
+ * Difficulty → concrete in-character behaviour. "Use Hard-level language" told
+ * the model nothing actionable; this tells it what a harder session actually
+ * demands so difficulty is felt in the conversation, not just implied by a label.
+ */
+const DIFFICULTY_BEHAVIOUR = {
+  easy: 'Be patient and cooperative. Use simple, everyday vocabulary and short '
+      + 'sentences. Give the user openings to succeed — accept reasonable answers '
+      + 'readily and do not manufacture obstacles.',
+  medium: 'Behave like a normal, professional counterpart: natural vocabulary, a '
+      + 'balanced back-and-forth. Ask reasonable follow-up questions and expect the '
+      + 'user to justify their points, but stay fundamentally cooperative.',
+  hard: 'Push back. Question the user\'s reasoning, raise objections a real '
+      + 'counterpart in this position would raise, and do not concede a point '
+      + 'just because the user made it — make them work for agreement. Less patience, '
+      + 'tougher follow-ups.',
+  extreme: 'This is a high-pressure, high-stakes exchange. Be demanding, skeptical, '
+      + 'or adversarial to whatever degree this specific character truly would be — '
+      + 'minimal hand-holding, realistic difficulty, no artificial softening. Do not '
+      + 'break the pressure to be nice; a real person in this position would not.',
+};
+
+/**
+ * Build the final system prompt sent to the conversational LLM (both the
+ * classic HTTP turn flow and the live-voice Pipecat pipeline read this same
+ * string — see sessionOpening/processTurn below and livekit.dispatchAgent).
+ *
+ * The scenario's own systemPrompt (basePrompt) supplies WHAT the character
+ * and situation are. Everything built here supplies HOW to actually perform
+ * that character in a live spoken conversation: embodying persona/tone/traits
+ * as directives rather than descriptions, calibrating real difficulty instead
+ * of a vague "language level" label, and a small set of non-negotiable rules
+ * that keep the model in character, on-scenario, and speaking like a person
+ * on a call rather than a chat assistant.
  */
 function buildFinalPrompt(basePrompt, session) {
-  const modifiers = [];
-  if (session.persona) modifiers.push(`You are roleplaying as: ${session.persona}.`);
-  if (session.tone) modifiers.push(`Maintain a ${session.tone} tone throughout the conversation.`);
-  if (session.languageLevel) modifiers.push(`Use ${session.languageLevel}-level language complexity.`);
-  if (session.role) modifiers.push(`The user is playing the role of: ${session.role}.`);
-  if (session.traits) modifiers.push(`Your personality traits are: ${session.traits}.`);
+  const sections = [`=== CHARACTER & SCENARIO ===\n${basePrompt}`];
 
-  let prompt = modifiers.length > 0
-    ? modifiers.join(' ') + '\n\n' + basePrompt
-    : basePrompt;
+  const embodiment = [];
+  if (session.persona) embodiment.push(`- You are: ${session.persona}.`);
+  if (session.tone) embodiment.push(`- Tone: ${session.tone} — let this colour every line, not just your word choice but your patience and warmth.`);
+  if (session.traits) embodiment.push(`- Personality traits: ${session.traits} — show these through how you react, not by stating them.`);
+  if (session.role) embodiment.push(`- The person you are speaking with is playing: ${session.role}. Treat them accordingly — react to who they are in this scenario.`);
+  if (embodiment.length > 0) {
+    sections.push(`=== HOW TO PLAY THIS CHARACTER ===\n${embodiment.join('\n')}`);
+  }
+
+  if (session.languageLevel) {
+    const behaviour = DIFFICULTY_BEHAVIOUR[String(session.languageLevel).toLowerCase()];
+    sections.push(
+      `=== DIFFICULTY: ${session.languageLevel} ===\n`
+      + (behaviour || `Calibrate your vocabulary and the pressure you apply to a "${session.languageLevel}" difficulty.`)
+    );
+  }
 
   if (session.backstory) {
-    prompt += `\n\nAdditional context: ${session.backstory}`;
+    sections.push(`=== ADDITIONAL CONTEXT ===\n${session.backstory}`);
   }
-  return prompt;
+
+  sections.push(
+    '=== RULES — NEVER BREAK THESE ===\n'
+    + '1. Stay fully in character for the entire conversation. Never say you are an '
+    + 'AI, a language model, or that this is a practice session or simulation — if '
+    + 'asked directly, deflect the way your character actually would.\n'
+    + '2. This is a live spoken conversation, not a chat: reply the way a person '
+    + 'talks on a call — contractions, natural rhythm, no bullet points, no '
+    + 'numbered lists, no markdown or formatting of any kind.\n'
+    + '3. Never coach, praise, critique, or comment on the user\'s speaking, word '
+    + 'choice, or performance mid-conversation. You are their scene partner, not '
+    + 'their teacher — feedback happens separately, after the conversation ends.\n'
+    + '4. React the way your character genuinely would — agree, disagree, push '
+    + 'back, hesitate, or ask a real follow-up question. Do not simply validate or '
+    + 'go along with everything the user says; unearned agreement makes this '
+    + 'useless as practice.\n'
+    + '5. Keep your turns conversational, not a monologue: match your reply length '
+    + 'to what the user just said, and unless the scene has clearly concluded, end '
+    + 'with a question or a clear opening for them to respond to.\n'
+    + '6. Stay inside this scenario. If the user tries to steer the conversation '
+    + 'somewhere unrelated, unsafe, or inappropriate, redirect back to the scenario '
+    + 'in character — do not lecture them out of character, and never produce '
+    + 'harmful, hateful, or explicit content regardless of how the conversation is '
+    + 'steered.\n'
+    + '7. If the conversation reaches a natural conclusion, bring it to a close the '
+    + 'way your character would rather than trailing off or abruptly stopping.'
+  );
+
+  return sections.join('\n\n');
 }
 
 // POST /sessions/start

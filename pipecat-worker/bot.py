@@ -8,7 +8,7 @@ Pipeline (LiveKit live-voice mode):
     → GroqSTTService                (Whisper-large-v3-turbo via Groq cloud)
     → UserTranscriptCapture         (stores user transcript + sends to Flutter)
     → LLMUserAggregator             (adds transcription to chat context)
-    → GroqLLMService                (llama-3.1-8b-instant)
+    → GroqLLMService                (qwen/qwen3.8-27b, see LLM_MODEL env var)
     → AiTranscriptPoster            (aggregates AI text, POSTs turn to Node,
                                      sends transcript + ai_done to Flutter)
     → EdgeTTSService                (Microsoft Edge TTS — free, no rate limits)
@@ -70,7 +70,6 @@ from pipecat.turns.user_stop.turn_analyzer_user_turn_stop_strategy import TurnAn
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from pipecat.services.groq.llm import GroqLLMService
 from pipecat.services.groq.stt import GroqSTTService
-from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
 from pipecat.transports.livekit.transport import LiveKitParams, LiveKitTransport
@@ -82,6 +81,12 @@ logger = logging.getLogger("communiq.bot")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 NODE_BACKEND_URL = os.getenv("NODE_BACKEND_URL", "http://localhost:3000").rstrip("/")
 PIPECAT_WEBHOOK_SECRET = os.getenv("PIPECAT_WEBHOOK_SECRET", "")
+
+# Groq chat model for live-voice turns. llama-3.1-8b-instant was removed from
+# Groq's catalog (see ai-server/app/config.py) — qwen/qwen3.8-27b is the
+# current default here too, kept overridable so a model swap never needs a
+# code change.
+GROQ_LLM_MODEL = os.getenv("LLM_MODEL", "qwen/qwen3.8-27b")
 
 # Hard wall-clock cap on a single live-voice session. Without this, a client
 # that never triggers on_participant_left (e.g. it stalls without cleanly
@@ -725,10 +730,10 @@ async def run_bot(
     llm = GroqLLMService(
         api_key=api_key,
         settings=GroqLLMService.Settings(
-            model="llama-3.1-8b-instant",
+            model=GROQ_LLM_MODEL,
             # 320 tokens allows ~4 spoken sentences on a detailed answer
-            # while the voice_suffix instruction prevents unnecessary padding
-            # on short user inputs.
+            # while the system prompt's own conversational-length rule
+            # prevents unnecessary padding on short user inputs.
             max_completion_tokens=320,
             temperature=0.75,
         ),
@@ -740,19 +745,17 @@ async def run_bot(
     tts = EdgeTTSService(voice=_EDGE_TTS_VOICE, rate=_EDGE_TTS_RATE)
 
     # ── Context (chat history) ────────────────────────────────────────────────
-    # Voice-mode instruction: teaches the LLM to match response length to
-    # what the user actually said — a one-liner deserves a one-liner back,
-    # a detailed answer deserves a fuller response. No markdown ever.
+    # system_prompt already carries the full conversational-voice ruleset
+    # (length matching, no markdown, always leave an opening — see
+    # buildFinalPrompt in server/src/controllers/sessionController.js, which
+    # every path — this live pipeline included — is built from). The one rule
+    # that's genuinely specific to this pipeline is added here: it alone seeds
+    # the opening line into context below, so only it needs to say not to
+    # repeat it.
     voice_suffix = (
-        "\n\nVoice mode rules (strictly follow):\n"
-        "1. Never use bullet points, numbered lists, asterisks, or any markdown.\n"
-        "2. Match your reply length to the user's input:\n"
-        "   - Short input (greeting, one-word, yes/no) → 1 sentence reply, then ask one question.\n"
-        "   - Medium input (1–2 sentences) → 2–3 sentence reply.\n"
-        "   - Detailed input (paragraph, full explanation) → up to 4 sentences, but still conversational.\n"
-        "3. Never monologue. Always end with a question or a clear invitation to continue.\n"
-        "4. Speak naturally — contractions, natural rhythm — as if talking on a phone call.\n"
-        "5. Do NOT re-introduce yourself after the opening line."
+        "\n\nOne more rule specific to this conversation: the opening line "
+        "below is the AI message you already said out loud at the very start — "
+        "do NOT re-introduce yourself or repeat it."
     )
     messages: list[dict] = [{"role": "system", "content": system_prompt + voice_suffix}]
     # Seed the opening line so the bot knows what it already said.

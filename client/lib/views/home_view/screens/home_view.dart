@@ -172,18 +172,17 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-    return SkyCampusBackground(
-      child: Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: () => _loadAll(forceRefresh: true),
-          color: AppColors.primary,
-          backgroundColor: AppColors.surface,
+    // A total failure with nothing cached gets the full error screen; a failure
+    // with cached data shows the data plus an inline banner.
+    if (_profileError && _profile == null && !_isLoading) {
+      return PlayfulBackground(
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          body: SafeArea(
+            child: ErrorStateView(
+              title: "Can't reach CommuniQ",
+              message: 'Check your connection and try again.',
               onRetry: () => _loadAll(forceRefresh: true),
->>>>>>> d2fd5e4c90b760bb23c52acef18d6156fde8ecc5
             ),
           ),
         ),
@@ -193,6 +192,7 @@ class _HomeViewState extends State<HomeView> {
     return PlayfulBackground(
       seed: 1,
       child: Scaffold(
+        backgroundColor: AppColors.transparent,
         body: SafeArea(
           bottom: false,
           child: RefreshIndicator(
