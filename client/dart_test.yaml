@@ -1,0 +1,10 @@
+# Golden tests render real pixels, so they are sensitive to the host platform's
+# font rasterisation. They exist as a review aid for the learning screens, not
+# as a CI gate — skipped by default, run explicitly with:
+#
+#   flutter test --run-skipped --tags golden
+#
+# and regenerate after an intentional visual change by adding --update-goldens.
+tags:
+  golden:
+    skip: "review aid — run with: flutter test --run-skipped --tags golden"

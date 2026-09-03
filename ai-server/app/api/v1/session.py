@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from groq import AsyncGroq
 
 from app.config import settings
@@ -89,7 +90,7 @@ async def session_opening(
             status_code=502, detail="AI opening failed. Please try again."
         ) from e
 
-    ai_reply = (response.choices[0].message.content or "").strip()
+    ai_reply = llm_facade.content_of(response)
     if not ai_reply:
         raise HTTPException(
             status_code=502, detail="AI returned an empty opening. Please try again."
@@ -111,31 +112,23 @@ async def session_opening(
     return OpeningResponse(aiReply=ai_reply, aiAudioBase64=ai_audio_base64)
 
 
-# ─── POST /session/turn ───────────────────────────────────────────────────────
-
-@router.post("/session/turn", response_model=TurnResponse)
-async def session_turn(
+async def _transcribe_and_reply(
     audioFile: UploadFile,
-    sessionId: str = Form(...),
-    conversationHistory: str = Form(default="[]"),
-    systemPrompt: str = Form(...),
-    groq: Optional[AsyncGroq] = Depends(get_groq_client),
-):
+    sessionId: str,
+    conversationHistory: str,
+    systemPrompt: str,
+    groq: Optional[AsyncGroq],
+) -> tuple[str, str]:
     """
-    Process one conversation turn for an active session.
+    Validate the upload, transcribe it, and get the AI's reply.
 
-    Called by the Node backend (POST /sessions/turn) after VAD detects
-    end of user speech. Node proxies the audio and context here, then
-    writes the returned transcripts to Firestore.
+    Shared by /session/turn and /session/turn/stream — the two differ only in
+    how the audio is delivered, and duplicating STT + LLM between them is how
+    they would quietly diverge.
 
-    Accepts (multipart/form-data):
-        audioFile           — raw audio bytes (m4a / wav / webm)
-        sessionId           — used for structured logging
-        conversationHistory — JSON array of {role, transcript} turns from Firestore
-        systemPrompt        — pre-built LLM persona prompt from the scenario document
-
-    Returns JSON:
-        { userTranscript, aiReply, aiAudioBase64 }
+    Returns (user_transcript, ai_reply). Raises HTTPException on any failure,
+    which is safe for both callers because nothing has been written to the
+    response yet at this point.
     """
     audio_bytes = await audioFile.read()
     filename = audioFile.filename or "audio.wav"
@@ -203,12 +196,45 @@ async def session_turn(
             status_code=502, detail="AI response failed. Please try again."
         )
 
-    ai_reply = (response.choices[0].message.content or "").strip()
+    ai_reply = llm_facade.content_of(response)
     if not ai_reply:
         raise HTTPException(
             status_code=502, detail="AI returned an empty response. Please try again."
         )
     logger.info("LLM done — session=%s reply=%d chars", sessionId, len(ai_reply))
+
+    return user_transcript, ai_reply
+
+
+# ─── POST /session/turn ───────────────────────────────────────────────────────
+
+@router.post("/session/turn", response_model=TurnResponse)
+async def session_turn(
+    audioFile: UploadFile,
+    sessionId: str = Form(...),
+    conversationHistory: str = Form(default="[]"),
+    systemPrompt: str = Form(...),
+    groq: Optional[AsyncGroq] = Depends(get_groq_client),
+):
+    """
+    Process one conversation turn for an active session.
+
+    Called by the Node backend (POST /sessions/turn) after VAD detects
+    end of user speech. Node proxies the audio and context here, then
+    writes the returned transcripts to Firestore.
+
+    Accepts (multipart/form-data):
+        audioFile           — raw audio bytes (m4a / wav / webm)
+        sessionId           — used for structured logging
+        conversationHistory — JSON array of {role, transcript} turns from Firestore
+        systemPrompt        — pre-built LLM persona prompt from the scenario document
+
+    Returns JSON:
+        { userTranscript, aiReply, aiAudioBase64 }
+    """
+    user_transcript, ai_reply = await _transcribe_and_reply(
+        audioFile, sessionId, conversationHistory, systemPrompt, groq,
+    )
 
     # ── Step 3: TTS ───────────────────────────────────────────────────────────
     logger.info("TTS start — session=%s text=%d chars", sessionId, len(ai_reply))
@@ -229,6 +255,75 @@ async def session_turn(
         userTranscript=user_transcript,
         aiReply=ai_reply,
         aiAudioBase64=ai_audio_base64,
+    )
+
+
+# ─── POST /session/turn/stream ───────────────────────────────────────────────
+
+@router.post("/session/turn/stream")
+async def session_turn_stream(
+    audioFile: UploadFile,
+    sessionId: str = Form(...),
+    conversationHistory: str = Form(default="[]"),
+    systemPrompt: str = Form(...),
+    groq: Optional[AsyncGroq] = Depends(get_groq_client),
+):
+    """
+    Same turn as POST /session/turn, but streamed as newline-delimited JSON so
+    the client can start playing before synthesis has finished.
+
+    /session/turn holds the whole reply until the last sentence is
+    synthesised. Even with concurrent synthesis that is well over a second of
+    silence for a mid-length answer, and it used to be closer to six.
+
+    Lines, in order:
+      {"type":"transcript","userTranscript":...,"aiReply":...}
+      {"type":"audio","index":0,"audioBase64":...}      one per sentence
+      {"type":"done"}
+      {"type":"error","detail":...}                     instead of the above
+
+    Errors are reported *inside* the stream once the first byte has gone out —
+    the HTTP status is already committed by then, so a failing sentence cannot
+    be signalled any other way.
+    """
+    user_transcript, ai_reply = await _transcribe_and_reply(
+        audioFile, sessionId, conversationHistory, systemPrompt, groq,
+    )
+
+    async def emit():
+        yield json.dumps({
+            "type": "transcript",
+            "userTranscript": user_transcript,
+            "aiReply": ai_reply,
+        }) + "\n"
+
+        count = 0
+        try:
+            async for index, chunk in tts_facade.synthesize_stream(ai_reply):
+                count += 1
+                yield json.dumps({
+                    "type": "audio",
+                    "index": index,
+                    "audioBase64": base64.b64encode(chunk).decode("utf-8"),
+                }) + "\n"
+        except Exception as e:  # noqa: BLE001 — must reach the client as data
+            logger.error("Streaming TTS failed — session=%s: %s", sessionId, e)
+            yield json.dumps({
+                "type": "error",
+                "detail": "Voice synthesis failed part-way through.",
+            }) + "\n"
+            return
+
+        logger.info(
+            "Turn stream done — session=%s chunks=%d", sessionId, count
+        )
+        yield json.dumps({"type": "done"}) + "\n"
+
+    return StreamingResponse(
+        emit(),
+        media_type="application/x-ndjson",
+        # Proxies that buffer would defeat the entire point of streaming.
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
@@ -275,7 +370,7 @@ async def session_evaluate(
             status_code=502, detail="Evaluation service unavailable. Please try again."
         ) from e
 
-    raw = response.choices[0].message.content or ""
+    raw = llm_facade.content_of(response)
 
     try:
         result = parse_evaluation(raw)

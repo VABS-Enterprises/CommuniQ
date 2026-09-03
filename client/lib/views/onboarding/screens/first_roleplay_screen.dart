@@ -22,7 +22,7 @@ class FirstRoleplayScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s24),
@@ -35,7 +35,7 @@ class FirstRoleplayScreen extends StatelessWidget {
               const Text(
                 "Let's try your\nfirst roleplay",
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.ink,
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                   height: 1.25,
@@ -44,7 +44,7 @@ class FirstRoleplayScreen extends StatelessWidget {
               const SizedBox(height: AppSpacing.s8),
               const Text(
                 "You'll have a short conversation with AI",
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                style: TextStyle(color: AppColors.inkMuted, fontSize: 14),
               ),
               const SizedBox(height: AppSpacing.s28),
               // Info chips row
@@ -81,8 +81,8 @@ class FirstRoleplayScreen extends StatelessWidget {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.brand,
+                    foregroundColor: AppColors.inkOnDark,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
@@ -101,7 +101,7 @@ class FirstRoleplayScreen extends StatelessWidget {
                   child: const Text(
                     'Skip for now',
                     style: TextStyle(
-                      color: AppColors.textMuted,
+                      color: AppColors.inkSoft,
                       fontSize: 14,
                     ),
                   ),
@@ -122,17 +122,17 @@ class FirstRoleplayScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.outline),
         ),
         child: Column(
           children: [
-            Icon(icon, color: AppColors.primaryLight, size: 20),
+            Icon(icon, color: AppColors.brandLight, size: 20),
             const SizedBox(height: 6),
             Text(
               label,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppColors.textSecondary,
+                color: AppColors.inkMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
               ),
@@ -149,7 +149,7 @@ class FirstRoleplayScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,7 +157,7 @@ class FirstRoleplayScreen extends StatelessWidget {
           const Text(
             'CURRENT MODULE',
             style: TextStyle(
-              color: AppColors.textMuted,
+              color: AppColors.inkSoft,
               fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.4,
@@ -167,7 +167,7 @@ class FirstRoleplayScreen extends StatelessWidget {
           const Text(
             'Introduce yourself',
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: AppColors.ink,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -180,21 +180,21 @@ class FirstRoleplayScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
+                  color: AppColors.brand.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.25)),
+                      color: AppColors.brand.withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: const [
                     Icon(Icons.face_retouching_natural_rounded,
-                        color: AppColors.primaryLight, size: 14),
+                        color: AppColors.brandLight, size: 14),
                     SizedBox(width: 6),
                     Text(
                       'Friendly Listener',
                       style: TextStyle(
-                          color: AppColors.primaryLight,
+                          color: AppColors.brandLight,
                           fontSize: 12,
                           fontWeight: FontWeight.w600),
                     ),
@@ -208,12 +208,12 @@ class FirstRoleplayScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: AppColors.outline),
                 ),
                 child: const Text(
                   'Easy',
                   style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: AppColors.inkMuted,
                       fontSize: 12,
                       fontWeight: FontWeight.w600),
                 ),
@@ -236,7 +236,7 @@ Widget _buildProgressDots(int activeIndex) {
         width: i == activeIndex ? 20 : 6,
         height: 6,
         decoration: BoxDecoration(
-          color: i == activeIndex ? AppColors.primary : AppColors.border,
+          color: i == activeIndex ? AppColors.brand : AppColors.outline,
           borderRadius: BorderRadius.circular(3),
         ),
       ),

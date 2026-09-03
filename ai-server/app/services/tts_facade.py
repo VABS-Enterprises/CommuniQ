@@ -10,6 +10,7 @@ import asyncio
 import io
 import logging
 import os
+from typing import AsyncIterator
 
 from app.config import settings
 from app.services import tts as edge_tts
@@ -160,6 +161,29 @@ async def synthesize_full(text: str, voice: str | None = None) -> bytes:
         # Kokoro is synchronous (CPU); run in a thread to keep the event loop free.
         return await asyncio.to_thread(_synthesize_kokoro, text)
     raise ValueError(f"Unknown TTS_BACKEND: {settings.tts_backend!r}")
+
+
+async def synthesize_stream(
+    text: str, voice: str | None = None
+) -> AsyncIterator[tuple[int, bytes]]:
+    """
+    Yield `(index, audio_bytes)` per sentence so playback can start on the
+    first one instead of waiting for the whole reply.
+
+    Only the edge backend synthesises incrementally today. Groq and Kokoro
+    fall back to a single chunk covering the full text — the caller's contract
+    is unchanged either way, they just get one large chunk instead of several
+    small ones, so a backend switch degrades latency rather than breaking
+    playback.
+    """
+    if settings.tts_backend == "edge":
+        async for item in edge_tts.synthesize_stream(text, voice):
+            yield item
+        return
+
+    audio = await synthesize_full(text, voice)
+    if audio:
+        yield 0, audio
 
 
 def _synthesize_kokoro(text: str) -> bytes:

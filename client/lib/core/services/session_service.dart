@@ -7,8 +7,9 @@ import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/services/profile_cache_service.dart';
 import 'package:communiq/models/scenario_model.dart';
 import 'package:communiq/models/session_result_model.dart'
-    show OpeningResult, SessionEndResult, TurnResult;
+    show OpeningResult, SessionEndResult, TurnResult, TurnEvent;
 import 'package:communiq/models/user_profile.dart';
+import 'package:communiq/models/visual_analysis_models.dart';
 
 /// Handles all session-related API calls to the Node backend.
 class SessionService {
@@ -268,6 +269,80 @@ class SessionService {
     }
   }
 
+  /// One message from the streamed turn endpoint.
+  ///
+  /// The transcript arrives first, then one event per synthesised sentence,
+  /// then [done]. [error] can replace the tail at any point — once the stream
+  /// has started the HTTP status is already committed, so a mid-stream failure
+  /// can only be reported as data.
+  ///
+  /// Streams the turn instead of waiting for the whole reply.
+  ///
+  /// The non-streaming [processTurn] cannot return until the last sentence has
+  /// been synthesised. Measured against the AI server, the transcript is ready
+  /// about a second before the audio is, and on longer replies the gap is much
+  /// wider — so the user sees what they said, and hears the first sentence,
+  /// well before the reply is finished.
+  Stream<TurnEvent> processTurnStreamed({
+    required String sessionId,
+    required Uint8List audioBytes,
+    required String filename,
+    required List<Map<String, String>> conversationHistory,
+  }) async* {
+    debugPrint('[SessionService] processTurnStreamed → sessionId=$sessionId, '
+        'file=$filename (${audioBytes.length}B)');
+
+    final formData = FormData.fromMap({
+      'audioFile': MultipartFile.fromBytes(
+        audioBytes,
+        filename: filename,
+        contentType: DioMediaType.parse(_mimeFromFilename(filename)),
+      ),
+      'sessionId': sessionId,
+      'conversationHistory': _encodeHistory(conversationHistory),
+    });
+
+    final Response<ResponseBody> response;
+    try {
+      response = await _dio.post<ResponseBody>(
+        ApiConstants.sessionsTurnStream,
+        data: formData,
+        options: Options(
+          responseType: ResponseType.stream,
+          sendTimeout: const Duration(seconds: 120),
+          receiveTimeout: const Duration(seconds: 120),
+        ),
+      );
+    } on DioException catch (e) {
+      debugPrint('[SessionService] processTurnStreamed ✗ $e');
+      throw Exception(_dioMessage(e, 'Turn processing failed'));
+    }
+
+    // NDJSON: one JSON object per line. A chunk boundary can land anywhere,
+    // including mid-line, so the tail is carried into the next chunk.
+    var buffer = '';
+    await for (final chunk in response.data!.stream) {
+      buffer += utf8.decode(chunk, allowMalformed: true);
+      final lines = buffer.split('\n');
+      buffer = lines.removeLast();
+
+      for (final line in lines) {
+        if (line.trim().isEmpty) continue;
+        try {
+          yield TurnEvent.fromJson(jsonDecode(line) as Map<String, dynamic>);
+        } catch (e) {
+          debugPrint('[SessionService] skipping malformed stream line: $e');
+        }
+      }
+    }
+    if (buffer.trim().isNotEmpty) {
+      try {
+        yield TurnEvent.fromJson(jsonDecode(buffer) as Map<String, dynamic>);
+      } catch (_) {/* truncated trailing line — nothing useful left */}
+    }
+    debugPrint('[SessionService] processTurnStreamed ✓ stream closed');
+  }
+
   /// Abandons a session without evaluation. Used when the user backs out of
   /// the conversation screen mid-session.
   Future<void> abandonSession(String sessionId) async {
@@ -364,5 +439,48 @@ class SessionService {
       return 'Cannot reach the server. Check your connection.';
     }
     return fallback;
+  }
+
+  /// Evaluates computer vision metrics via AI LLM and persists report to Firestore under the user's account.
+  Future<List<VisualInsight>?> evaluateAndSaveVisualReport(VisionSessionResult result) async {
+    try {
+      final payload = {
+        'visualEngagementScore': result.visualEngagementScore,
+        'overallPostureScore': result.overallPostureScore,
+        'eyeContactPercentage': result.eyeContactPercentage,
+        'gazeStabilityPercentage': result.gazeStabilityPercentage,
+        'spineAlignmentPercentage': result.spineAlignmentPercentage,
+        'shoulderSymmetryPercentage': result.shoulderSymmetryPercentage,
+        'chestOpennessPercentage': result.chestOpennessPercentage,
+        'headTiltStabilityPercentage': result.headTiltStabilityPercentage,
+        'handMovementPercentage': result.handMovementPercentage,
+        'gestureScore': result.gestureScore,
+      };
+
+      final response = await _dio.post('/user/visual-reports', data: payload);
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>?;
+        final insightsList = data?['insights'] as List?;
+        if (insightsList != null && insightsList.isNotEmpty) {
+          return insightsList.map((item) {
+            InsightType type = InsightType.suggestion;
+            final typeStr = (item['type'] ?? 'suggestion').toString().toLowerCase();
+            if (typeStr == 'positive') {
+              type = InsightType.positive;
+            } else if (typeStr == 'warning') {
+              type = InsightType.warning;
+            }
+            return VisualInsight(
+              type: type,
+              title: item['title'] ?? 'AI Executive Coaching Tip',
+              description: item['description'] ?? 'Keep practicing your posture.',
+            );
+          }).toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('[SessionService] evaluateAndSaveVisualReport error: $e');
+    }
+    return null;
   }
 }

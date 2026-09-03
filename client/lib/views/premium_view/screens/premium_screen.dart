@@ -85,7 +85,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+            icon: const Icon(Icons.close_rounded, color: AppColors.inkMuted),
             onPressed: () => Navigator.pop(context),
           ),
           const Spacer(),
@@ -98,8 +98,8 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Current Plan: ', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                Text('Free', style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+                Text('Current Plan: ', style: TextStyle(color: AppColors.inkMuted, fontSize: 12)),
+                Text('Free', style: TextStyle(color: AppColors.ink, fontSize: 12, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -125,14 +125,16 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
             ),
           ),
           child: const Center(
-            child: Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 36),
+            child: Icon(Icons.workspace_premium_rounded, color: AppColors.inkOnDark, size: 36),
           ),
         ),
         const SizedBox(height: 24),
         // Title
+        // The mask ran white -> #E2E2E2, which was designed for the old dark
+        // background and rendered the headline invisible on cream.
         ShaderMask(
           shaderCallback: (bounds) => const LinearGradient(
-            colors: [Colors.white, Color(0xFFE2E2E2)],
+            colors: [AppColors.brandDark, AppColors.brand],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ).createShader(bounds),
@@ -140,7 +142,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
             'Unlock Your Full\nPotential',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.ink,
               fontSize: 32,
               fontWeight: FontWeight.w900,
               height: 1.1,
@@ -153,7 +155,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
           'Master every conversation with advanced AI roleplay scenarios and deeper analytics.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: AppColors.textSecondary,
+            color: AppColors.inkMuted,
             fontSize: 15,
             height: 1.4,
           ),
@@ -190,7 +192,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
         padding: const EdgeInsets.symmetric(horizontal: 24),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
+          color: isSelected ? AppColors.brand.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(21),
           border: Border.all(
             color: Colors.transparent,
@@ -201,7 +203,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
             Text(
               title,
               style: TextStyle(
-                color: isSelected ? AppColors.primaryLight : AppColors.textSecondary,
+                color: isSelected ? AppColors.brandLight : AppColors.inkMuted,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 fontSize: 14,
               ),
@@ -214,7 +216,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
                   color: AppColors.success,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text('SAVE 40%', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                child: const Text('SAVE 40%', style: TextStyle(color: AppColors.inkOnDark, fontSize: 10, fontWeight: FontWeight.bold)),
               ),
             ]
           ],
@@ -235,8 +237,8 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
           borderRadius: BorderRadius.circular(20),
           gradient: const LinearGradient(
             colors: [
-              AppColors.primaryDark,
-              AppColors.primary,
+              AppColors.brandDark,
+              AppColors.brand,
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -246,7 +248,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
           children: [
             Text(
               _isAnnual ? 'CommuniQ Premium' : 'CommuniQ Premium',
-              style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 1.0),
+              style: const TextStyle(color: AppColors.brandLight, fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 1.0),
             ),
             const SizedBox(height: 12),
             Row(
@@ -255,18 +257,20 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
               children: [
                 const Padding(
                   padding: EdgeInsets.only(top: 8.0, right: 2),
-                  child: Text('\$', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                  child: Text('\$', style: TextStyle(color: AppColors.inkOnDark, fontSize: 24, fontWeight: FontWeight.bold)),
                 ),
                 Text(
                   _isAnnual ? '4.99' : '7.99',
-                  style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.w900, height: 1.0),
+                  style: const TextStyle(color: AppColors.inkOnDark, fontSize: 48, fontWeight: FontWeight.w900, height: 1.0),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
               _isAnnual ? 'per month, billed annually at \$59.88' : 'per month, cancel anytime',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              // Sits on the brand gradient card, so muted grey ink was barely
+              // legible — this needs the on-dark ramp, not the on-light one.
+              style: const TextStyle(color: AppColors.inkOnDark70, fontSize: 13),
             ),
           ],
         ),
@@ -280,7 +284,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
       children: [
         const Text(
           'Premium Benefits',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(color: AppColors.ink, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         _buildFeatureRow(Icons.all_inclusive_rounded, _kPremiumCyan, 'Unlimited roleplay scenarios'),
@@ -310,7 +314,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500),
+              style: const TextStyle(color: AppColors.ink, fontSize: 15, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -323,8 +327,8 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
       onPressed: () {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Redirecting to secure checkout...', style: TextStyle(color: Colors.white)),
-            backgroundColor: AppColors.primary,
+            content: const Text('Redirecting to secure checkout...', style: TextStyle(color: AppColors.inkOnDark)),
+            backgroundColor: AppColors.brand,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -340,7 +344,7 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
       child: Ink(
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppColors.primaryDark, AppColors.primary],
+            colors: [AppColors.brandDark, AppColors.brand],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
@@ -355,14 +359,14 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
               Text(
                 'Upgrade to Premium',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.inkOnDark,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
               ),
               SizedBox(width: 8),
-              Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+              Icon(Icons.arrow_forward_rounded, color: AppColors.inkOnDark, size: 20),
             ],
           ),
         ),

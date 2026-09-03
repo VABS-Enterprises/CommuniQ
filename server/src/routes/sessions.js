@@ -7,6 +7,7 @@ const {
   startSession,
   sessionOpening,
   processTurn,
+  processTurnStream,
   endSession,
   getReport,
   abandonSession,
@@ -89,6 +90,11 @@ router.post('/internal/live-voice-turn', verifyWorkerSecret, appendLiveVoiceTurn
 router.post('/internal/bot-crash', verifyWorkerSecret, handleBotCrash);
 router.post('/opening', verifyToken, openingRateLimit, sessionOpening);
 router.post('/turn', verifyToken, turnRateLimit, upload.single('audioFile'), handleMulterError, processTurn);
+
+// Streamed variant of /turn — same work, NDJSON response so the client can
+// play the reply as it is synthesised rather than after the last sentence.
+// Shares the turn rate limit: it is the same amount of AI work.
+router.post('/turn/stream', verifyToken, turnRateLimit, upload.single('audioFile'), handleMulterError, processTurnStream);
 router.post('/end', verifyToken, endRateLimit, endSession);
 router.get('/history', verifyToken, getSessionHistory);
 

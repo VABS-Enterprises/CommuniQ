@@ -352,6 +352,36 @@ async function getWeeklyTopUsersByXp(limit = 50) {
     .slice(0, limit);
 }
 
+async function saveVisualReport(uid, reportData) {
+  const { v4: uuidv4 } = require('uuid');
+  const reportId = reportData.reportId || uuidv4();
+
+  const docData = {
+    reportId,
+    userId: uid,
+    visualEngagementScore: reportData.visualEngagementScore || 0,
+    overallPostureScore: reportData.overallPostureScore || 0,
+    eyeContactPercentage: reportData.eyeContactPercentage || 0,
+    gazeStabilityPercentage: reportData.gazeStabilityPercentage || 0,
+    spineAlignmentPercentage: reportData.spineAlignmentPercentage || 0,
+    shoulderSymmetryPercentage: reportData.shoulderSymmetryPercentage || 0,
+    chestOpennessPercentage: reportData.chestOpennessPercentage || 0,
+    headTiltStabilityPercentage: reportData.headTiltStabilityPercentage || 0,
+    handMovementPercentage: reportData.handMovementPercentage || 0,
+    gestureScore: reportData.gestureScore || 0,
+    insights: reportData.insights || [],
+    createdAt: FieldValue.serverTimestamp(),
+  };
+
+  await db.collection('users').doc(uid).collection('visualReports').doc(reportId).set(docData);
+  return docData;
+}
+
+async function getUserVisualReports(uid) {
+  const snap = await db.collection('users').doc(uid).collection('visualReports').orderBy('createdAt', 'desc').limit(20).get();
+  return snap.docs.map((doc) => doc.data());
+}
+
 module.exports = {
   createUser,
   upsertGoogleUser,
@@ -381,4 +411,6 @@ module.exports = {
   createContestAttempt,
   getUserContestAttempts,
   getContestLeaderboard,
+  saveVisualReport,
+  getUserVisualReports,
 };

@@ -1085,7 +1085,6 @@ class _RoleplayConversationScreenState
     if (_isCameraEnabled && _visionFrames.isNotEmpty) {
       visualResult = VisualAnalysisCalculator.calculateSessionResult(
         frames: List.from(_visionFrames),
-        totalDuration: Duration(seconds: _secondsElapsed > 0 ? _secondsElapsed : 10),
       );
     }
 
@@ -1160,6 +1159,19 @@ class _RoleplayConversationScreenState
       final feedbackConfig =
           result.report.toFeedbackConfig(widget.config.scenarioTitle);
 
+      VisionSessionResult? finalVisualResult = visualResult;
+      if (finalVisualResult != null) {
+        try {
+          debugPrint('⏳ [Conversation] Evaluating & saving roleplay visual report to Firestore...');
+          final aiInsights = await SessionService.instance.evaluateAndSaveVisualReport(finalVisualResult);
+          if (aiInsights != null && aiInsights.isNotEmpty) {
+            finalVisualResult = finalVisualResult.copyWith(insights: aiInsights);
+          }
+        } catch (vErr) {
+          debugPrint('⚠️ [Conversation] Visual report evaluation/save non-fatal error: $vErr');
+        }
+      }
+
       debugPrint('✅ [Conversation] Evaluation received');
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -1168,7 +1180,7 @@ class _RoleplayConversationScreenState
           builder: (_) => RoleplayFeedbackScreen(
             config: feedbackConfig,
             report: result.report,
-            visualResult: visualResult,
+            visualResult: finalVisualResult,
             conversationHistory: List.from(_conversationHistory),
             isOnboarding: widget.isOnboarding,
             xpAwarded: result.xpAwarded,

@@ -4,7 +4,7 @@ const FormData = require('form-data');
 // When deployed on Render, FASTAPI_URL comes from a `fromService` reference
 // which returns only the hostname (e.g. "communiq-ai-server.onrender.com")
 // without a protocol. Ensure we always have a full URL.
-const _rawFastApiUrl = process.env.FASTAPI_URL || 'http://localhost:8000';
+const _rawFastApiUrl = (process.env.FASTAPI_URL || 'http://127.0.0.1:8000').replace('localhost', '127.0.0.1');
 const FASTAPI_URL = _rawFastApiUrl.startsWith('http')
   ? _rawFastApiUrl
   : `https://${_rawFastApiUrl}`;
@@ -108,6 +108,45 @@ async function sendTurnToFastApi(
     handleAxiosError(err, 'turn');
   }
 }
+
+/**
+ * Same turn as sendTurnToFastApi, but returns the raw NDJSON stream so the
+ * caller can forward each sentence's audio to the client as it is synthesised.
+ *
+ * The non-streaming call cannot return until the last sentence has been
+ * synthesised, which is the bulk of the turn's perceived latency. Here the
+ * transcript arrives first and audio follows in pieces.
+ *
+ * Resolves to a Node readable stream of NDJSON lines.
+ */
+async function streamTurnFromFastApi(
+  audioBuffer,
+  audioOriginalName,
+  sessionId,
+  conversationHistory,
+  systemPrompt
+) {
+  const form = new FormData();
+  form.append('audioFile', audioBuffer, {
+    filename: audioOriginalName || 'audio.wav',
+    contentType: getAudioMimeType(audioOriginalName),
+  });
+  form.append('sessionId', sessionId);
+  form.append('conversationHistory', JSON.stringify(conversationHistory));
+  form.append('systemPrompt', systemPrompt);
+
+  try {
+    const response = await axios.post(`${FASTAPI_URL}/session/turn/stream`, form, {
+      headers: { ...form.getHeaders(), ..._aiHeaders() },
+      responseType: 'stream',
+      timeout: 90000,
+    });
+    return response.data;
+  } catch (err) {
+    handleAxiosError(err, 'turn');
+  }
+}
+
 
 /**
  * Sends the full transcript to FastAPI for structured evaluation.
@@ -226,11 +265,27 @@ async function transcribeAudio(audioBuffer, filename) {
   }
 }
 
+async function evaluateVisual(metrics) {
+  try {
+    const response = await axios.post(
+      `${FASTAPI_URL}/evaluate/visual`,
+      metrics,
+      { headers: _aiHeaders({ 'Content-Type': 'application/json' }), timeout: 15000 }
+    );
+    return response.data;
+  } catch (err) {
+    console.error('[fastApiService] evaluateVisual error:', err.message);
+    return null;
+  }
+}
+
 module.exports = {
   sendTurnToFastApi,
+  streamTurnFromFastApi,
   sendOpeningToFastApi,
   evaluateSession,
   evaluateLearningAnswer,
   evaluateContestAnswer,
   transcribeAudio,
+  evaluateVisual,
 };

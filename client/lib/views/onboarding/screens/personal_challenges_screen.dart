@@ -85,7 +85,7 @@ class _PersonalChallengesScreenState extends State<PersonalChallengesScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: OnboardingBackground(
         child: SafeArea(
           child: Padding(
@@ -102,7 +102,7 @@ class _PersonalChallengesScreenState extends State<PersonalChallengesScreen>
                 const Text(
                   'What holds you\nback the most?',
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.ink,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                     height: 1.2,
@@ -113,7 +113,7 @@ class _PersonalChallengesScreenState extends State<PersonalChallengesScreen>
                 const Text(
                   "Be honest — we'll tailor your training",
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.inkMuted,
                     fontSize: 14,
                     height: 1.5,
                   ),
@@ -168,7 +168,7 @@ class _PersonalChallengesScreenState extends State<PersonalChallengesScreen>
                       child: Text(
                         '${_selected.length} selected',
                         style: const TextStyle(
-                          color: AppColors.primaryLight,
+                          color: AppColors.brandLight,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),

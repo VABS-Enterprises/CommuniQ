@@ -32,6 +32,8 @@ class _VisualAnalysisCameraScreenState extends State<VisualAnalysisCameraScreen>
   bool _cameraPermissionDenied = false;
   String? _cameraErrorMessage;
 
+  final SessionScenario _currentScenario = SessionScenario.interview;
+
   bool _isDemoMode = false;
   Timer? _demoTimer;
   final Random _random = Random();
@@ -173,7 +175,7 @@ class _VisualAnalysisCameraScreenState extends State<VisualAnalysisCameraScreen>
     // Compute session result
     final result = VisualAnalysisCalculator.calculateSessionResult(
       frames: _recordedFrames,
-      totalDuration: _elapsedDuration.inSeconds > 0 ? _elapsedDuration : const Duration(seconds: 10),
+      scenario: _currentScenario,
       isDemoMode: _isDemoMode,
     );
 
@@ -208,23 +210,45 @@ class _VisualAnalysisCameraScreenState extends State<VisualAnalysisCameraScreen>
       GazeDirection gaze = GazeDirection.center;
       HeadOrientation head = HeadOrientation.forward;
       EyeContactState eyeContact = EyeContactState.yes;
+      PostureState posture = PostureState.upright;
+      HandGestureState gesture = HandGestureState.active;
 
       if (p < 0.70) {
         gaze = GazeDirection.center;
         head = HeadOrientation.forward;
         eyeContact = EyeContactState.yes;
+        posture = PostureState.upright;
+        gesture = HandGestureState.active;
       } else if (p < 0.82) {
         gaze = GazeDirection.left;
         head = HeadOrientation.left;
         eyeContact = EyeContactState.no;
+        posture = PostureState.slouched;
+        gesture = HandGestureState.stationary;
       } else if (p < 0.92) {
         gaze = GazeDirection.right;
         head = HeadOrientation.right;
         eyeContact = EyeContactState.no;
+        posture = PostureState.upright;
+        gesture = HandGestureState.active;
       } else {
         gaze = GazeDirection.down;
         head = HeadOrientation.down;
         eyeContact = EyeContactState.no;
+        posture = PostureState.slouched;
+        gesture = HandGestureState.notVisible;
+      }
+
+      double spineVal = 84.0 + (_random.nextDouble() * 10.0 - 5.0);
+      double shoulderVal = 88.0 + (_random.nextDouble() * 8.0 - 4.0);
+      double chestVal = 82.0 + (_random.nextDouble() * 10.0 - 5.0);
+      double tiltVal = 90.0 + (_random.nextDouble() * 8.0 - 4.0);
+
+      if (posture == PostureState.slouched) {
+        spineVal = 58.0 + (_random.nextDouble() * 10.0);
+        shoulderVal = 70.0 + (_random.nextDouble() * 8.0);
+        chestVal = 62.0 + (_random.nextDouble() * 10.0);
+        tiltVal = 72.0 + (_random.nextDouble() * 8.0);
       }
 
       final demoFrame = VisionFrameResult(
@@ -232,6 +256,12 @@ class _VisualAnalysisCameraScreenState extends State<VisualAnalysisCameraScreen>
         gazeDirection: gaze,
         headOrientation: head,
         eyeContact: eyeContact,
+        postureState: posture,
+        handGestureState: gesture,
+        headSpineAlignment: spineVal,
+        shoulderSymmetry: shoulderVal,
+        chestOpenness: chestVal,
+        headTiltStability: tiltVal,
         leftEyeOpenness: 0.9,
         rightEyeOpenness: 0.9,
         timestamp: DateTime.now(),
@@ -276,7 +306,7 @@ class _VisualAnalysisCameraScreenState extends State<VisualAnalysisCameraScreen>
                 ),
               ),
               Text(
-                'Camera-based Gaze & Eye Contact',
+                'Gaze, Posture & Hand Gestures',
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
@@ -297,6 +327,7 @@ class _VisualAnalysisCameraScreenState extends State<VisualAnalysisCameraScreen>
         body: SafeArea(
           child: Column(
             children: [
+              const SizedBox(height: 8),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
@@ -426,7 +457,7 @@ class _VisualAnalysisCameraScreenState extends State<VisualAnalysisCameraScreen>
               _buildFallbackCard(
                 icon: Icons.camera_alt_outlined,
                 title: 'Camera Access Required',
-                subtitle: 'Camera permission is needed for live eye contact and gaze estimation.',
+                subtitle: 'Camera permission is needed for live eye contact, posture, and gesture analysis.',
                 actionText: 'Use Demo Mode',
                 onAction: _enableDemoMode,
               )
@@ -467,18 +498,33 @@ class _VisualAnalysisCameraScreenState extends State<VisualAnalysisCameraScreen>
                 ),
               )
             else if (_cameraController != null && _cameraController!.value.isInitialized)
-              Stack(
-                fit: StackFit.expand,
-                children: [
-                  CameraPreview(_cameraController!),
-                  CustomPaint(
-                    painter: CameraLandmarkPainter(
-                      frameResult: _latestFrame,
-                      previewSize: _cameraController!.value.previewSize ?? const Size(640, 480),
-                      isFrontCamera: true,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final rawSize = _cameraController!.value.previewSize!;
+                  final double imgW = min(rawSize.width, rawSize.height);
+                  final double imgH = max(rawSize.width, rawSize.height);
+
+                  return FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: imgW,
+                      height: imgH,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CameraPreview(_cameraController!),
+                          CustomPaint(
+                            painter: CameraLandmarkPainter(
+                              frameResult: _latestFrame,
+                              previewSize: Size(imgW, imgH),
+                              isFrontCamera: true,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
           ],
         ),

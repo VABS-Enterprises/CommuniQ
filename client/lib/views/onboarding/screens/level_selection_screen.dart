@@ -29,7 +29,6 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
       icon: Icons.spa_rounded,
       filledBars: 1,
       accent: Color(0xFF10B981),
-      gradient: [Color(0xFF0C221A), Color(0xFF0D1525)],
       badge: 'Start here',
     ),
     _Level(
@@ -40,7 +39,6 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
       icon: Icons.trending_up_rounded,
       filledBars: 2,
       accent: Color(0xFFF59E0B),
-      gradient: [Color(0xFF221A0C), Color(0xFF0D1525)],
       badge: 'Most common',
     ),
     _Level(
@@ -51,7 +49,6 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
       icon: Icons.local_fire_department_rounded,
       filledBars: 3,
       accent: Color(0xFF818CF8),
-      gradient: [Color(0xFF130D2E), Color(0xFF0D1525)],
       badge: 'Go further',
     ),
   ];
@@ -83,7 +80,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: OnboardingBackground(
         child: SafeArea(
           child: Padding(
@@ -100,7 +97,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
                 const Text(
                   'Where are you\nright now?',
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.ink,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                     height: 1.2,
@@ -111,7 +108,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
                 const Text(
                   "We'll calibrate your experience to match",
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.inkMuted,
                     fontSize: 14,
                     height: 1.5,
                   ),
@@ -205,13 +202,13 @@ class _LevelCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.08)
-              : AppColors.cardSurface,
+              ? AppColors.brand.withValues(alpha: 0.08)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: isSelected
-                ? AppColors.primaryLight.withValues(alpha: 0.55)
-                : AppColors.cardBorder,
+                ? AppColors.brandLight.withValues(alpha: 0.55)
+                : AppColors.outline,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -225,13 +222,13 @@ class _LevelCard extends StatelessWidget {
               height: 48,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.18)
-                    : const Color(0xFF131D2E),
+                    ? AppColors.brand.withValues(alpha: 0.18)
+                    : AppColors.bgSunk,
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Icon(
                 level.icon,
-                color: isSelected ? AppColors.primaryLight : AppColors.textMuted,
+                color: isSelected ? AppColors.brandLight : AppColors.inkSoft,
                 size: 24,
               ),
             ),
@@ -249,8 +246,8 @@ class _LevelCard extends StatelessWidget {
                         level.label,
                         style: TextStyle(
                           color: isSelected
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary,
+                              ? AppColors.ink
+                              : AppColors.inkMuted,
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.1,
@@ -262,16 +259,16 @@ class _LevelCard extends StatelessWidget {
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? AppColors.primary.withValues(alpha: 0.18)
-                              : AppColors.surfaceVariant,
+                              ? AppColors.brand.withValues(alpha: 0.18)
+                              : AppColors.surfaceAlt,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           level.badge,
                           style: TextStyle(
                             color: isSelected
-                                ? AppColors.primaryLight
-                                : AppColors.textMuted,
+                                ? AppColors.brandLight
+                                : AppColors.inkSoft,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.3,
@@ -287,8 +284,8 @@ class _LevelCard extends StatelessWidget {
                     level.tagline,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.primaryLight.withValues(alpha: 0.8)
-                          : AppColors.textMuted,
+                          ? AppColors.brandLight.withValues(alpha: 0.8)
+                          : AppColors.inkSoft,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.2,
@@ -301,8 +298,8 @@ class _LevelCard extends StatelessWidget {
                     level.description,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.textSecondary
-                          : AppColors.textMuted,
+                          ? AppColors.inkMuted
+                          : AppColors.inkSoft,
                       fontSize: 12.5,
                       height: 1.5,
                     ),
@@ -314,8 +311,8 @@ class _LevelCard extends StatelessWidget {
                   _SkillBars(
                     filled: level.filledBars,
                     accent: isSelected
-                        ? AppColors.primaryLight
-                        : AppColors.surfaceVariant,
+                        ? AppColors.brandLight
+                        : AppColors.surfaceAlt,
                   ),
                 ],
               ),
@@ -343,7 +340,7 @@ class _SkillBars extends StatelessWidget {
             height: 4,
             margin: EdgeInsets.only(right: i < 2 ? 4 : 0),
             decoration: BoxDecoration(
-              color: isFilled ? accent : AppColors.surfaceVariant,
+              color: isFilled ? accent : AppColors.surfaceAlt,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -360,7 +357,6 @@ class _Level {
   final IconData icon;
   final int filledBars;
   final Color accent;
-  final List<Color> gradient;
   final String badge;
   const _Level({
     required this.label,
@@ -369,7 +365,6 @@ class _Level {
     required this.icon,
     required this.filledBars,
     required this.accent,
-    required this.gradient,
     required this.badge,
   });
 }

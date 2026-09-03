@@ -4,7 +4,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
+import 'package:communiq/core/services/learning_progress_store.dart';
 import 'package:communiq/models/communiq_level.dart';
+
+/// The curriculum, as served by `GET /levels`.
+class Curriculum {
+  final List<CommuniqLevel> levels;
+  final List<CommuniqJourney> journeys;
+
+  const Curriculum({required this.levels, required this.journeys});
+
+  /// The journey a level belongs to, or null if the data disagrees with
+  /// itself. Matched on the declared level range rather than `journey_id`,
+  /// which is the field most likely to be wrong after a content edit.
+  CommuniqJourney? journeyFor(int levelId) {
+    for (final j in journeys) {
+      if (j.contains(levelId)) return j;
+    }
+    return null;
+  }
+}
 
 /// Loads the learning curriculum from the server.
 ///
@@ -17,12 +36,13 @@ class LevelService {
   LevelService._();
   static final LevelService instance = LevelService._();
 
-  List<CommuniqLevel>? _cachedLevels;
+  Curriculum? _cached;
 
   Dio get _dio => ApiService.instance.dio;
 
-  Future<List<CommuniqLevel>> fetchLevels() async {
-    if (_cachedLevels != null) return _cachedLevels!;
+  Future<Curriculum> fetchCurriculum() async {
+    final cached = _cached;
+    if (cached != null) return cached;
 
     try {
       final res = await _dio.get(ApiConstants.levels);
@@ -36,25 +56,43 @@ class LevelService {
         throw Exception('Unexpected /levels response shape');
       }
 
-      _cachedLevels = rawLevels
+      final levels = rawLevels
           .whereType<Map<String, dynamic>>()
           .map(CommuniqLevel.fromJson)
-          .toList();
+          .toList()
+        ..sort((a, b) => a.id.compareTo(b.id));
 
-      debugPrint('[LevelService] fetchLevels ✓ ${_cachedLevels!.length} levels');
-      return _cachedLevels!;
+      final rawJourneys =
+          data is Map<String, dynamic> ? data['journeys'] : null;
+      final journeys = rawJourneys is List
+          ? (rawJourneys
+              .whereType<Map<String, dynamic>>()
+              .map(CommuniqJourney.fromJson)
+              .toList()
+            ..sort((a, b) => a.startLevel.compareTo(b.startLevel)))
+          : <CommuniqJourney>[];
+
+      final curriculum = Curriculum(levels: levels, journeys: journeys);
+      _cached = curriculum;
+      debugPrint('[LevelService] fetchCurriculum ✓ ${levels.length} levels, '
+          '${journeys.length} journeys');
+      return curriculum;
     } on DioException catch (e) {
-      debugPrint('[LevelService] fetchLevels ✗ ${e.message}');
+      debugPrint('[LevelService] fetchCurriculum ✗ ${e.message}');
       throw Exception('Could not load lessons. Check your connection.');
     } catch (e) {
-      debugPrint('[LevelService] fetchLevels ✗ $e');
+      debugPrint('[LevelService] fetchCurriculum ✗ $e');
       rethrow;
     }
   }
 
-  void clearCache() => _cachedLevels = null;
+  /// Convenience for callers that only need the level list.
+  Future<List<CommuniqLevel>> fetchLevels() async =>
+      (await fetchCurriculum()).levels;
 
-  /// Clears all learning progress from SharedPreferences.
+  void clearCache() => _cached = null;
+
+  /// Clears all learning progress held on this device.
   ///
   /// Must cover every cache key learning_view.dart writes, or a stale value
   /// survives sign-out and can flash on the next account signed into this
@@ -62,6 +100,11 @@ class LevelService {
   /// refresh completes. `total_coins_cache` doesn't match 'level_*' or
   /// 'completed_level_ids' so it needs its own explicit check.
   Future<void> clearProgress() async {
+    // The in-memory snapshot is what the UI actually reads, so it has to go
+    // too — clearing only SharedPreferences left the previous user's coins on
+    // screen until the next successful fetch.
+    LearningProgressStore.instance.clear();
+    clearCache();
     try {
       final prefs = await SharedPreferences.getInstance();
       for (final key in prefs.getKeys()) {

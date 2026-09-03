@@ -61,7 +61,7 @@ class _ValidationScreenState extends State<ValidationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.bg,
       body: OnboardingBackground(
         child: SafeArea(
           child: Padding(
@@ -84,7 +84,7 @@ class _ValidationScreenState extends State<ValidationScreen>
                       const Text(
                         "You're not alone\nin this.",
                         style: TextStyle(
-                          color: AppColors.textPrimary,
+                          color: AppColors.ink,
                           fontSize: 30,
                           fontWeight: FontWeight.w800,
                           height: 1.18,
@@ -95,7 +95,7 @@ class _ValidationScreenState extends State<ValidationScreen>
                       RichText(
                         text: TextSpan(
                           style: const TextStyle(
-                            color: AppColors.textSecondary,
+                            color: AppColors.inkMuted,
                             fontSize: 14,
                             height: 1.62,
                           ),
@@ -104,7 +104,7 @@ class _ValidationScreenState extends State<ValidationScreen>
                             TextSpan(
                               text: _challenge(),
                               style: const TextStyle(
-                                color: AppColors.primaryLight,
+                                color: AppColors.brandLight,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -180,7 +180,7 @@ class _ValidationScreenState extends State<ValidationScreen>
                   child: const Text(
                     'WHAT OTHERS SAY',
                     style: TextStyle(
-                      color: AppColors.textMuted,
+                      color: AppColors.inkSoft,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.5,
@@ -235,7 +235,7 @@ class _HeroStat extends StatelessWidget {
           Container(
             width: 3,
             decoration: BoxDecoration(
-              color: AppColors.primary,
+              color: AppColors.brand,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -252,7 +252,7 @@ class _HeroStat extends StatelessWidget {
                     Text(
                       '9',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.ink,
                         fontSize: 62,
                         fontWeight: FontWeight.w900,
                         height: 1,
@@ -263,7 +263,7 @@ class _HeroStat extends StatelessWidget {
                     Text(
                       '/10',
                       style: TextStyle(
-                        color: Color(0x50FFFFFF),
+                        color: AppColors.inkSoft,
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.5,
@@ -275,7 +275,7 @@ class _HeroStat extends StatelessWidget {
                 const Text(
                   'people held back what they really\nwanted to say — at least once this week.',
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: AppColors.inkMuted,
                     fontSize: 13,
                     height: 1.52,
                   ),
@@ -308,16 +308,14 @@ class _ProofCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
+      child: Container(
           padding: const EdgeInsets.fromLTRB(13, 14, 13, 14),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.07),
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.10),
-              width: 1,
+              color: AppColors.outline,
+              width: 1.5,
             ),
           ),
           child: Column(
@@ -328,17 +326,17 @@ class _ProofCard extends StatelessWidget {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.18),
+                  color: AppColors.brand.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: Icon(icon, color: AppColors.primaryLight, size: 15),
+                child: Icon(icon, color: AppColors.brandLight, size: 15),
               ),
               const SizedBox(height: 10),
               // Stat number
               Text(
                 stat,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.ink,
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
                   height: 1,
@@ -350,14 +348,13 @@ class _ProofCard extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.48),
+                  color: AppColors.inkMuted,
                   fontSize: 10.5,
                   height: 1.42,
                 ),
               ),
             ],
           ),
-        ),
       ),
     );
   }
@@ -410,7 +407,7 @@ class _TestimonialsCarouselState extends State<_TestimonialsCarousel>
   static const _reviews = [
     _ReviewItem(
       initial: 'P',
-      avatarColors: [AppColors.primary, AppColors.primaryLight],
+      avatarColors: [AppColors.brand, AppColors.brandLight],
       name: 'Priya S.',
       meta: '26 · Marketing Manager',
       quote:
@@ -528,10 +525,10 @@ class _ReviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.09),
+        color: AppColors.brand.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.22),
+          color: AppColors.brand.withValues(alpha: 0.22),
           width: 1,
         ),
       ),
@@ -560,7 +557,7 @@ class _ReviewCard extends StatelessWidget {
               Text(
                 item.name,
                 style: const TextStyle(
-                  color: AppColors.textSecondary,
+                  color: AppColors.inkMuted,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -575,7 +572,7 @@ class _ReviewCard extends StatelessWidget {
             child: Text(
               '"${item.quote}"',
               style: const TextStyle(
-                color: AppColors.textPrimary,
+                color: AppColors.ink,
                 fontSize: 13,
                 height: 1.48,
                 fontStyle: FontStyle.italic,
@@ -594,14 +591,14 @@ class _ReviewCard extends StatelessWidget {
                 width: 24,
                 height: 24,
                 decoration: const BoxDecoration(
-                  color: AppColors.primary,
+                  color: AppColors.brand,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
                   child: Text(
                     item.initial,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.inkOnDark,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
@@ -612,7 +609,7 @@ class _ReviewCard extends StatelessWidget {
               Text(
                 item.meta,
                 style: const TextStyle(
-                  color: AppColors.textMuted,
+                  color: AppColors.inkSoft,
                   fontSize: 11,
                 ),
               ),
@@ -635,13 +632,13 @@ class _BackBtn extends StatelessWidget {
       width: 38,
       height: 38,
       decoration: BoxDecoration(
-        color: AppColors.cardSurface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: AppColors.cardBorder, width: 1),
+        border: Border.all(color: AppColors.outline, width: 1),
       ),
       child: const Icon(
         Icons.arrow_back_ios_new_rounded,
-        color: AppColors.textSecondary,
+        color: AppColors.inkMuted,
         size: 16,
       ),
     );

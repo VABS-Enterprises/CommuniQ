@@ -21,6 +21,7 @@ const {
 } = require('../services/firestoreService');
 const {
   sendTurnToFastApi,
+  streamTurnFromFastApi,
   sendOpeningToFastApi,
   evaluateSession,
 } = require('../services/fastApiService');
@@ -246,12 +247,19 @@ async function sessionOpening(req, res) {
     // Pass the opening AI line so Pipecat seeds its LLM context with it —
     // this prevents the bot from re-introducing itself on the first user turn.
     // No-op when LIVEKIT_ENABLED=false (classic HTTP mode).
-    await livekit.dispatchAgent(sessionId, finalSystemPrompt, aiReply);
+    const agentDispatched = await livekit.dispatchAgent(
+      sessionId, finalSystemPrompt, aiReply,
+    );
 
     return res.status(200).json({
       aiReply,
       aiAudioBase64,
-      liveVoiceEnabled: livekit.ENABLED,
+      // Only true when an agent is actually in the room. This used to report
+      // livekit.ENABLED — i.e. "LiveKit is configured" — so a failed dispatch
+      // still told the client to go live-voice, and live-voice does not run
+      // the file recorder. The result was a dead conversation: the mic opened,
+      // recorded nothing, and no turn was ever sent.
+      liveVoiceEnabled: agentDispatched,
     });
   } catch (err) {
     console.error('sessionOpening error:', err.message);
@@ -319,6 +327,130 @@ async function processTurn(req, res) {
     return res.status(200).json({ userTranscript, aiReply, aiAudioBase64, turnCount });
   } catch (err) {
     console.error('processTurn error:', err.message);
+    const status = err.statusCode || 500;
+    return res.status(status).json({ error: err.message || 'Failed to process turn' });
+  }
+}
+
+// POST /sessions/turn/stream
+//
+// Same work as processTurn, but the AI server's reply is forwarded as it is
+// produced instead of after the last sentence is synthesised. The client can
+// show the transcript and start playing audio roughly a second sooner on a
+// short reply, and far sooner on a long one.
+//
+// The Firestore write still happens exactly once, as soon as the transcript
+// line arrives — before any audio is forwarded — so a client that disconnects
+// mid-playback still leaves a complete, evaluable conversation behind.
+async function processTurnStream(req, res) {
+  const { sessionId } = req.body;
+  const userId = req.uid;
+  const audioFile = req.file;
+
+  if (!sessionId || !audioFile) {
+    return res.status(400).json({ error: 'sessionId and audioFile are required' });
+  }
+
+  let history;
+  try {
+    history = JSON.parse(req.body.conversationHistory || '[]');
+    if (!Array.isArray(history)) throw new Error('not an array');
+  } catch {
+    return res.status(400).json({ error: 'conversationHistory must be valid JSON array' });
+  }
+
+  try {
+    const session = await getSessionById(sessionId);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+    if (session.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    if (session.status !== 'in_progress') {
+      return res.status(400).json({ error: 'Session is not in progress' });
+    }
+
+    const userTurnCount = countUserTurns(session);
+    if (userTurnCount >= MAX_TURNS_PER_SESSION) {
+      return res.status(400).json({
+        error: `Session has reached the maximum of ${MAX_TURNS_PER_SESSION} turns`,
+      });
+    }
+
+    const { basePrompt } = await resolveSystemPrompt(session);
+    const finalSystemPrompt = buildFinalPrompt(basePrompt, session);
+
+    const upstream = await streamTurnFromFastApi(
+      audioFile.buffer,
+      audioFile.originalname,
+      sessionId,
+      history,
+      finalSystemPrompt
+    );
+
+    res.status(200);
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    const turnCount = userTurnCount + 1;
+    let buffer = '';
+    let persisted = false;
+
+    upstream.on('data', async (chunk) => {
+      buffer += chunk.toString('utf8');
+      const lines = buffer.split('\n');
+      // The last element is whatever came after the final newline — an
+      // incomplete line that must wait for the next chunk.
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let msg;
+        try {
+          msg = JSON.parse(line);
+        } catch {
+          continue; // never let a malformed line kill the stream
+        }
+
+        if (msg.type === 'transcript' && !persisted) {
+          persisted = true;
+          try {
+            await appendTurnsToSession(
+              sessionId,
+              createTurnDoc('user', msg.userTranscript),
+              createTurnDoc('ai', msg.aiReply)
+            );
+          } catch (e) {
+            console.error('processTurnStream persist failed:', e.message);
+          }
+          // turnCount is the client's, not the AI server's, so it is added here.
+          res.write(JSON.stringify({ ...msg, turnCount }) + '\n');
+          continue;
+        }
+        res.write(line + '\n');
+      }
+    });
+
+    upstream.on('end', () => {
+      if (buffer.trim()) res.write(buffer + '\n');
+      res.end();
+    });
+
+    upstream.on('error', (e) => {
+      console.error('processTurnStream upstream error:', e.message);
+      // Headers are already sent, so the failure has to travel as data.
+      res.write(JSON.stringify({ type: 'error', detail: 'Turn failed part-way through.' }) + '\n');
+      res.end();
+    });
+
+    // Stop synthesising for a client that has gone away.
+    req.on('close', () => {
+      if (typeof upstream.destroy === 'function') upstream.destroy();
+    });
+  } catch (err) {
+    console.error('processTurnStream error:', err.message);
+    if (res.headersSent) {
+      res.write(JSON.stringify({ type: 'error', detail: 'Turn failed.' }) + '\n');
+      return res.end();
+    }
     const status = err.statusCode || 500;
     return res.status(status).json({ error: err.message || 'Failed to process turn' });
   }
@@ -665,6 +797,7 @@ module.exports = {
   startSession,
   sessionOpening,
   processTurn,
+  processTurnStream,
   endSession,
   getReport,
   abandonSession,
