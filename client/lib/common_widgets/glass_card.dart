@@ -15,6 +15,10 @@ class GlassCard extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
   final double borderRadius;
   final double borderAlpha;
+
+  /// Overrides the derived border. The visual-analysis screens pass an
+  /// explicit edge colour; everything else lets [borderAlpha] derive one.
+  final Color? borderColor;
   final bool glow;
   final Color? glowColor;
 
@@ -27,6 +31,7 @@ class GlassCard extends StatelessWidget {
     this.margin,
     this.borderRadius = AppRadius.cards,
     this.borderAlpha = 0.4,
+    this.borderColor,
     this.glow = false,
     this.glowColor,
   });
@@ -42,7 +47,8 @@ class GlassCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: radius,
         border: Border.all(
-          color: AppColors.glassBorder.withValues(alpha: borderAlpha),
+          color: borderColor ??
+              AppColors.glassBorder.withValues(alpha: borderAlpha),
           width: 1.0,
         ),
         boxShadow: glow

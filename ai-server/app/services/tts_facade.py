@@ -205,6 +205,13 @@ def _synthesize_kokoro(text: str) -> bytes:
     if not text or not text.strip():
         return b""
 
+    # Same cleanup the edge and groq paths do — without it Kokoro voices the
+    # Markdown and stage directions.
+    from app.services.tts import strip_stage_directions
+    text = strip_stage_directions(text)
+    if not text:
+        return b""
+
     pipeline = _get_kokoro()
     voice_id = settings.kokoro_voice
     sample_rate = 24000  # Kokoro always outputs 24 kHz

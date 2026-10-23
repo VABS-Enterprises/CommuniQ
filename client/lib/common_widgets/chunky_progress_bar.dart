@@ -35,56 +35,55 @@ class ChunkyProgressBar extends StatelessWidget {
     final fill = color ?? AppColors.success;
     final clamped = value.isNaN ? 0.0 : value.clamp(0.0, 1.0);
 
-    final track = LayoutBuilder(
-      builder: (context, constraints) {
-        final maxW = constraints.maxWidth;
-        return Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: AppColors.bgSunk,
-            borderRadius: BorderRadius.circular(height),
-            border: Border.all(color: AppColors.outline, width: 2),
-          ),
-          child: Align(
+    // A FractionallySizedBox rather than a LayoutBuilder: LayoutBuilder
+    // cannot report intrinsic dimensions, so a bar inside an IntrinsicHeight
+    // (the home stats card) threw during layout and the card never painted.
+    final track = Container(
+      // The track always spans its parent; only the fill is fractional.
+      width: double.infinity,
+      height: height,
+      decoration: BoxDecoration(
+        color: AppColors.bgSunk,
+        borderRadius: BorderRadius.circular(height),
+        border: Border.all(color: AppColors.outline, width: 2),
+      ),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: clamped),
+        duration: animate ? AppMotion.settle : Duration.zero,
+        curve: AppMotion.ease,
+        builder: (context, v, _) {
+          // Below a sliver of a percent the rounded cap renders as a
+          // splinter; hide it so 0% reads as genuinely empty.
+          if (v < 0.005) return const SizedBox.shrink();
+          return FractionallySizedBox(
             alignment: Alignment.centerLeft,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: clamped),
-              duration: animate ? AppMotion.settle : Duration.zero,
-              curve: AppMotion.ease,
-              builder: (context, v, _) {
-                // Below a couple of pixels the rounded cap renders as a
-                // sliver; hide it so 0% reads as genuinely empty.
-                final w = (maxW - 4) * v;
-                if (w < 2) return const SizedBox.shrink();
-                return Container(
-                  width: w,
-                  height: height - 4,
-                  decoration: BoxDecoration(
-                    color: fill,
-                    borderRadius: BorderRadius.circular(height),
-                  ),
-                  // Inner highlight — reads as a glossy capsule rather than a
-                  // flat block.
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: FractionallySizedBox(
-                      widthFactor: 0.88,
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 2.5),
-                        height: (height - 4) * 0.24,
-                        decoration: BoxDecoration(
-                          color: AppColors.white.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(height),
-                        ),
-                      ),
+            widthFactor: v,
+            child: Container(
+              height: height - 4,
+              decoration: BoxDecoration(
+                color: fill,
+                borderRadius: BorderRadius.circular(height),
+              ),
+              // Inner highlight — reads as a glossy capsule rather than a
+              // flat block.
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: FractionallySizedBox(
+                  widthFactor: 0.88,
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 2.5),
+                    height: (height - 4) * 0.24,
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(height),
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
 
     if (!showLabel) return track;

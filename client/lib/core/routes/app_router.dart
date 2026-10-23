@@ -252,6 +252,15 @@ GoRouter createRouter({bool gallery = false}) {
             navigatorKey: _shellKeys[3],
             routes: [
               GoRoute(
+                path: AppRoutes.contest,
+                builder: (_, __) => const ContestHubPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _shellKeys[4],
+            routes: [
+              GoRoute(
                 path: AppRoutes.profile,
                 builder: (_, __) => const ProfileView(),
               ),
@@ -325,11 +334,6 @@ GoRouter createRouter({bool gallery = false}) {
         },
       ),
 
-      GoRoute(
-        path: AppRoutes.contest,
-        parentNavigatorKey: _rootKey,
-        builder: (_, __) => const ContestHubPage(),
-      ),
       GoRoute(
         path: AppRoutes.contestPlay,
         parentNavigatorKey: _rootKey,

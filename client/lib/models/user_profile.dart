@@ -5,9 +5,11 @@ class SkillStat {
 
   const SkillStat({required this.avg, required this.sessions});
 
+  // Same rule as UserProfile: a stray value in one skill bucket must not
+  // fail the profile it is nested inside.
   factory SkillStat.fromJson(Map<String, dynamic> json) => SkillStat(
-        avg: (json['avg'] as num?)?.toDouble() ?? 0.0,
-        sessions: (json['sessions'] as num?)?.toInt() ?? 0,
+        avg: json['avg'] is num ? (json['avg'] as num).toDouble() : 0.0,
+        sessions: json['sessions'] is num ? (json['sessions'] as num).toInt() : 0,
       );
 }
 
@@ -31,7 +33,15 @@ class UserProfile {
   final int sessionsCompleted;
 
   /// Learning module progress: list of completed scenarios with coins/scores.
-  final List<Map<String, dynamic>> learningProgress;
+  /// The raw `learningProgress` map from the user document: `coins`,
+  /// `completedLevelIds`, `levels`, `attempts`, `levelCoins`, `responses`.
+  ///
+  /// Was typed as a list, which is not what the server stores — see
+  /// learningController.js. Nothing read it, so the mismatch stayed hidden
+  /// until a level was completed and the field appeared in the document;
+  /// the cast then threw and failed the whole profile parse, which surfaces
+  /// to the user as "Can't reach CommuniQ".
+  final Map<String, dynamic> learningProgress;
 
   const UserProfile({
     required this.uid,
@@ -45,41 +55,57 @@ class UserProfile {
     required this.isPremium,
     this.skillProgress = const {},
     this.sessionsCompleted = 0,
-    this.learningProgress = const [],
+    this.learningProgress = const {},
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
-    final rawSkill =
-        (json['skillProgress'] as Map<String, dynamic>?) ?? {};
-    final skillMap = rawSkill.map(
-      (k, v) => MapEntry(
-        k,
-        SkillStat.fromJson(v as Map<String, dynamic>? ?? {}),
-      ),
+    final skillMap = _readMap(json['skillProgress']).map(
+      (k, v) => MapEntry(k, SkillStat.fromJson(_readMap(v))),
     );
 
     return UserProfile(
-      uid: json['uid'] as String? ?? '',
-      email: json['email'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      photoURL: json['photoURL'] as String?,
-      xp: (json['xp'] as num?)?.toInt() ?? 0,
-      level: (json['level'] as num?)?.toInt() ?? 1,
-      streak: (json['streak'] as num?)?.toInt() ?? 0,
-      badges: (json['badges'] as List<dynamic>?)?.cast<String>() ?? [],
-      isPremium: json['isPremium'] as bool? ?? false,
+      uid: _readString(json['uid']),
+      email: _readString(json['email']),
+      name: _readString(json['name']),
+      photoURL: json['photoURL'] is String ? json['photoURL'] as String : null,
+      xp: _readInt(json['xp']),
+      level: _readInt(json['level'], fallback: 1),
+      streak: _readInt(json['streak']),
+      badges: _readStringList(json['badges']),
+      isPremium: json['isPremium'] == true,
       skillProgress: skillMap,
-      sessionsCompleted: (json['_sessionsCompleted'] as num?)?.toInt() ?? 0,
-      // The server writes `learningProgress` (camelCase, see
-      // learningController.js). This previously read only `learning_progress`,
-      // so the field was always empty. The snake_case key is kept as a
-      // fallback for any profile cached under the old shape.
-      learningProgress: ((json['learningProgress'] ??
-                  json['learning_progress']) as List<dynamic>?)
-              ?.cast<Map<String, dynamic>>() ??
-          [],
+      sessionsCompleted: _readInt(json['_sessionsCompleted']),
+      learningProgress: _readLearningProgress(json),
     );
   }
+
+  // ── Total readers ─────────────────────────────────────────────────────────
+  //
+  // A profile is the app's entry point: Home, session history and the
+  // leaderboard all fail if it fails. A direct `as` cast on a field the server
+  // renamed or retyped brings the whole screen down — which is exactly what
+  // happened with `learningProgress` — so every field degrades to its default
+  // instead of throwing.
+
+  static String _readString(Object? v) => v is String ? v : '';
+
+  static int _readInt(Object? v, {int fallback = 0}) {
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v) ?? fallback;
+    return fallback;
+  }
+
+  static Map<String, dynamic> _readMap(Object? v) =>
+      v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
+
+  static List<String> _readStringList(Object? v) =>
+      v is List ? v.whereType<String>().toList() : const <String>[];
+
+  /// The server writes camelCase (learningController.js); `learning_progress`
+  /// is kept as a fallback, and a list is tolerated because profiles cached
+  /// under the old, wrong type are still on disk.
+  static Map<String, dynamic> _readLearningProgress(Map<String, dynamic> json) =>
+      _readMap(json['learningProgress'] ?? json['learning_progress']);
 
   Map<String, dynamic> toJson() => {
         'uid': uid,

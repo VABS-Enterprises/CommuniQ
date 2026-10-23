@@ -66,11 +66,17 @@ class _PremiumScreenState extends State<PremiumScreen> with TickerProviderStateM
             ),
           ),
 
-          // ─── Floating Upgrade Button ───
+          // ─── Upgrade button, pinned just above the nav bar ───
+          //
+          // The bottom inset is already taken out of this Scaffold's body —
+          // the shell reports the floating nav bar as MediaQuery padding, and
+          // the body is laid out inside it. Adding padding.bottom here counted
+          // that 93dp twice and parked the button mid-screen, a long way above
+          // the bar it was meant to sit on. A plain gap is all it needs.
           Positioned(
             left: 24,
             right: 24,
-            bottom: MediaQuery.of(context).padding.bottom + 16,
+            bottom: 16,
             child: _buildUpgradeButton(),
           ),
         ],

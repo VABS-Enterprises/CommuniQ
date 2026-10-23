@@ -12,6 +12,19 @@ DEFAULT_VOICE = "en-IN-PrabhatNeural"  # matches pipecat-worker voice — same A
 # them as vocal direction controls (e.g. [cheerful], [whisper]).
 _STAGE_DIRECTION = re.compile(r"\s*[（(][^)）]{1,60}[)）]\s*")
 
+# Models write roleplay actions as *smiles warmly* and emphasis as **important**.
+# Neither is speech, and every TTS backend pronounces the character: listeners
+# heard "asterisk smiles warmly asterisk". Actions are dropped like their
+# parenthesised equivalents above; emphasis keeps its words and loses only the
+# markers. The length bound is the same 60 characters, so a lone `*` in prose
+# and a multi-sentence span are both left alone.
+_MD_BOLD = re.compile(r"\*\*(.+?)\*\*|__(.+?)__", re.DOTALL)
+_MD_ACTION = re.compile(r"\s*\*([^*\n]{1,60})\*\s*")
+_MD_HEADING = re.compile(r"^\s{0,3}#{1,6}\s*", re.MULTILINE)
+_MD_BULLET = re.compile(r"^\s{0,3}[-*+]\s+", re.MULTILINE)
+_MD_CODE = re.compile(r"`+")
+_EXTRA_SPACE = re.compile(r"[ \t]{2,}")
+
 # Supported Indian English + fallback voices.
 SUPPORTED_VOICES = {
     "en-IN-NeerjaNeural",   # female, Indian English (default)
@@ -96,8 +109,18 @@ async def synthesize_sentence(text: str, voice: str | None = None) -> bytes:
 
 
 def strip_stage_directions(text: str) -> str:
-    """Remove parenthesised/bracketed stage directions before TTS synthesis."""
-    return _STAGE_DIRECTION.sub(" ", text).strip()
+    """
+    Strip everything that is written for the eye, not the ear, before synthesis:
+    parenthesised stage directions and Markdown that the voice would otherwise
+    read out character by character.
+    """
+    text = _STAGE_DIRECTION.sub(" ", text)
+    text = _MD_BOLD.sub(lambda m: m.group(1) or m.group(2) or "", text)
+    text = _MD_ACTION.sub(" ", text)
+    text = _MD_HEADING.sub("", text)
+    text = _MD_BULLET.sub("", text)
+    text = _MD_CODE.sub("", text)
+    return _EXTRA_SPACE.sub(" ", text).strip()
 
 
 # edge-tts is a network round trip per chunk, so several can be in flight at

@@ -8,6 +8,8 @@ import 'package:communiq/common_widgets/mascot/mascot.dart';
 import 'package:communiq/common_widgets/playful_background.dart';
 import 'package:communiq/common_widgets/section_header.dart';
 import 'package:communiq/common_widgets/state_views.dart';
+import 'package:communiq/core/routes/app_router.dart' show ConversationArgs;
+import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/constants/app_text_styles.dart';
 import 'package:communiq/core/constants/motion.dart';
@@ -207,14 +209,13 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
       );
 
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => RoleplayConversationScreen(
-            config: config,
-            sessionId: sessionId,
-          ),
-        ),
+      // Must go through go_router: this screen is a page-based route, so an
+      // imperative pushReplacement throws "A page-based route cannot be
+      // completed using imperative api" — and by this point the session has
+      // already been created on the server, so the user loses it.
+      context.pushReplacement(
+        AppRoutes.roleplayConversation,
+        extra: ConversationArgs(config: config, sessionId: sessionId),
       );
     } catch (e) {
       debugPrint('❌ [SetupScenario] startSession failed: $e');

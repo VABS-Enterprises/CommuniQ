@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:communiq/core/services/offline_cache_service.dart';
+
 /// Resolves the backend URL at runtime.
 ///
 /// Priority:
@@ -36,6 +38,9 @@ class ApiService {
   )
     ..interceptors.add(_FirebaseAuthInterceptor())
     ..interceptors.add(_LoggingInterceptor())
+    // Before _ErrorInterceptor: a replayed cache hit should resolve the call
+    // rather than travel on as an error.
+    ..interceptors.add(_OfflineCacheInterceptor())
     ..interceptors.add(_ErrorInterceptor());
 
   Dio get dio => _dio;
@@ -140,5 +145,72 @@ class _ErrorInterceptor extends Interceptor {
     }
 
     handler.next(err);
+  }
+}
+
+/// Keeps the last successful body of every GET on disk and replays it when
+/// the device can't reach the server, so the app opens with real data offline
+/// instead of empty states.
+///
+/// Only connection failures are served from cache. A 4xx/5xx is the server
+/// answering, and hiding that behind stale data would turn a real error into
+/// a silent one.
+class _OfflineCacheInterceptor extends Interceptor {
+  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+
+  bool _isOffline(DioException err) {
+    if (err.response != null) return false;
+    return err.type == DioExceptionType.connectionError ||
+        err.type == DioExceptionType.connectionTimeout ||
+        err.type == DioExceptionType.receiveTimeout ||
+        err.type == DioExceptionType.sendTimeout ||
+        err.type == DioExceptionType.unknown;
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    final uid = _uid;
+    if (uid != null &&
+        response.requestOptions.method == 'GET' &&
+        response.statusCode == 200) {
+      // Fire-and-forget: persisting must never delay the response.
+      OfflineCacheService.write(
+        uid,
+        response.requestOptions.uri.toString(),
+        response.data,
+      );
+    }
+    handler.next(response);
+  }
+
+  @override
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    final uid = _uid;
+    if (uid == null ||
+        err.requestOptions.method != 'GET' ||
+        !_isOffline(err)) {
+      handler.next(err);
+      return;
+    }
+
+    final url = err.requestOptions.uri.toString();
+    final cached = await OfflineCacheService.read(uid, url);
+    if (cached == null) {
+      handler.next(err);
+      return;
+    }
+
+    debugPrint('[API ⤺] offline — serving cached $url');
+    handler.resolve(
+      Response(
+        requestOptions: err.requestOptions,
+        data: cached,
+        statusCode: 200,
+        extra: const {'fromOfflineCache': true},
+      ),
+    );
   }
 }

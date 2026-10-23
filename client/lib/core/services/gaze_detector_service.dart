@@ -404,34 +404,97 @@ class GazeDetectorService {
 
   InputImage? _inputImageFromCameraImage(CameraImage image, CameraDescription camera) {
     try {
-      final sensorOrientation = camera.sensorOrientation;
-      final rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
+      final rotation =
+          InputImageRotationValue.fromRawValue(camera.sensorOrientation);
       if (rotation == null) return null;
-
-      final format = InputImageFormatValue.fromRawValue(image.format.raw);
-      if (format == null) return null;
 
       if (image.planes.isEmpty) return null;
 
-      final WriteBuffer allBytes = WriteBuffer();
-      for (final plane in image.planes) {
-        allBytes.putUint8List(plane.bytes);
+      // ML Kit's fromByteArray only accepts NV21 or YV12; handed anything else
+      // it throws IllegalArgumentException and every frame is dropped. The
+      // camera is opened with ImageFormatGroup.nv21, but the plugin still
+      // reports the ImageReader's YUV_420_888 as image.format.raw, so trusting
+      // that value meant declaring an unsupported format on every frame.
+      //
+      // A single plane is already NV21. Three planes are planar YUV that has to
+      // be packed into NV21 (full Y, then interleaved V/U) before ML Kit can
+      // read it.
+      //
+      // iOS keeps its own path: there the camera delivers bgra8888, which ML
+      // Kit accepts as reported.
+      if (defaultTargetPlatform != TargetPlatform.android) {
+        final format = InputImageFormatValue.fromRawValue(image.format.raw);
+        if (format == null) return null;
+        return InputImage.fromBytes(
+          bytes: image.planes.first.bytes,
+          metadata: InputImageMetadata(
+            size: Size(image.width.toDouble(), image.height.toDouble()),
+            rotation: rotation,
+            format: format,
+            bytesPerRow: image.planes.first.bytesPerRow,
+          ),
+        );
       }
-      final bytes = allBytes.done().buffer.asUint8List();
+
+      final repacked = image.planes.length > 1;
+      final bytes =
+          repacked ? _yuv420ToNv21(image) : image.planes.first.bytes;
+      if (bytes == null) return null;
 
       return InputImage.fromBytes(
         bytes: bytes,
         metadata: InputImageMetadata(
           size: Size(image.width.toDouble(), image.height.toDouble()),
           rotation: rotation,
-          format: format,
-          bytesPerRow: image.planes.first.bytesPerRow,
+          format: InputImageFormat.nv21,
+          // Repacking removes the plane padding, so the stride is now the
+          // image width rather than the original padded row length.
+          bytesPerRow: repacked ? image.width : image.planes.first.bytesPerRow,
         ),
       );
     } catch (e) {
       debugPrint('[GazeDetectorService] InputImage build error: $e');
       return null;
     }
+  }
+
+  /// Packs a 3-plane YUV_420_888 frame into a single NV21 buffer: the whole Y
+  /// plane followed by V and U interleaved. Row and pixel strides are honoured
+  /// because planes are commonly padded to an alignment wider than the image.
+  Uint8List? _yuv420ToNv21(CameraImage image) {
+    if (image.planes.length < 3) return null;
+
+    final width = image.width;
+    final height = image.height;
+    final out = Uint8List(width * height + 2 * ((width + 1) ~/ 2) * ((height + 1) ~/ 2));
+
+    final yPlane = image.planes[0];
+    var offset = 0;
+    for (var row = 0; row < height; row++) {
+      final start = row * yPlane.bytesPerRow;
+      out.setRange(offset, offset + width, yPlane.bytes, start);
+      offset += width;
+    }
+
+    final uPlane = image.planes[1];
+    final vPlane = image.planes[2];
+    final uvRowStride = uPlane.bytesPerRow;
+    final uvPixelStride = uPlane.bytesPerPixel ?? 1;
+    final uvHeight = (height + 1) ~/ 2;
+    final uvWidth = (width + 1) ~/ 2;
+
+    for (var row = 0; row < uvHeight; row++) {
+      for (var col = 0; col < uvWidth; col++) {
+        final index = row * uvRowStride + col * uvPixelStride;
+        if (index >= vPlane.bytes.length || index >= uPlane.bytes.length) {
+          return null;
+        }
+        out[offset++] = vPlane.bytes[index];
+        out[offset++] = uPlane.bytes[index];
+      }
+    }
+
+    return out;
   }
 
   Future<void> dispose() async {

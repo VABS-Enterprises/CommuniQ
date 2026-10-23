@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:communiq/common_widgets/mascot/mascot.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/views/auth/screens/login_screen.dart';
 import 'package:communiq/views/onboarding/screens/communication_context_screen.dart';
@@ -18,7 +19,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late AnimationController _entranceCtrl;
 
   late Animation<double> _orbScale;
-  late Animation<double> _orbGlowAlpha;
 
   late Animation<double> _fadeLogo;
   late Animation<double> _scaleOrb;
@@ -46,8 +46,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
     // Orb pulse — subtle scale + glow-intensity breathing, no ring stack.
     _orbScale = Tween<double>(begin: 0.97, end: 1.03)
-        .animate(CurvedAnimation(parent: _orbCtrl, curve: Curves.easeInOut));
-    _orbGlowAlpha = Tween<double>(begin: 0.28, end: 0.5)
         .animate(CurvedAnimation(parent: _orbCtrl, curve: Curves.easeInOut));
 
     // Entrance animations (staggered)
@@ -236,36 +234,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   // pulse on that glow's intensity. That's it — no stacked concentric rings.
   Widget _buildOrb() {
     return SizedBox(
-      width: 150,
-      height: 150,
+      width: 180,
+      height: 180,
       child: Center(
         child: Transform.scale(
           scale: _orbScale.value,
-          child: Container(
-            width: 122,
-            height: 122,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.brand,
-              border: Border.all(
-                color: AppColors.brandLight.withValues(alpha: 0.25),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.brand.withValues(alpha: _orbGlowAlpha.value),
-                  blurRadius: 48,
-                  spreadRadius: 6,
-                ),
-              ],
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/images/hummingbird.png',
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
+          // Whisperwing on the bare ground: no disc and no halo behind him,
+          // so the drawn owl is the only shape here.
+          child: const Mascot(mood: MascotMood.idle, size: 138),
         ),
       ),
     );

@@ -73,10 +73,8 @@ class _ContestHubPageState extends State<ContestHubPage> {
         backgroundColor: AppColors.transparent,
         appBar: AppBar(
           title: const Text('Contests'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => context.pop(),
-          ),
+          // A tab root, not a pushed page: nothing to go back to.
+          automaticallyImplyLeading: false,
           actions: [
             IconButton(
               tooltip: 'Leaderboard',
@@ -95,7 +93,7 @@ class _ContestHubPageState extends State<ContestHubPage> {
               AppSpacing.page,
               AppSpacing.s8,
               AppSpacing.page,
-              AppSpacing.s48,
+              AppSpacing.navClearance,
             ),
             children: [
               _Intro(best: _best, attempts: _attempts.length),

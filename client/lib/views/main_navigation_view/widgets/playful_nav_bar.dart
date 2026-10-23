@@ -11,18 +11,11 @@ class NavDestination {
     required this.icon,
     required this.activeIcon,
     required this.label,
-    this.isBranch = true,
   });
 
   final IconData icon;
   final IconData activeIcon;
   final String label;
-
-  /// True for the four go_router shell branches (Home/Learn/Practise/You),
-  /// which track [PlayfulNavBar.currentIndex] and can show as selected.
-  /// False for items — like Contest — that simply push a route on top of
-  /// the current tab instead of switching branches, so they never light up.
-  final bool isBranch;
 }
 
 /// The app's bottom navigation: a floating pill with a hard shadow.
@@ -60,7 +53,6 @@ class PlayfulNavBar extends StatelessWidget {
       icon: Icons.emoji_events_outlined,
       activeIcon: Icons.emoji_events_rounded,
       label: 'Contest',
-      isBranch: false,
     ),
     NavDestination(
       icon: Icons.person_outline_rounded,
@@ -68,17 +60,6 @@ class PlayfulNavBar extends StatelessWidget {
       label: 'You',
     ),
   ];
-
-  /// Maps a position in [destinations] to its go_router shell branch index,
-  /// skipping non-branch entries (Contest). Only meaningful when
-  /// `destinations[destinationIndex].isBranch` is true.
-  static int branchIndexFor(int destinationIndex) {
-    var branch = -1;
-    for (var i = 0; i <= destinationIndex; i++) {
-      if (destinations[i].isBranch) branch++;
-    }
-    return branch;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,8 +87,7 @@ class PlayfulNavBar extends StatelessWidget {
               for (var i = 0; i < destinations.length; i++)
                 _NavItem(
                   destination: destinations[i],
-                  selected: destinations[i].isBranch &&
-                      branchIndexFor(i) == currentIndex,
+                  selected: i == currentIndex,
                   onTap: () => onTap(i),
                 ),
             ],

@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,7 +16,14 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'package:communiq/core/routes/app_router.dart' show FeedbackArgs;
+import 'package:communiq/core/routes/app_routes.dart';
+import 'package:communiq/common_widgets/playful_background.dart';
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/constants/app_text_styles.dart';
+import 'package:communiq/core/constants/motion.dart';
+import 'package:communiq/core/constants/radius.dart';
+import 'package:communiq/core/constants/shadows.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/services/gaze_detector_service.dart';
@@ -106,6 +114,11 @@ class _RoleplayConversationScreenState
   CameraDescription? _frontCamera;
   GazeDetectorService? _gazeService;
   bool _isCameraEnabled = false;
+
+  /// Where the user has dragged the camera preview to, in screen coordinates.
+  /// Null until first moved, so the default corner follows the screen size
+  /// rather than a value captured at first build.
+  Offset? _pipOffset;
   bool _isCameraInitializing = false;
   VisionFrameResult? _latestVisionFrame;
   final List<VisionFrameResult> _visionFrames = [];
@@ -1092,11 +1105,10 @@ class _RoleplayConversationScreenState
     if (_isDemoMode) {
       await Future.delayed(const Duration(seconds: 2));
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => RoleplayFeedbackScreen(
-            config: FeedbackConfig(
+      context.pushReplacement(
+        AppRoutes.roleplayFeedback,
+        extra: FeedbackArgs(
+          config: FeedbackConfig(
               scenarioTitle: widget.config.scenarioTitle.isNotEmpty
                   ? widget.config.scenarioTitle
                   : 'Introduce Yourself',
@@ -1142,9 +1154,8 @@ class _RoleplayConversationScreenState
             xpAwarded: 50,
             newLevel: 1,
             leveledUp: false,
-            newBadges: const [],
-            newStreak: 1,
-          ),
+          newBadges: const [],
+          newStreak: 1,
         ),
       );
       return;
@@ -1174,21 +1185,21 @@ class _RoleplayConversationScreenState
 
       debugPrint('✅ [Conversation] Evaluation received');
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => RoleplayFeedbackScreen(
-            config: feedbackConfig,
-            report: result.report,
-            visualResult: finalVisualResult,
-            conversationHistory: List.from(_conversationHistory),
-            isOnboarding: widget.isOnboarding,
-            xpAwarded: result.xpAwarded,
-            newLevel: result.newLevel,
-            leveledUp: result.leveledUp,
-            newBadges: result.newBadges,
-            newStreak: result.newStreak,
-          ),
+      // Page-based route: go through the router, or this throws on arrival at
+      // the one screen the whole session exists to reach.
+      context.pushReplacement(
+        AppRoutes.roleplayFeedback,
+        extra: FeedbackArgs(
+          config: feedbackConfig,
+          report: result.report,
+          visualResult: finalVisualResult,
+          conversationHistory: List.from(_conversationHistory),
+          isOnboarding: widget.isOnboarding,
+          xpAwarded: result.xpAwarded,
+          newLevel: result.newLevel,
+          leveledUp: result.leveledUp,
+          newBadges: result.newBadges,
+          newStreak: result.newStreak,
         ),
       );
     } catch (e) {
@@ -1211,7 +1222,7 @@ class _RoleplayConversationScreenState
               duration: Duration(seconds: 3),
             ),
           );
-          Navigator.pop(context);
+          context.pop();
         }
         return;
       }
@@ -1262,27 +1273,27 @@ class _RoleplayConversationScreenState
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('End Session?',
-            style: TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold)),
-        content: const Text(
-            'Leaving now will abandon this session. Progress will not be saved.',
-            style: TextStyle(color: AppColors.textSecondary)),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.cardRadius,
+          side: const BorderSide(color: AppColors.outline, width: 2),
+        ),
+        title: Text('Leave this session?', style: AppTextStyles.titleLarge),
+        content: Text(
+          'Your progress in this conversation will not be saved.',
+          style: AppTextStyles.bodyMedium,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Stay',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Stay',
+                style: AppTextStyles.labelLarge
+                    .copyWith(color: AppColors.inkMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Leave',
-                style: TextStyle(
-                    color: Colors.redAccent,
-                    fontWeight: FontWeight.bold)),
+            child: Text('Leave',
+                style: AppTextStyles.labelLarge
+                    .copyWith(color: AppColors.errorDark)),
           ),
         ],
       ),
@@ -1298,7 +1309,7 @@ class _RoleplayConversationScreenState
       await _audioPlayer.stop();
       SessionService.instance.abandonSession(widget.sessionId).ignore();
       _cleanupTempFiles();
-      if (mounted) Navigator.pop(context);
+      if (mounted) context.pop();
     }
   }
 
@@ -1341,7 +1352,32 @@ class _RoleplayConversationScreenState
     return 'Something went wrong — please try again.';
   }
 
-  // ─── Build ────────────────────────────────────────────────────────────────────
+  // ─── Build ────────────────────────────────────────────────────────────────
+  //
+  // The session reads as a stage: two speakers facing each other across a lane
+  // of travelling dots, with the transcript below as the hero surface. Whoever
+  // holds the turn owns the screen's accent — the persona speaks in brand
+  // purple, you speak in gold — so a glance at any element says whose turn it
+  // is. Replaces the previous dark-navy panel, which was the last screen still
+  // on the retired neon palette.
+
+  /// Accent for the current turn. Every tinted element reads from this, so the
+  /// screen visibly hands over on each state change.
+  Color get _turnAccent {
+    switch (_state) {
+      case _ConvState.user_turn:
+        return AppColors.sunDark;
+      case _ConvState.ai_speaking:
+        return AppColors.brand;
+      case _ConvState.processing:
+      case _ConvState.ending:
+        return AppColors.inkSoft;
+    }
+  }
+
+  String get _personaInitial => widget.config.persona.trim().isEmpty
+      ? '?'
+      : widget.config.persona.trim()[0].toUpperCase();
 
   @override
   Widget build(BuildContext context) {
@@ -1351,347 +1387,242 @@ class _RoleplayConversationScreenState
         if (didPop) return;
         await _onWillPop();
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF080B14),
-        body: Stack(
-          children: [
-            _buildAmbientGlow(),
-            SafeArea(
-              child: Column(
-                children: [
-                  _buildTopBar(),
-                  const SizedBox(height: 16),
-                  _buildOrb(),
-                  const SizedBox(height: 16),
-                  // Conversation card is the hero — takes all remaining space.
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.s16),
-                      child: _buildConversationCard(),
+      child: PlayfulBackground(
+        seed: 11,
+        intensity: 0.5,
+        child: Scaffold(
+          backgroundColor: AppColors.transparent,
+          body: Stack(
+            children: [
+              SafeArea(
+                child: Column(
+                  children: [
+                    _buildTopBar(),
+                    _buildTurnStage(),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.page),
+                        child: _buildConversationCard(),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildBottomControls(),
-                ],
-              ),
-            ),
-            if (_isCameraEnabled && _cameraController != null && _cameraController!.value.isInitialized)
-              Positioned(
-                top: 75,
-                right: 16,
-                width: 105,
-                height: 140,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: (_latestVisionFrame?.eyeContact == EyeContactState.yes
-                          ? AppColors.emerald
-                          : AppColors.primary),
-                      width: 2,
-                    ),
-                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8)],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        CameraPreview(_cameraController!),
-                        Positioned(
-                          bottom: 4,
-                          left: 4,
-                          right: 4,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.75),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              _latestVisionFrame?.eyeContact == EyeContactState.yes
-                                  ? '👁 Eye Contact'
-                                  : 'Looking Away',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: _latestVisionFrame?.eyeContact == EyeContactState.yes
-                                    ? AppColors.emerald
-                                    : AppColors.warning,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                    _buildBottomControls(),
+                  ],
                 ),
               ),
-          ],
+              if (_isCameraEnabled &&
+                  _cameraController != null &&
+                  _cameraController!.value.isInitialized)
+                _buildCameraPip(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ─── Ambient glow ─────────────────────────────────────────────────────────────
-
-  Widget _buildAmbientGlow() {
-    // Removed — no ambient glow blobs or bright effects.
-    return const SizedBox.shrink();
-  }
-
-  // ─── Top bar ──────────────────────────────────────────────────────────────────
+  // ─── Top bar ──────────────────────────────────────────────────────────────
 
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.page, AppSpacing.s12, AppSpacing.page, AppSpacing.s8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            icon: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFF141D2C),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: AppColors.textPrimary, size: 16),
-            ),
-            onPressed: _onWillPop,
-            padding: EdgeInsets.zero,
+          _buildSquareButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: _onWillPop,
+            tooltip: 'Leave session',
           ),
-          Column(
-            children: [
-              Text(
-                widget.config.persona,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (_, __) => Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight.withValues(
-                            alpha: 0.5 + 0.5 * _pulseController.value),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'LIVE SESSION',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.primaryLight,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              IconButton(
-                tooltip: _isCameraEnabled ? 'Disable Eye-Contact Camera' : 'Enable Eye-Contact Camera',
-                icon: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: _isCameraEnabled ? AppColors.primary.withValues(alpha: 0.3) : const Color(0xFF141D2C),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: _isCameraEnabled ? AppColors.primary : AppColors.border,
-                    ),
-                  ),
-                  child: _isCameraInitializing
-                      ? const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryLight),
-                        )
-                      : Icon(
-                          _isCameraEnabled ? Icons.videocam_rounded : Icons.videocam_outlined,
-                          color: _isCameraEnabled ? AppColors.primaryLight : AppColors.textSecondary,
-                          size: 18,
-                        ),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.config.persona,
+                  style: AppTextStyles.titleMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                onPressed: _toggleCameraTracking,
-              ),
-              const SizedBox(width: 6),
-              _buildTimerPill(),
-            ],
+                Text(
+                  widget.config.role.isNotEmpty
+                      ? widget.config.role
+                      : widget.config.scenarioTitle,
+                  style: AppTextStyles.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s8),
+          _buildCameraButton(),
+          const SizedBox(width: AppSpacing.s8),
+          _buildTimerPill(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCameraButton() {
+    final on = _isCameraEnabled;
+    return _buildSquareButton(
+      tooltip: on ? 'Turn off eye-contact camera' : 'Track eye contact',
+      onTap: _toggleCameraTracking,
+      fill: on ? AppColors.brandSoft : AppColors.surface,
+      borderColor: on ? AppColors.brand : AppColors.outline,
+      iconColor: on ? AppColors.brand : AppColors.inkMuted,
+      icon: on ? Icons.videocam_rounded : Icons.videocam_outlined,
+      busy: _isCameraInitializing,
+    );
+  }
+
+  /// The timer earns colour only as it runs out: neutral, then gold under 30s,
+  /// then red under 10s.
+  Widget _buildTimerPill() {
+    final remaining = _secondsRemaining;
+
+    Color fill = AppColors.surface;
+    Color edge = AppColors.outline;
+    Color ink = AppColors.ink;
+
+    if (remaining != null && remaining <= 10) {
+      fill = AppColors.errorSoft;
+      edge = AppColors.error;
+      ink = AppColors.errorDark;
+    } else if (remaining != null && remaining <= 30) {
+      fill = AppColors.sunSoft;
+      edge = AppColors.sunDark;
+      ink = AppColors.sunDark;
+    }
+
+    final text = remaining != null
+        ? '${(remaining ~/ 60).toString().padLeft(2, '0')}:'
+            '${(remaining % 60).toString().padLeft(2, '0')}'
+        : _formattedTime;
+
+    return AnimatedContainer(
+      duration: AppMotion.settle,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: AppRadius.pillRadius,
+        border: Border.all(color: edge, width: 2),
+        boxShadow: AppShadow.hardWith(edge, y: 3),
+      ),
+      child: Text(
+        text,
+        style: AppTextStyles.numeralSmall.copyWith(color: ink, fontSize: 15),
+      ),
+    );
+  }
+
+  // ─── Turn stage ───────────────────────────────────────────────────────────
+  //
+  // Two speakers with a lane of dots between them. The dots travel toward
+  // whoever is listening, so the direction of the conversation is legible
+  // without reading a word of it.
+
+  Widget _buildTurnStage() {
+    final aiTurn = _state == _ConvState.ai_speaking;
+    final yourTurn = _state == _ConvState.user_turn;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.s24, AppSpacing.s8, AppSpacing.s24, AppSpacing.s16),
+      child: Row(
+        children: [
+          _buildSpeakerAvatar(
+            label: widget.config.persona,
+            active: aiTurn,
+            color: AppColors.brand,
+            child: aiTurn || !yourTurn
+                ? Text(
+                    _personaInitial,
+                    style: AppTextStyles.titleLarge.copyWith(
+                      color: aiTurn ? AppColors.inkOnDark : AppColors.inkMuted,
+                      fontSize: 26,
+                    ),
+                  )
+                : Text(
+                    _personaInitial,
+                    style: AppTextStyles.titleLarge.copyWith(
+                      color: AppColors.inkMuted,
+                      fontSize: 26,
+                    ),
+                  ),
+          ),
+          Expanded(child: _buildFlowLane()),
+          _buildSpeakerAvatar(
+            label: 'You',
+            active: yourTurn,
+            color: AppColors.sun,
+            child: Icon(
+              // In live voice the mic never closes, so it stays lit even while
+              // the persona talks — that is what makes barging in discoverable.
+              _isLiveVoiceActive || yourTurn
+                  ? Icons.mic_rounded
+                  : Icons.mic_off_rounded,
+              size: 28,
+              color: yourTurn ? AppColors.ink : AppColors.inkSoft,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTimerPill() {
-    final remaining = _secondsRemaining;
-    Color pillBg = const Color(0xFF141D2C);
-    Color pillBorder = AppColors.border;
-    Color textColor = AppColors.textPrimary;
-
-    if (remaining != null) {
-      if (remaining <= 10) {
-        pillBg = Colors.redAccent.withValues(alpha: 0.15);
-        pillBorder = Colors.redAccent;
-        textColor = Colors.redAccent;
-      } else if (remaining <= 30) {
-        pillBg = Colors.orange.withValues(alpha: 0.12);
-        pillBorder = Colors.orange;
-        textColor = Colors.orange;
-      }
-    }
-
-    final displayText = remaining != null
-        ? '${(remaining ~/ 60).toString().padLeft(2, '0')}:${(remaining % 60).toString().padLeft(2, '0')}'
-        : _formattedTime;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: pillBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: pillBorder),
-      ),
-      child: Text(
-        displayText,
-        style: TextStyle(
-          color: textColor,
-          fontFamily: 'monospace',
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  // ─── Animated dots loader ─────────────────────────────────────────────────────
-  Widget _buildDotsLoader({Color color = AppColors.primary, double size = 9}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(3, (i) {
-        return AnimatedBuilder(
-          animation: _pulseController,
-          builder: (_, __) {
-            final phase = (_pulseController.value + i / 3.0) % 1.0;
-            final t = math.sin(phase * math.pi);
-            return Container(
-              width: size,
-              height: size,
-              margin: EdgeInsets.symmetric(horizontal: size * 0.3),
-              transform: Matrix4.translationValues(0, -t * size * 0.8, 0),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.4 + 0.6 * t),
-              ),
-            );
-          },
-        );
-      }),
-    );
-  }
-
-  // ─── Orb (compact) ────────────────────────────────────────────────────────────
-
-  Widget _buildOrb() {
+  Widget _buildSpeakerAvatar({
+    required String label,
+    required bool active,
+    required Color color,
+    required Widget child,
+  }) {
     return AnimatedBuilder(
       animation: _pulseController,
-      builder: (context, _) {
+      builder: (_, __) {
+        // A zero-blur ring that expands and fades: the chunky system's answer
+        // to a glow, and it reads as "sound leaving this speaker".
         final pulse = _pulseController.value;
-        double scale = 1.0 + (pulse * 0.06);
-
-        Color orbColor;
-        Color glowColor;
-
-        if (_isLiveVoiceActive) {
-          // In live voice mode the mic is ALWAYS on.
-          // Orb is green/active regardless of who is speaking —
-          // dimmed slightly when AI is speaking to hint whose turn it is.
-          switch (_state) {
-            case _ConvState.user_turn:
-              orbColor = AppColors.primary;
-              glowColor = AppColors.primaryLight;
-              scale = 1.0 + (pulse * 0.14); // more pulse = user is expected to speak
-            case _ConvState.ai_speaking:
-              // Mic still on — just dim the orb so the AI's side feels dominant.
-              orbColor = AppColors.primary.withValues(alpha: 0.45);
-              glowColor = AppColors.primaryLight.withValues(alpha: 0.3);
-              scale = 1.0 + (pulse * 0.04);
-            case _ConvState.processing:
-            case _ConvState.ending:
-              orbColor = AppColors.primaryDark;
-              glowColor = AppColors.primary;
-              scale = 1.0;
-          }
-        } else {
-          switch (_state) {
-            case _ConvState.user_turn:
-              orbColor = AppColors.primary;
-              glowColor = AppColors.primaryLight;
-              scale = 1.0 + (pulse * 0.12);
-            case _ConvState.ai_speaking:
-              orbColor = const Color(0xFF3B82F6);
-              glowColor = const Color(0xFF93C5FD);
-            case _ConvState.processing:
-            case _ConvState.ending:
-              orbColor = AppColors.primaryDark;
-              glowColor = AppColors.primary;
-              scale = 1.0;
-          }
-        }
-
-        return Stack(
-          alignment: Alignment.center,
+        return Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Transform.scale(
-              scale: scale * 1.35,
-              child: Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: orbColor.withValues(
-                        alpha: 0.10 * (1.0 - pulse)),
-                    width: 1.5,
-                  ),
+            AnimatedContainer(
+              duration: AppMotion.settle,
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: active ? color : AppColors.surface,
+                border: Border.all(
+                  color: active ? AppColors.shadowFor(color) : AppColors.outline,
+                  width: 3,
                 ),
+                boxShadow: active
+                    ? [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.35 * (1 - pulse)),
+                          blurRadius: 0,
+                          spreadRadius: 3 + 9 * pulse,
+                        ),
+                      ]
+                    : AppShadow.subtle(),
               ),
+              child: Center(child: child),
             ),
-            Transform.scale(
-              scale: scale,
-              child: Container(
-                width: 88,
-                height: 88,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: orbColor,
-                  boxShadow: [
-                    BoxShadow(
-                      color: orbColor.withValues(alpha: 0.2),
-                      blurRadius: 16,
-                      spreadRadius: 2,
-                    ),
-                  ],
+            const SizedBox(height: AppSpacing.s8),
+            SizedBox(
+              width: 84,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: active ? AppColors.ink : AppColors.inkSoft,
                 ),
-                child: _buildOrbContent(),
               ),
             ),
           ],
@@ -1700,135 +1631,105 @@ class _RoleplayConversationScreenState
     );
   }
 
-  Widget _buildOrbContent() {
-    switch (_state) {
-      case _ConvState.processing:
-      case _ConvState.ending:
-        // Single static icon — the card center already has the spinner.
-        return Center(
-          child: Icon(
-            _state == _ConvState.ending
-                ? Icons.analytics_outlined
-                : Icons.hourglass_top_rounded,
-            color: Colors.white.withValues(alpha: 0.7),
-            size: 28,
+  Widget _buildFlowLane() {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (_, __) {
+        const count = 7;
+        final towardUser = _state == _ConvState.ai_speaking;
+        final towardPersona = _state == _ConvState.user_turn;
+        final idle = !towardUser && !towardPersona;
+        final color = idle ? AppColors.inkSoft : _turnAccent;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 26),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(count, (i) {
+              // Reversing the index reverses the direction of travel.
+              final step = towardPersona ? count - 1 - i : i;
+              final phase = (_pulseController.value + step / count) % 1.0;
+              final t = idle ? 0.0 : math.sin(phase * math.pi);
+              final size = 5.0 + 4.0 * t;
+              return Container(
+                width: size,
+                height: size,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withValues(alpha: 0.22 + 0.78 * t),
+                ),
+              );
+            }),
           ),
         );
-      case _ConvState.user_turn:
-        return const Center(
-          child: Icon(Icons.mic, color: Colors.white, size: 34),
-        );
-      case _ConvState.ai_speaking:
-        // In live voice the mic stays on even while AI speaks — show mic icon
-        // dimmed so the user knows they can barge in at any time.
-        if (_isLiveVoiceActive) {
-          return Center(
-            child: Icon(Icons.mic,
-                color: Colors.white.withValues(alpha: 0.45), size: 34),
-          );
-        }
-        return Center(
-          child: Icon(
-            _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-            color:
-                _isMuted ? Colors.white.withValues(alpha: 0.35) : Colors.white,
-            size: 32,
-          ),
-        );
-    }
+      },
+    );
   }
 
-  // ─── Conversation card (hero element) ─────────────────────────────────────────
+  // ─── Transcript card ──────────────────────────────────────────────────────
 
   Widget _buildConversationCard() {
-    final Color borderColor;
-    final Color accentColor;
-
-    switch (_state) {
-      case _ConvState.user_turn:
-        borderColor = AppColors.primary.withValues(alpha: 0.35);
-        accentColor = AppColors.primary;
-      case _ConvState.ai_speaking:
-        borderColor = const Color(0xFF3B82F6).withValues(alpha: 0.35);
-        accentColor = const Color(0xFF3B82F6);
-      case _ConvState.processing:
-      case _ConvState.ending:
-        borderColor = AppColors.border;
-        accentColor = AppColors.textMuted;
-    }
+    final accent = _turnAccent;
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
+      duration: AppMotion.settle,
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1119),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: borderColor,
-          width: 1,
-        ),
+        color: AppColors.surface,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.outline, width: 2),
+        boxShadow: AppShadow.hardWith(AppColors.outline, y: 4),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
+      child: ClipRRect(
+        borderRadius: AppRadius.cardRadius,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Header: speaker dot + label + REC badge ──────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: accentColor),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _getSpeakerLabel(),
-                  style: TextStyle(
-                    color: accentColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const Spacer(),
-                // REC badge only in classic HTTP mode
-                if (_state == _ConvState.user_turn && !_isLiveVoiceActive)
-                  _buildRecordingBadge(),
-                // Live indicator in live voice mode
-                if (_isLiveVoiceActive) _buildLivePill(),
-              ],
-            ),
-
-            const SizedBox(height: 4),
+            // Accent stripe — the card's own turn indicator.
             AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              height: 1,
-              color: borderColor.withValues(alpha: 0.5),
+              duration: AppMotion.settle,
+              height: 6,
+              color: accent,
             ),
-            const SizedBox(height: 16),
-
-            // ── Main content — cross-fade on every state change ───────────────
             Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                transitionBuilder: (child, anim) => FadeTransition(
-                  opacity: anim,
-                  child: child,
-                ),
-                child: KeyedSubtree(
-                  key: ValueKey<String>(
-                    '${_state.name}_${_isLiveVoiceActive}_$_isOpeningLoading',
-                  ),
-                  child: _buildCardContent(),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.s20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          _getSpeakerLabel(),
+                          style: AppTextStyles.eyebrow.copyWith(color: accent),
+                        ),
+                        const Spacer(),
+                        if (_isLiveVoiceActive)
+                          _buildLivePill()
+                        else if (_state == _ConvState.user_turn)
+                          _buildRecordingBadge(),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.s14),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: AppMotion.settle,
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        transitionBuilder: (child, anim) =>
+                            FadeTransition(opacity: anim, child: child),
+                        child: KeyedSubtree(
+                          key: ValueKey<String>(
+                            '${_state.name}_${_isLiveVoiceActive}_$_isOpeningLoading',
+                          ),
+                          child: _buildCardContent(),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-
           ],
         ),
       ),
@@ -1838,58 +1739,71 @@ class _RoleplayConversationScreenState
   String _getSpeakerLabel() {
     switch (_state) {
       case _ConvState.user_turn:
-        return 'YOU';
+        return 'YOUR TURN';
       case _ConvState.ai_speaking:
         return widget.config.persona.toUpperCase();
       case _ConvState.processing:
-        return 'PROCESSING';
+        return 'THINKING';
       case _ConvState.ending:
         return 'EVALUATING';
     }
   }
 
   Widget _buildRecordingBadge() {
-    // Per-turn elapsed seconds, updated every second via the main timer tick.
     final secs = _micStartTime != null
         ? DateTime.now().difference(_micStartTime!).inSeconds
         : 0;
-    final mins = secs ~/ 60;
-    final s = secs % 60;
-    final timeStr =
-        mins > 0 ? '$mins:${s.toString().padLeft(2, '0')}' : '${s}s';
+    final label = secs >= 60
+        ? '${secs ~/ 60}:${(secs % 60).toString().padLeft(2, '0')}'
+        : '${secs}s';
 
+    return _buildStatusPill(
+      color: AppColors.error,
+      fill: AppColors.errorSoft,
+      label: 'REC $label',
+    );
+  }
+
+  Widget _buildLivePill() {
+    return _buildStatusPill(
+      color: AppColors.successDark,
+      fill: AppColors.successSoft,
+      label: 'LIVE',
+    );
+  }
+
+  /// Pill with a breathing dot — shared by REC and LIVE so the two read as the
+  /// same kind of signal rather than two unrelated badges.
+  Widget _buildStatusPill({
+    required Color color,
+    required Color fill,
+    required String label,
+  }) {
     return AnimatedBuilder(
       animation: _pulseController,
       builder: (_, __) => Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.28)),
+          color: fill,
+          borderRadius: AppRadius.pillRadius,
+          border: Border.all(color: color, width: 1.5),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 6,
-              height: 6,
+              width: 7,
+              height: 7,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary.withValues(
-                    alpha: 0.5 + 0.5 * _pulseController.value),
+                color: color.withValues(
+                    alpha: 0.45 + 0.55 * _pulseController.value),
               ),
             ),
             const SizedBox(width: 6),
             Text(
-              'REC  $timeStr',
-              style: TextStyle(
-                color: AppColors.primaryLight,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.4,
-              ),
+              label,
+              style: AppTextStyles.labelSmall.copyWith(color: color),
             ),
           ],
         ),
@@ -1897,66 +1811,107 @@ class _RoleplayConversationScreenState
     );
   }
 
-  // ── Small "LIVE" pill shown in the card header during live voice ─────────────
-  Widget _buildLivePill() {
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (_, __) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: AppColors.scoreExcellent.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: AppColors.scoreExcellent.withValues(
-                  alpha: 0.3 + 0.2 * _pulseController.value)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 5,
-              height: 5,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.scoreExcellent.withValues(
-                    alpha: 0.6 + 0.4 * _pulseController.value),
-              ),
+  Widget _buildCardContent() {
+    if (_state == _ConvState.processing || _state == _ConvState.ending) {
+      final label = _state == _ConvState.ending
+          ? 'Analysing your session…'
+          : (_isOpeningLoading
+              ? 'Connecting to ${widget.config.persona}…'
+              : 'Thinking about your answer…');
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildDotsLoader(color: AppColors.brand),
+          const SizedBox(height: AppSpacing.s16),
+          Text(label,
+              style: AppTextStyles.bodyMedium, textAlign: TextAlign.center),
+        ],
+      );
+    }
+
+    final isUserTurn = _state == _ConvState.user_turn;
+    final isAiSpeaking = _state == _ConvState.ai_speaking;
+
+    final userText = _isLiveVoiceActive
+        ? _lastUserTranscript
+        : (_liveTranscript.isNotEmpty ? _liveTranscript : _cardText);
+    final text = isUserTurn ? userText : _karaokeChunk;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: AnimatedSwitcher(
+              duration: AppMotion.quick,
+              switchInCurve: Curves.easeOut,
+              child: text.isNotEmpty
+                  ? Text(
+                      text,
+                      key: ValueKey<String>(text),
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        fontSize: 19,
+                        height: 1.55,
+                        color: AppColors.ink,
+                      ),
+                    )
+                  : _buildEmptyPlaceholder(isUserTurn),
             ),
-            const SizedBox(width: 5),
-            const Text(
-              'LIVE',
-              style: TextStyle(
-                color: AppColors.scoreExcellent,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-              ),
-            ),
-          ],
+          ),
         ),
+        const SizedBox(height: AppSpacing.s12),
+        if (isAiSpeaking)
+          Center(child: _buildAiSpeakingBars())
+        else if (isUserTurn)
+          _buildWaveformRow(),
+        const SizedBox(height: AppSpacing.s8),
+        Center(
+          child: Text(
+            isAiSpeaking
+                ? '${widget.config.persona} is speaking'
+                : (_isLiveVoiceActive
+                    ? 'Listening — jump in whenever'
+                    : 'Speak clearly, then send'),
+            style: AppTextStyles.bodySmall,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyPlaceholder(bool isUserTurn) {
+    return Text(
+      key: const ValueKey('placeholder'),
+      isUserTurn ? 'Your answer will appear here as you speak…' : '…',
+      style: AppTextStyles.bodyLarge.copyWith(
+        fontSize: 17,
+        height: 1.55,
+        color: AppColors.inkSoft,
+        fontStyle: FontStyle.italic,
       ),
     );
   }
 
-  // ── Animated bars shown when AI is speaking in live voice ────────────────────
-  Widget _buildAiSpeakingBars() {
+  // ─── Motion pieces ────────────────────────────────────────────────────────
+
+  Widget _buildDotsLoader({Color color = AppColors.brand, double size = 9}) {
     return AnimatedBuilder(
       animation: _pulseController,
       builder: (_, __) => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
-        children: List.generate(5, (i) {
-          final phase =
-              (_pulseController.value + i * 0.18) % 1.0;
-          final h = 6.0 + 20.0 * math.sin(phase * math.pi).abs();
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(3, (i) {
+          final phase = (_pulseController.value + i / 3.0) % 1.0;
+          final t = math.sin(phase * math.pi);
           return Container(
-            width: 4,
-            height: h,
-            margin: const EdgeInsets.symmetric(horizontal: 3),
+            width: size,
+            height: size,
+            margin: EdgeInsets.symmetric(horizontal: size * 0.3),
+            transform: Matrix4.translationValues(0, -t * size * 0.8, 0),
             decoration: BoxDecoration(
-              color: const Color(0xFF3B82F6)
-                  .withValues(alpha: 0.5 + 0.4 * math.sin(phase * math.pi)),
-              borderRadius: BorderRadius.circular(2),
+              shape: BoxShape.circle,
+              color: color.withValues(alpha: 0.35 + 0.65 * t),
             ),
           );
         }),
@@ -1964,153 +1919,27 @@ class _RoleplayConversationScreenState
     );
   }
 
-  /// Unified card content layout — all states share the same structural template:
-  ///
-  ///  ┌──────────────────────────────────────┐
-  ///  │  [transcript / placeholder / loader]  │  ← Expanded, top-left anchored
-  ///  │                                       │
-  ///  │                                       │
-  ///  │  [waveform bars]                      │  ← fixed bottom, always present
-  ///  │  [status label]                        │    when relevant
-  ///  └──────────────────────────────────────┘
-  ///
-  /// This eliminates the flicker/jump when state transitions shift content
-  /// between center and top.
-  Widget _buildCardContent() {
-    // ── Processing / Ending (shared, no voice active needed) ──────────────────
-    if (_state == _ConvState.processing || _state == _ConvState.ending) {
-      final label = _state == _ConvState.ending
-          ? 'Analysing your session...'
-          : (_isOpeningLoading
-              ? 'Connecting to ${widget.config.persona}...'
-              : 'Processing...');
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Spacer(),
-          Center(child: _buildDotsLoader()),
-          const SizedBox(height: 16),
-          Center(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 14,
-                letterSpacing: 0.2,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const Spacer(),
-        ],
-      );
-    }
-
-    // ── Determine what text to show in the main area ───────────────────────────
-    final bool isUserTurn = _state == _ConvState.user_turn;
-    final bool isAiSpeaking = _state == _ConvState.ai_speaking;
-
-    // For user turns: prefer live STT partial, fallback to last confirmed transcript.
-    final String userDisplayText = _isLiveVoiceActive
-        ? _lastUserTranscript
-        : (_liveTranscript.isNotEmpty ? _liveTranscript : _cardText);
-
-    // For AI turns: karaoke chunk (set by live-voice messages or _streamLocalKaraoke).
-    final String aiDisplayText = _karaokeChunk;
-
-    final bool hasContent = isUserTurn
-        ? userDisplayText.isNotEmpty
-        : aiDisplayText.isNotEmpty;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Main text area — always top-anchored ─────────────────────────────
-        Expanded(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              switchInCurve: Curves.easeOut,
-              child: hasContent
-                  ? Text(
-                      isUserTurn ? userDisplayText : aiDisplayText,
-                      key: ValueKey<String>(
-                          isUserTurn ? userDisplayText : aiDisplayText),
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w400,
-                        height: 1.6,
-                        letterSpacing: -0.1,
-                      ),
-                    )
-                  : _buildEmptyPlaceholder(isUserTurn),
-            ),
-          ),
-        ),
-
-        // ── Bottom: waveform / AI bars + status hint ─────────────────────────
-        const SizedBox(height: 12),
-        if (isAiSpeaking)
-          _buildAiSpeakingBars()
-        else if (isUserTurn)
-          _buildWaveformRow(),
-        const SizedBox(height: 8),
-        Text(
-          isAiSpeaking
-              ? '${widget.config.persona} is speaking'
-              : (_isLiveVoiceActive ? 'Listening — speak anytime' : 'Speak clearly'),
-          style: const TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 12,
-            letterSpacing: 0.1,
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Subtle placeholder when there's no text yet — no pulsating opacity.
-  Widget _buildEmptyPlaceholder(bool isUserTurn) {
-    return Text(
-      key: const ValueKey('placeholder'),
-      isUserTurn ? 'Say something...' : '...',
-      style: const TextStyle(
-        color: AppColors.textMuted,
-        fontSize: 17,
-        fontStyle: FontStyle.italic,
-        height: 1.6,
-      ),
-    );
-  }
-
-
-  // ─── Waveform row ─────────────────────────────────────────────────────────────
-
+  /// Your live mic level. Real amplitude, so it stops moving when you do.
   Widget _buildWaveformRow() {
     return AnimatedBuilder(
       animation: _waveformController,
       builder: (context, _) {
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(9, (i) {
-            final sineNudge =
-                math.sin((_waveformController.value * math.pi) + i * 0.8) *
-                    0.15;
+          children: List.generate(11, (i) {
+            final nudge =
+                math.sin((_waveformController.value * math.pi) + i * 0.8) * 0.15;
             final amp = i < _barAmplitudes.length
-                ? (_barAmplitudes[i] + sineNudge).clamp(0.05, 1.0)
+                ? (_barAmplitudes[i] + nudge).clamp(0.05, 1.0)
                 : 0.15;
-            final height = 4.0 + (22.0 * amp);
             return AnimatedContainer(
               duration: const Duration(milliseconds: 80),
-              width: 3.5,
-              height: height,
+              width: 5,
+              height: 6.0 + 24.0 * amp,
               margin: const EdgeInsets.symmetric(horizontal: 2.5),
               decoration: BoxDecoration(
-                color: AppColors.primaryLight
-                    .withValues(alpha: 0.5 + 0.5 * amp),
-                borderRadius: BorderRadius.circular(2),
+                color: AppColors.sunDark.withValues(alpha: 0.4 + 0.6 * amp),
+                borderRadius: BorderRadius.circular(3),
               ),
             );
           }),
@@ -2119,44 +1948,59 @@ class _RoleplayConversationScreenState
     );
   }
 
-  // ─── Bottom controls ──────────────────────────────────────────────────────────
+  Widget _buildAiSpeakingBars() {
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (_, __) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(5, (i) {
+          final phase = (_pulseController.value + i * 0.18) % 1.0;
+          final t = math.sin(phase * math.pi).abs();
+          return Container(
+            width: 5,
+            height: 8.0 + 22.0 * t,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            decoration: BoxDecoration(
+              color: AppColors.brand.withValues(alpha: 0.45 + 0.55 * t),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // ─── Bottom controls ──────────────────────────────────────────────────────
 
   Widget _buildBottomControls() {
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).padding.bottom + 24,
+        top: AppSpacing.s16,
         left: AppSpacing.s24,
         right: AppSpacing.s24,
-        top: 8,
+        bottom: MediaQuery.of(context).padding.bottom + AppSpacing.s20,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _buildIconButton(
-            icon: _isMuted ? Icons.volume_off : Icons.volume_up,
-            color:
-                _isMuted ? AppColors.textMuted : AppColors.textPrimary,
+          _buildRoundButton(
+            icon: _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+            tooltip: _isMuted ? 'Unmute' : 'Mute',
             onTap: _toggleMute,
-            tooltip: _isMuted ? 'Unmute AI' : 'Mute AI',
+            fill: _isMuted ? AppColors.bgSunk : AppColors.surface,
+            iconColor: _isMuted ? AppColors.inkSoft : AppColors.ink,
           ),
           _buildCenterAction(),
-          _buildIconButton(
+          _buildRoundButton(
             icon: Icons.call_end_rounded,
-            color: _canEndCall ? Colors.white : AppColors.textMuted,
-            backgroundColor: _canEndCall
-                ? const Color(0xFFEF4444)
-                : AppColors.surface,
-            borderColor: _canEndCall
-                ? const Color(0xFFEF4444)
-                : AppColors.border,
-            glow: _canEndCall
-                ? const Color(0xFFEF4444).withValues(alpha: 0.4)
-                : null,
-            onTap: _canEndCall ? _endSession : null,
             tooltip: _canEndCall
                 ? 'End & get feedback'
-                : 'Speak for ${math.max(0, 10 - _effectiveSpokenSeconds)}s more to end',
+                : 'Speak ${math.max(0, 10 - _effectiveSpokenSeconds)}s more to end',
+            onTap: _canEndCall ? _endSession : null,
+            fill: _canEndCall ? AppColors.error : AppColors.bgSunk,
+            borderColor: _canEndCall ? AppColors.errorDark : AppColors.outline,
+            iconColor: _canEndCall ? AppColors.inkOnDark : AppColors.inkSoft,
           ),
         ],
       ),
@@ -2164,144 +2008,71 @@ class _RoleplayConversationScreenState
   }
 
   Widget _buildCenterAction() {
-    // ── Live voice connected → waveform pill, no manual buttons ───────────────
-    if (_isLiveVoiceActive) {
-      return _buildLiveVoiceStatusPill();
-    }
+    if (_isLiveVoiceActive) return _buildLiveVoiceStatusPill();
 
-    // ── Server enabled LiveKit but not yet attempted (opening audio playing) ──
-    // Also covers the brief window between _liveVoiceAttempted=true and the
-    // LiveKit connect() call resolving — neither state should show buttons.
+    // LiveKit offered but not yet connected — no buttons belong here yet.
     if (_serverLiveVoiceEnabled && !_liveVoiceAttempted) {
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        width: 140,
-        height: 56,
-        decoration: BoxDecoration(
-          color: const Color(0xFF141D2C),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Center(child: _buildDotsLoader(size: 7)),
+      return _buildActionShell(
+        fill: AppColors.surface,
+        border: AppColors.outline,
+        child: _buildDotsLoader(color: AppColors.inkSoft, size: 7),
       );
     }
 
-    // ── LiveKit attempted but failed → fallback HTTP buttons ──────────────────
-    // Also: server never offered LiveKit at all → always classic HTTP.
     switch (_state) {
       case _ConvState.processing:
       case _ConvState.ending:
-        // Card center already shows the spinner — keep bottom area empty.
-        return const SizedBox(width: 140, height: 56);
+        return const SizedBox(width: 168, height: 64);
 
       case _ConvState.ai_speaking:
-        return GestureDetector(
+        return _buildActionShell(
           onTap: _onInterrupt,
-          child: Container(
-            width: 140,
-            height: 60,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEF4444).withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(
-                  color: const Color(0xFFEF4444).withValues(alpha: 0.5),
-                  width: 1.5),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.pan_tool_rounded,
-                    color: Color(0xFFEF4444), size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  'INTERRUPT',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: const Color(0xFFEF4444),
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.0,
-                      ),
-                ),
-              ],
-            ),
-          ),
+          fill: AppColors.surface,
+          border: AppColors.error,
+          child: _actionLabel(
+              Icons.pan_tool_rounded, 'INTERRUPT', AppColors.errorDark),
         );
 
       case _ConvState.user_turn:
-        return GestureDetector(
+        return _buildActionShell(
           onTap: _onSend,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 140,
-            height: 60,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.4),
-                  blurRadius: 16,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  'SEND',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                      ),
-                ),
-              ],
-            ),
-          ),
+          fill: AppColors.brand,
+          border: AppColors.brandDark,
+          child:
+              _actionLabel(Icons.send_rounded, 'SEND', AppColors.inkOnDark),
         );
     }
   }
 
-  /// Center area in live voice mode — animated waveform bars that react to
-  /// who is speaking. No buttons, no text labels — just visual feedback.
-  Widget _buildLiveVoiceStatusPill() {
-    final bool isAi = _state == _ConvState.ai_speaking;
-    final bool isLoading = _state == _ConvState.processing ||
-        _state == _ConvState.ending;
-
-    final Color barColor = isAi
-        ? const Color(0xFF3B82F6)
-        : AppColors.primary;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      width: 140,
-      height: 56,
-      decoration: BoxDecoration(
-        color: isLoading
-            ? const Color(0xFF141D2C)
-            : barColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: isLoading
-              ? AppColors.border
-              : barColor.withValues(alpha: 0.25),
-          width: 1.5,
-        ),
-      ),
-      child: Center(
-        child: isLoading
-            ? const SizedBox.shrink()
-            : _buildLiveWaveformBars(barColor),
-      ),
+  Widget _actionLabel(IconData icon, String label, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: AppSpacing.s8),
+        Text(label, style: AppTextStyles.labelLarge.copyWith(color: color)),
+      ],
     );
   }
 
-  /// 5 animated waveform bars — height driven by pulse for user,
-  /// separate sine phases for AI (gives a different feel for each speaker).
+  Widget _buildLiveVoiceStatusPill() {
+    final isAi = _state == _ConvState.ai_speaking;
+    final isLoading =
+        _state == _ConvState.processing || _state == _ConvState.ending;
+    final color = isAi ? AppColors.brand : AppColors.sunDark;
+
+    return _buildActionShell(
+      fill: isLoading
+          ? AppColors.surface
+          : (isAi ? AppColors.brandSoft : AppColors.sunSoft),
+      border: isLoading ? AppColors.outline : color,
+      child: isLoading
+          ? const SizedBox.shrink()
+          : _buildLiveWaveformBars(color),
+    );
+  }
+
   Widget _buildLiveWaveformBars(Color color) {
     return AnimatedBuilder(
       animation: _pulseController,
@@ -2309,20 +2080,17 @@ class _RoleplayConversationScreenState
         const barCount = 5;
         return Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: List.generate(barCount, (i) {
             final phase = (_pulseController.value + i / barCount) % 1.0;
             final t = math.sin(phase * math.pi * 2).abs();
-            final minH = 4.0;
-            final maxH = _state == _ConvState.user_turn ? 22.0 : 16.0;
-            final h = minH + (maxH - minH) * t;
+            final maxH = _state == _ConvState.user_turn ? 24.0 : 18.0;
             return Container(
-              width: 3.5,
-              height: h,
-              margin: const EdgeInsets.symmetric(horizontal: 2.5),
+              width: 5,
+              height: 5 + (maxH - 5) * t,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.5 + 0.5 * t),
-                borderRadius: BorderRadius.circular(2),
+                color: color.withValues(alpha: 0.45 + 0.55 * t),
+                borderRadius: BorderRadius.circular(3),
               ),
             );
           }),
@@ -2331,35 +2099,186 @@ class _RoleplayConversationScreenState
     );
   }
 
-  Widget _buildIconButton({
-    required IconData icon,
-    required Color color,
-    Color? backgroundColor,
-    Color? borderColor,
-    Color? glow,
+  /// The chunky pill the centre action always lives in — one shell so SEND,
+  /// INTERRUPT and the live waveform share a footprint and never make the row
+  /// jump between states.
+  Widget _buildActionShell({
+    required Color fill,
+    required Color border,
+    required Widget child,
     VoidCallback? onTap,
+  }) {
+    final shell = AnimatedContainer(
+      duration: AppMotion.settle,
+      width: 168,
+      height: 64,
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: AppRadius.pillRadius,
+        border: Border.all(color: border, width: 2.5),
+        boxShadow: AppShadow.hardWith(border, y: onTap == null ? 3 : 5),
+      ),
+      child: Center(child: child),
+    );
+    return onTap == null
+        ? shell
+        : GestureDetector(onTap: onTap, child: shell);
+  }
+
+  // ─── Buttons ──────────────────────────────────────────────────────────────
+
+  Widget _buildSquareButton({
+    required IconData icon,
+    required VoidCallback onTap,
     String? tooltip,
+    Color fill = AppColors.surface,
+    Color borderColor = AppColors.outline,
+    Color iconColor = AppColors.ink,
+    bool busy = false,
   }) {
     final btn = GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: 54,
-        height: 54,
+        duration: AppMotion.settle,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: backgroundColor ?? const Color(0xFF141D2C),
-          border: Border.all(color: borderColor ?? AppColors.border),
-          boxShadow: glow != null
-              ? [BoxShadow(color: glow, blurRadius: 12, spreadRadius: 1)]
-              : [],
+          color: fill,
+          borderRadius: AppRadius.chipRadius,
+          border: Border.all(color: borderColor, width: 2),
+          boxShadow: AppShadow.hardWith(borderColor, y: 3),
         ),
-        child: Icon(icon, color: color, size: 22),
+        child: busy
+            ? Padding(
+                padding: const EdgeInsets.all(11),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.5, color: iconColor),
+              )
+            : Icon(icon, color: iconColor, size: 20),
       ),
     );
-    if (tooltip != null) {
-      return Tooltip(message: tooltip, child: btn);
-    }
-    return btn;
+    return tooltip == null ? btn : Tooltip(message: tooltip, child: btn);
+  }
+
+  Widget _buildRoundButton({
+    required IconData icon,
+    required VoidCallback? onTap,
+    String? tooltip,
+    Color fill = AppColors.surface,
+    Color? borderColor,
+    Color iconColor = AppColors.ink,
+  }) {
+    final edge = borderColor ?? AppColors.outline;
+    final btn = GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: AppMotion.settle,
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: fill,
+          border: Border.all(color: edge, width: 2.5),
+          boxShadow: AppShadow.hardWith(edge, y: onTap == null ? 2 : 4),
+        ),
+        child: Icon(icon, color: iconColor, size: 24),
+      ),
+    );
+    return tooltip == null ? btn : Tooltip(message: tooltip, child: btn);
+  }
+
+  // ─── Camera picture-in-picture ────────────────────────────────────────────
+
+  static const double _pipWidth = 108;
+  static const double _pipHeight = 144;
+
+  /// Keeps the preview fully on screen, whatever the drag or the rotation.
+  Offset _clampPip(Offset offset) {
+    final media = MediaQuery.of(context);
+    const margin = AppSpacing.s8;
+    return Offset(
+      offset.dx.clamp(margin, media.size.width - _pipWidth - margin),
+      offset.dy.clamp(
+        media.padding.top + margin,
+        media.size.height - _pipHeight - media.padding.bottom - margin,
+      ),
+    );
+  }
+
+  Widget _buildCameraPip() {
+    final holding = _latestVisionFrame?.eyeContact == EyeContactState.yes;
+    final edge = holding ? AppColors.success : AppColors.sunDark;
+
+    // The preview used to be pinned to the top-right, where it covered the
+    // persona's avatar and the timer. It is draggable now — anywhere on
+    // screen, clamped to stay reachable.
+    final media = MediaQuery.of(context);
+    final offset = _pipOffset ??
+        Offset(
+          media.size.width - _pipWidth - AppSpacing.page,
+          media.padding.top + 84,
+        );
+
+    return Positioned(
+      left: offset.dx,
+      top: offset.dy,
+      width: _pipWidth,
+      height: _pipHeight,
+      child: GestureDetector(
+        onPanUpdate: (details) => setState(
+          () => _pipOffset = _clampPip(offset + details.delta),
+        ),
+        child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.chipRadius,
+          border: Border.all(color: edge, width: 3),
+          boxShadow: AppShadow.hardWith(AppColors.shadowFor(edge), y: 4),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.chips - 3),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CameraPreview(_cameraController!),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  color: edge,
+                  child: Text(
+                    holding ? 'EYE CONTACT' : 'LOOK UP',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: holding ? AppColors.inkOnDark : AppColors.ink,
+                      fontSize: 9,
+                    ),
+                  ),
+                ),
+              ),
+              // Drag affordance — without it the preview reads as fixed.
+              Positioned(
+                top: 4,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    width: 26,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.inkOnDark70,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        ),
+      ),
+    );
   }
 }

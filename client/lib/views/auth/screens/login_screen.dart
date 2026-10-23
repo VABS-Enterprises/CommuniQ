@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:communiq/common_widgets/mascot/mascot.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
 import 'package:communiq/core/services/auth_service.dart';
@@ -172,44 +173,10 @@ class _LoginScreenState extends State<LoginScreen>
                     position: _slideTop,
                     child: Column(
                       children: [
-                        // Glowing logo circle
-                        Container(
-                          width: 76,
-                          height: 76,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [AppColors.brand, AppColors.brandLight],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.brand
-                                    .withValues(alpha: 0.45),
-                                blurRadius: 36,
-                                spreadRadius: 4,
-                              ),
-                              BoxShadow(
-                                color: AppColors.brand
-                                    .withValues(alpha: 0.25),
-                                blurRadius: 60,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/hummingbird.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.mic_rounded,
-                                color: AppColors.inkOnDark,
-                                size: 32,
-                              ),
-                            ),
-                          ),
-                        ),
+                        // Whisperwing, on the bare ground — the gradient
+                        // circle and its glow are gone, so the drawn owl is
+                        // the only shape here.
+                        const Mascot(mood: MascotMood.idle, size: 104),
 
                         const SizedBox(height: 24),
 

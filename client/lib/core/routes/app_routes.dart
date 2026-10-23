@@ -32,10 +32,11 @@ abstract final class AppRoutes {
   static const home = '/home';
   static const learning = '/learning';
   static const roleplay = '/roleplay';
+  static const contest = '/contest';
   static const profile = '/profile';
 
   /// Tab order, used by the shell and the nav bar so the two can't disagree.
-  static const tabs = [home, learning, roleplay, profile];
+  static const tabs = [home, learning, roleplay, contest, profile];
 
   // ── Pushed over the shell ────────────────────────────────────────────────
   static const learningSession = '/learning/session';
@@ -45,7 +46,6 @@ abstract final class AppRoutes {
   static const roleplayFeedback = '/roleplay/feedback';
   static const sessionReport = '/session-report';
 
-  static const contest = '/contest';
   static const contestPlay = '/contest/play';
   static const contestResult = '/contest/result';
   static const contestHistory = '/contest/history';
@@ -61,25 +61,8 @@ abstract final class AppRoutes {
   static const devGallery = '/dev/gallery';
 }
 
-/// Navigation arguments for [AppRoutes.roleplayConversation].
-class ConversationArgs {
-  final dynamic config;
-  final String sessionId;
-
-  const ConversationArgs({
-    required this.config,
-    required this.sessionId,
-  });
-}
-
-/// Navigation arguments for [AppRoutes.roleplayFeedback].
-class FeedbackArgs {
-  final String sessionId;
-  final dynamic result;
-
-  const FeedbackArgs({
-    required this.sessionId,
-    this.result,
-  });
-}
+// ConversationArgs and FeedbackArgs live in app_router.dart, next to the
+// GoRoute builders that cast `state.extra` to them. Duplicate stubs used to
+// sit here with `dynamic config` and the wrong fields; a screen that imported
+// this file built the stub, and the router's cast then failed at runtime.
 

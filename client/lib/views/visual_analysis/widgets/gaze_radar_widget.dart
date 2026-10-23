@@ -33,21 +33,30 @@ class GazeRadarWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.center_focus_strong_rounded, color: AppColors.primaryLight, size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    'GAZE TARGET RADAR',
-                    style: TextStyle(
-                      color: AppColors.primaryLight,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.1,
+              // Both halves are intrinsically sized, so on a narrow screen the
+              // row had nothing to give and overflowed. The label yields first.
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.center_focus_strong_rounded, color: AppColors.primaryLight, size: 16),
+                    SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'GAZE TARGET RADAR',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.primaryLight,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -56,6 +65,8 @@ class GazeRadarWidget extends StatelessWidget {
                 ),
                 child: Text(
                   '$centerPct% Center Focus',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.success,
                     fontSize: 10,

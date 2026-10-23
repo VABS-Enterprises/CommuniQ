@@ -250,7 +250,7 @@ class _HomeViewState extends State<HomeView> {
                 // hardcoded a rank and a countdown for a feature that was a
                 // mock behind a "Coming Soon" gate.
                 ChunkyCard(
-                  onTap: () => context.push(AppRoutes.contest),
+                  onTap: () => context.go(AppRoutes.contest),
                   // Brand stripe like every other navigation card; the trophy
                   // itself stays gold because rank is an "earned" thing.
                   accent: AppColors.brand,

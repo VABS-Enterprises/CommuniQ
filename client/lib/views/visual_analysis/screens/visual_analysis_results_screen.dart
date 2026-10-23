@@ -66,12 +66,17 @@ class _VisualAnalysisResultsScreenState extends State<VisualAnalysisResultsScree
             icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text(
-            'Visual Analysis Report',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+          title: const FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Visual Analysis Report',
+              maxLines: 1,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           actions: [
@@ -316,12 +321,16 @@ class _VisualAnalysisResultsScreenState extends State<VisualAnalysisResultsScree
             children: [
               Icon(Icons.remove_red_eye_rounded, color: AppColors.primaryLight, size: 20),
               SizedBox(width: 8),
-              Text(
-                'Eye Contact & Gaze Delivery',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  'Eye Contact & Gaze Delivery',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],

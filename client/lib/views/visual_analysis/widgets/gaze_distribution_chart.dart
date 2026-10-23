@@ -31,12 +31,16 @@ class GazeDistributionChart extends StatelessWidget {
             children: [
               Icon(Icons.remove_red_eye_rounded, color: AppColors.primaryLight, size: 20),
               SizedBox(width: 8),
-              Text(
-                'Gaze Distribution',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  'Gaze Distribution',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],

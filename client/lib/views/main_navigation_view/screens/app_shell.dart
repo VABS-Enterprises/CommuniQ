@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/services/onboarding_service.dart';
 import 'package:communiq/views/main_navigation_view/widgets/playful_nav_bar.dart';
 
@@ -30,22 +29,11 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _onTap(int index) {
-    final destination = PlayfulNavBar.destinations[index];
-
-    // Contest isn't a shell branch — it's a full-screen route pushed on top
-    // of whichever tab is currently open, same as the "Enter a contest" card
-    // on Home. It never becomes the "selected" tab.
-    if (!destination.isBranch) {
-      context.push(AppRoutes.contest);
-      return;
-    }
-
     // Tapping the active tab pops that branch back to its root, matching the
     // platform convention.
-    final branchIndex = PlayfulNavBar.branchIndexFor(index);
     widget.navigationShell.goBranch(
-      branchIndex,
-      initialLocation: branchIndex == widget.navigationShell.currentIndex,
+      index,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -5,6 +7,7 @@ import 'package:flutter/services.dart' show PlatformException;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
+import 'package:communiq/core/services/offline_cache_service.dart';
 import 'package:communiq/core/services/profile_cache_service.dart';
 import 'package:communiq/core/services/level_service.dart';
 
@@ -113,7 +116,12 @@ class AuthService {
     debugPrint('[Google Auth] ── Starting sign-in flow ──────────────');
     try {
       debugPrint('[Google Auth] Step 1: Opening Google account picker...');
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      // Play Services takes ~68 s to give up on its own when it cannot reach
+      // Google. Nobody waits that long in front of a sign-in button, and the
+      // browser fallback below needs the failure promptly to be useful.
+      final GoogleSignInAccount? googleUser = await _googleSignIn
+          .signIn()
+          .timeout(const Duration(seconds: 12));
 
       if (googleUser == null) {
         debugPrint('[Google Auth] Step 1: ⚠️  User cancelled the picker');
@@ -169,6 +177,19 @@ class AuthService {
       debugPrint('');
     } on CancelledException {
       rethrow;
+    } on TimeoutException {
+      debugPrint('[Google Auth] ⏱  Native picker timed out — '
+          'falling back to browser OAuth');
+      try {
+        await _signInWithGoogleViaBrowser();
+        return;
+      } on CancelledException {
+        rethrow;
+      } catch (fallbackErr) {
+        debugPrint('[Google Auth] ❌ Browser fallback failed: $fallbackErr');
+        throw Exception(
+            "Couldn't reach Google. Check the connection and try again.");
+      }
     } on FirebaseAuthException catch (e) {
       debugPrint('[Google Auth] ❌ FirebaseAuthException');
       debugPrint('[Google Auth]   code:    ${e.code}');
@@ -178,11 +199,70 @@ class AuthService {
       debugPrint('[Google Auth] ❌ PlatformException');
       debugPrint('[Google Auth]   code:    ${e.code}');
       debugPrint('[Google Auth]   message: ${e.message}');
+
+      // Play Services could not complete the native picker. Seen on devices
+      // where GMS reports NETWORK_ERROR (status 7) even though the phone is
+      // plainly online — Firebase Auth mints tokens and the browser loads
+      // Google domains on the same connection. The native flow is not the only
+      // way in, so rather than dead-ending the user, fall back to Firebase's
+      // own browser-based OAuth, which does not touch the Play Services
+      // sign-in path at all.
+      if (_isRecoverableGmsFailure(e)) {
+        debugPrint('[Google Auth] ↻ Native picker failed — '
+            'falling back to browser OAuth');
+        try {
+          await _signInWithGoogleViaBrowser();
+          return;
+        } on CancelledException {
+          rethrow;
+        } catch (fallbackErr) {
+          debugPrint('[Google Auth] ❌ Browser fallback also failed: '
+              '$fallbackErr');
+          // Report the original, more specific Play Services diagnosis.
+          throw googleSignInErrorFor(e);
+        }
+      }
       throw googleSignInErrorFor(e);
     } catch (e) {
       if (e is CancelledException) rethrow;
       debugPrint('[Google Auth] ❌ Unexpected error: $e');
       throw Exception('Google Sign-In failed. Please try again.');
+    }
+  }
+
+  /// Whether a Play Services failure is worth retrying by another route.
+  ///
+  /// A network error or an unspecified internal failure says nothing about the
+  /// app's configuration, so the browser flow has a real chance. A cancel or a
+  /// certificate mismatch would fail the same way twice.
+  static bool _isRecoverableGmsFailure(PlatformException e) {
+    final detail = '${e.code} ${e.message ?? ''}';
+    final status = RegExp(r'ApiException:\s*(\d+)').firstMatch(detail)?.group(1);
+    // 7 NETWORK_ERROR, 8 INTERNAL_ERROR, 17 API_NOT_CONNECTED.
+    return e.code == 'network_error' || status == '7' || status == '8' ||
+        status == '17';
+  }
+
+  /// Signs in with Google through Firebase's browser-based OAuth flow.
+  ///
+  /// Opens a Custom Tab rather than the Play Services picker, so it works on
+  /// devices where GMS sign-in is broken. Firebase performs the token exchange
+  /// itself, so there is no separate credential step here.
+  static Future<void> _signInWithGoogleViaBrowser() async {
+    final provider = GoogleAuthProvider()
+      ..addScope('email')
+      ..addScope('profile');
+
+    final userCredential = await _auth.signInWithProvider(provider);
+    debugPrint('[Google Auth] ✅ Browser OAuth success — '
+        'uid=${userCredential.user?.uid}, email=${userCredential.user?.email}');
+
+    try {
+      await ApiService.post(ApiConstants.authGoogle);
+      debugPrint('[Google Auth] ✅ Profile synced');
+    } catch (apiErr) {
+      debugPrint('[Google Auth] ⚠️  Backend unreachable — profile will be '
+          'created on first home load. ($apiErr)');
     }
   }
 
@@ -239,6 +319,7 @@ class AuthService {
         _googleSignIn.signOut(),
         _auth.signOut(),
         ProfileCacheService.clear(),
+        OfflineCacheService.clear(),
         LevelService.instance.clearProgress(),
       ]);
       debugPrint('[AuthService] signOut ✓');

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from collections.abc import AsyncGenerator
 from typing import Optional
@@ -20,6 +21,29 @@ logger = logging.getLogger("communiq.pipecat.kokoro")
 
 # Kokoro outputs 24 kHz float32; chunk size ~100 ms for smoother streaming
 _CHUNK_SAMPLES = 2400  # 100 ms at 24 kHz mono int16
+
+# Written for the eye, not the ear. The model narrates actions as *smiles* and
+# emphasises with **bold**; spoken verbatim that becomes "asterisk smiles
+# asterisk". Mirrors ai-server/app/services/tts.py:strip_stage_directions so
+# both voice paths sound the same.
+_STAGE_DIRECTION = re.compile(r"\s*[（(][^)）]{1,60}[)）]\s*")
+_MD_BOLD = re.compile(r"\*\*(.+?)\*\*|__(.+?)__", re.DOTALL)
+_MD_ACTION = re.compile(r"\s*\*([^*\n]{1,60})\*\s*")
+_MD_HEADING = re.compile(r"^\s{0,3}#{1,6}\s*", re.MULTILINE)
+_MD_BULLET = re.compile(r"^\s{0,3}[-*+]\s+", re.MULTILINE)
+_MD_CODE = re.compile(r"`+")
+_EXTRA_SPACE = re.compile(r"[ \t]{2,}")
+
+
+def strip_unspoken_markup(text: str) -> str:
+    """Drop stage directions and Markdown so the voice reads words only."""
+    text = _STAGE_DIRECTION.sub(" ", text)
+    text = _MD_BOLD.sub(lambda m: m.group(1) or m.group(2) or "", text)
+    text = _MD_ACTION.sub(" ", text)
+    text = _MD_HEADING.sub("", text)
+    text = _MD_BULLET.sub("", text)
+    text = _MD_CODE.sub("", text)
+    return _EXTRA_SPACE.sub(" ", text).strip()
 
 
 class KokoroTTSService(TTSService):
@@ -74,7 +98,7 @@ class KokoroTTSService(TTSService):
     async def run_tts(
         self, text: str, context_id: str
     ) -> AsyncGenerator[Frame, None]:
-        prepared = self._prepare_text_for_tts(text)
+        prepared = self._prepare_text_for_tts(strip_unspoken_markup(text))
         if not prepared.strip():
             return
 
