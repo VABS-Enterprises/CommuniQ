@@ -193,6 +193,7 @@ class _HomeViewState extends State<HomeView> {
     return PlayfulBackground(
       seed: 1,
       child: Scaffold(
+        backgroundColor: AppColors.transparent,
         body: SafeArea(
           bottom: false,
           child: RefreshIndicator(
