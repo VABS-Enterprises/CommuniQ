@@ -1,71 +1,93 @@
-# CommuniQ — AI Based Conversation Simulator
+# CommuniQ — AI-Based Conversation Simulator
 
-CommuniQ is an AI-powered voice-based communication practice app built for Indian students and professionals. It lets you have real, pressure-tested conversations with AI characters so you can sharpen your communication skills before it counts.
+CommuniQ is an AI-powered, voice-first communication practice app built for Indian students and professionals. You hold real, pressure-tested conversations with AI characters — interviewers, clients, GD moderators — and get a detailed evaluation of how you spoke, so you can sharpen your skills before the conversation that counts.
 
-You speak. An AI character responds. You get evaluated. You improve.
+> **You speak. An AI character responds. You get evaluated. You improve.**
 
 ---
 
 ## Table of Contents
 
-1. [Architecture Overview](#architecture-overview)
-2. [Prerequisites](#prerequisites)
-3. [Repository Structure](#repository-structure)
-4. [Step-by-Step Setup](#step-by-step-setup)
-   - [1. Clone the repo](#1-clone-the-repo)
-   - [2. Firebase setup](#2-firebase-setup)
-   - [3. Groq API key](#3-groq-api-key)
-   - [4. Node server](#4-node-server)
-   - [5. AI server (FastAPI)](#5-ai-server-fastapi)
-   - [6. Pipecat worker (live voice)](#6-pipecat-worker-live-voice)
-   - [7. Flutter client](#7-flutter-client)
-5. [Running the Project](#running-the-project)
-6. [Seeding Scenarios](#seeding-scenarios)
-7. [Environment Variable Reference](#environment-variable-reference)
-8. [Practice Scenarios](#practice-scenarios)
-9. [Performance Evaluation](#performance-evaluation)
+1. [Key Features](#key-features)
+2. [Tech Stack](#tech-stack)
+3. [Architecture](#architecture)
+4. [Repository Structure](#repository-structure)
+5. [Prerequisites](#prerequisites)
+6. [Setup](#setup)
+7. [Running the Project](#running-the-project)
+8. [Testing](#testing)
+9. [Environment Variable Reference](#environment-variable-reference)
+10. [API Overview](#api-overview)
+11. [Deployment](#deployment)
+12. [Further Documentation](#further-documentation)
 
 ---
 
-## Architecture Overview
+## Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Live voice roleplay** | Real-time, low-latency voice conversations with an AI character over WebRTC (LiveKit + Pipecat). |
+| **Practice scenarios** | HR interview, technical interview, group discussion and sales call — each at Beginner, Intermediate and Advanced difficulty. |
+| **Session evaluation** | Six skill scores (Clarity, Fluency, Confidence, Vocabulary, Grammar, Pronunciation), a filler-word breakdown, quoted strengths, actionable improvements with before/after examples, and a recommended next scenario. |
+| **Visual analysis** | On-device eye-contact (gaze) and posture tracking through the camera using Google ML Kit face detection, shown as a gaze radar, a distribution chart and AI coaching tips. |
+| **Guided learning path** | 20 structured levels of bite-sized lessons with progress tracking. |
+| **Contests and leaderboards** | Timed speaking contests, contest history, and weekly and all-time leaderboards. |
+| **Personalised onboarding** | A multi-step flow (goals, speaking style, challenges, skill level) that builds a practice plan. |
+| **Offline resilience** | Cached API responses and an encrypted local profile cache keep the app usable on flaky networks. |
+| **Authentication** | Firebase Auth with Email/Password and Google Sign-In. |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Mobile client | Flutter (Dart 3), Provider, Dio, LiveKit client, ML Kit Face Detection, camera, just_audio |
+| Backend API | Node.js, Express, Firebase Admin SDK, LiveKit Server SDK, Helmet, express-rate-limit |
+| AI server | Python, FastAPI, Groq (Whisper STT + LLM), Edge TTS / Kokoro TTS |
+| Real-time voice | Pipecat, LiveKit (WebRTC), Silero VAD |
+| Database and auth | Firebase Firestore, Firebase Authentication |
+| Model training (offline) | QLoRA fine-tuning with Unsloth, Ollama Modelfile |
+| Deployment | Render (`render.yaml`), Docker (Pipecat worker, self-hosted LiveKit) |
+
+---
+
+## Architecture
 
 ```
-Flutter app (phone)
-    │  Firebase ID token (auth)
-    ▼
-Node API  (port 3000)
-    │  session management, auth, Firestore writes
-    ├──► FastAPI ai-server (port 8000)  — opening turn + evaluation
-    └──► Pipecat worker  (port 9000)  — live voice turns via LiveKit (WebRTC)
+            Flutter app (Android / iOS / Web)
+                         │  Firebase ID token on every request
+                         ▼
+               Node API  (Express, port 3000)
+     auth · sessions · scenarios · levels · contests · Firestore
+                │                               │
+                ▼                               ▼
+   FastAPI ai-server (port 8000)       Pipecat worker (port 9000)
+   opening turn · STT · TTS ·          live voice turns over
+   evaluation (roleplay / learning /   LiveKit (WebRTC)
+   contest)
 
-Cloud services used:
-  Groq     — Whisper STT  +  Llama 3.1 8B LLM
-  Edge TTS — text-to-speech (free, no key)
-  Firebase — Firestore database + Auth
-  LiveKit  — WebRTC media server (cloud or self-hosted)
+Cloud services:
+  Groq      — Whisper STT + LLM inference
+  Edge TTS  — text-to-speech (free, no key)
+  Firebase  — Firestore database + Authentication
+  LiveKit   — WebRTC media server (cloud or self-hosted)
 ```
 
 **Live voice flow (one turn):**
+
 ```
 User mic → LiveKit → Pipecat worker → Groq Whisper (STT)
-                                    → Groq Llama (LLM)
+                                    → Groq LLM (character reply)
                                     → Edge TTS
                                     → LiveKit → User speaker
+                     Pipecat worker → Node API (transcript saved to Firestore)
 ```
 
----
+When the session ends, the Node API sends the full transcript to the ai-server for evaluation and stores the report in Firestore.
 
-## Prerequisites
-
-Install these before anything else.
-
-| Tool | Version | Download |
-|------|---------|----------|
-| Node.js | 18+ | https://nodejs.org |
-| Python | 3.11 or 3.12 (not 3.13 for Kokoro TTS) | https://python.org |
-| Flutter | 3.x (stable) | https://flutter.dev/docs/get-started/install |
-| Git | any | https://git-scm.com |
-| Docker Desktop | (only if self-hosting LiveKit) | https://docker.com |
+A detailed walkthrough is in [`documentation/architecture.md`](documentation/architecture.md).
 
 ---
 
@@ -73,20 +95,48 @@ Install these before anything else.
 
 ```
 CommuniQ/
-├── server/              Node.js backend (auth, sessions, Firestore)
-├── ai-server/           FastAPI — opening turn + session evaluation
-├── pipecat-worker/      Pipecat live-voice agent (WebRTC via LiveKit)
-├── client/              Flutter app
-├── livekit/             Self-hosted LiveKit config (docker-compose)
-├── training/            Dataset scripts + fine-tuning pipeline (offline)
-└── docs/                Architecture and API contract docs
+├── client/            Flutter mobile app
+│   └── lib/
+│       ├── core/          routing, services (API, auth, gaze detection, offline cache …)
+│       ├── models/        data models
+│       ├── common_widgets/
+│       └── views/         auth, onboarding, home, roleplay, learning,
+│                          contest, visual_analysis, profile, premium
+├── server/            Node.js / Express backend (auth, sessions, Firestore)
+├── ai-server/         FastAPI service — STT, TTS, opening turn, evaluation
+├── pipecat-worker/    Pipecat real-time voice agent (WebRTC via LiveKit)
+├── livekit/           Self-hosted LiveKit config (docker-compose)
+├── training/          Dataset scripts + QLoRA fine-tuning pipeline (offline)
+├── documentation/     Setup and architecture guides
+├── docs/              API contracts, roadmap, metrics notes
+├── firestore.rules    Firestore security rules
+└── render.yaml        Render deployment blueprint
 ```
 
 ---
 
-## Step-by-Step Setup
+## Prerequisites
 
-### 1. Clone the repo
+| Tool | Version | Download |
+|------|---------|----------|
+| Node.js | 18+ | https://nodejs.org |
+| Python | 3.11 or 3.12 (Kokoro TTS does not support 3.13) | https://python.org |
+| Flutter | 3.x stable (Dart ≥ 3.3) | https://flutter.dev/docs/get-started/install |
+| Git | any | https://git-scm.com |
+| ffmpeg | any (needed by the ai-server for audio conversion) | https://ffmpeg.org/download.html |
+| Docker Desktop | only if self-hosting LiveKit | https://docker.com |
+
+You also need:
+
+- a **Firebase** project (Auth + Firestore)
+- a **Groq** API key — free tier at [console.groq.com](https://console.groq.com)
+- a **LiveKit** project — free at [cloud.livekit.io](https://cloud.livekit.io), or self-hosted with Docker
+
+---
+
+## Setup
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/VABS-Enterprises/CommuniQ.git
@@ -94,37 +144,14 @@ cd CommuniQ
 git checkout version-one
 ```
 
----
+### 2. Firebase
 
-### 2. Firebase setup
+1. Create a project in the [Firebase Console](https://console.firebase.google.com), or ask a team member for access to the existing one.
+2. **Authentication → Sign-in method:** enable **Email/Password** and **Google**.
+3. **Firestore Database:** create a database.
+4. **Project Settings → Service Accounts → Generate new private key.** From the downloaded JSON, copy `project_id`, `client_email` and `private_key` into `server/.env` (see below).
 
-CommuniQ uses Firebase for **authentication** and **Firestore** as the database.
-
-1. Go to [Firebase Console](https://console.firebase.google.com) and open the **communiq-f32a0** project (ask a team member for access), or create a new project for local dev.
-2. Go to **Project Settings → Service Accounts → Generate new private key** → download the JSON file.
-3. Open the JSON and copy three values into your `server/.env` (see step 4):
-   - `project_id` → `FIREBASE_PROJECT_ID`
-   - `client_email` → `FIREBASE_CLIENT_EMAIL`
-   - `private_key` → `FIREBASE_PRIVATE_KEY`
-
-4. In Firebase Console → **Authentication → Sign-in methods**, enable **Email/Password**.
-5. In Firebase Console → **Firestore Database**, create a database in **production mode** (or test mode for local dev).
-
----
-
-### 3. Groq API key
-
-CommuniQ uses Groq for STT (Whisper) and LLM (Llama 3.1 8B).
-
-1. Sign up at [console.groq.com](https://console.groq.com) (free tier is sufficient for development).
-2. Go to **API Keys → Create API Key**.
-3. Copy the key — it starts with `gsk_`.
-
-You will use this key in both `ai-server/.env` and `pipecat-worker/.env`.
-
----
-
-### 4. Node server
+### 3. Node server
 
 ```bash
 cd server
@@ -142,14 +169,15 @@ FIREBASE_PROJECT_ID=your_project_id
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxx@your_project.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 
-# FastAPI ai-server URL
+# AI server
 FASTAPI_URL=http://localhost:8000
+AI_SERVER_INTERNAL_KEY=any-long-random-string     # must match ai-server/.env
 
 # Admin
-ADMIN_SECRET=communiq-dev-secret
+ADMIN_SECRET=change-me
 ALLOWED_ORIGINS=*
 
-# LiveKit (cloud) — sign up free at https://cloud.livekit.io
+# LiveKit
 LIVEKIT_ENABLED=true
 LIVEKIT_URL=wss://your-project.livekit.cloud
 LIVEKIT_API_KEY=your_livekit_api_key
@@ -157,33 +185,25 @@ LIVEKIT_API_SECRET=your_livekit_api_secret
 
 # Pipecat worker
 PIPECAT_WORKER_URL=http://localhost:9000
-PIPECAT_WEBHOOK_SECRET=communiq-pipecat-secret-dev
+PIPECAT_WEBHOOK_SECRET=any-long-random-string     # must match pipecat-worker/.env
 ```
 
-> **LiveKit Cloud (easiest):** Sign up at https://cloud.livekit.io → create a project → copy URL / Key / Secret.
->
-> **Self-hosted LiveKit (no account needed):** Run `cd livekit && docker compose up -d` and use:
-> ```
-> LIVEKIT_URL=ws://localhost:7880
-> LIVEKIT_API_KEY=devkey
-> LIVEKIT_API_SECRET=communiq-local-dev-livekit-secret-min-32ch
-> ```
+> **Self-hosted LiveKit (no account needed):** run `cd livekit && docker compose up -d`, then set
+> `LIVEKIT_URL=ws://localhost:7880` and use the key and secret from `livekit/livekit.yaml`.
 
----
+Seed the practice scenarios and learning levels into a fresh Firestore database:
 
-### 5. AI server (FastAPI)
+```bash
+node scripts/seed-scenarios.js
+npm run levels:sync
+```
+
+### 4. AI server (FastAPI)
 
 ```bash
 cd ai-server
-
-# Create a virtual environment
 python -m venv venv
-
-# Activate it
-venv\Scripts\activate          # Windows
-source venv/bin/activate       # macOS / Linux
-
-# Install dependencies
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
@@ -192,24 +212,19 @@ Create `ai-server/.env`:
 ```env
 GROQ_API_KEY=gsk_your_key_here
 PORT=8000
+AI_SERVER_INTERNAL_KEY=any-long-random-string     # same value as server/.env
 ASR_BACKEND=groq
 LLM_BACKEND=groq
-TTS_BACKEND=edge
 EVAL_LLM_BACKEND=groq
-LLM_MODEL=qwen/qwen3.8-27b
-EVAL_LLM_MODEL=openai/gpt-oss-120b
+TTS_BACKEND=edge
 ```
 
----
-
-### 6. Pipecat worker (live voice)
-
-The Pipecat worker runs the real-time voice pipeline for live conversations.
+### 5. Pipecat worker (live voice)
 
 ```bash
 cd pipecat-worker
-
-# Install dependencies (uses the system Python or a venv)
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
@@ -217,72 +232,69 @@ Create `pipecat-worker/.env`:
 
 ```env
 PORT=9000
-
-# Groq — same key as ai-server
 GROQ_API_KEY=gsk_your_key_here
-
-# Node backend URL (for posting turn transcripts back)
 NODE_BACKEND_URL=http://localhost:3000
-
-# Shared secret — must match PIPECAT_WEBHOOK_SECRET in server/.env
-PIPECAT_WEBHOOK_SECRET=communiq-pipecat-secret-dev
+PIPECAT_WEBHOOK_SECRET=any-long-random-string     # same value as server/.env
 ```
 
-> Note: LiveKit credentials are sent by Node at runtime — you do **not** need them in this `.env`.
+> The Node server sends LiveKit room credentials to the worker at runtime, so they are **not** needed here.
 
----
-
-### 7. Flutter client
+### 6. Flutter client
 
 ```bash
 cd client
 flutter pub get
 ```
 
-Open `client/lib/core/services/api_service.dart` and confirm `baseUrl` points to your Node server:
+The client chooses its backend URL like this:
 
-- **Emulator / same machine:** `http://10.0.2.2:3000` (Android emulator) or `http://localhost:3000` (iOS sim / web)
-- **Physical device:** Use an ngrok tunnel — run `ngrok http 3000` and paste the `https://` URL
-
-Then run:
+- **Debug builds:** `http://localhost:3000` (iOS simulator, web, desktop)
+- **Release builds:** the deployed Render URL
+- **Override:** `--dart-define=SERVER_URL=<url>`, for example:
 
 ```bash
-flutter run
+# Android emulator
+flutter run --dart-define=SERVER_URL=http://10.0.2.2:3000
+
+# Physical device (expose the Node server with `ngrok http 3000`)
+flutter run --dart-define=SERVER_URL=https://<your-ngrok-id>.ngrok-free.app
 ```
 
 ---
 
 ## Running the Project
 
-Open **4 terminals** from the repo root.
+Start each service in its own terminal, from the repo root:
 
-| Terminal | Command | What it does |
-|----------|---------|-------------|
-| **1 — Node** | `cd server && npm start` | Auth, sessions, Firestore |
-| **2 — ai-server** | `cd ai-server && venv\Scripts\activate && uvicorn app.main:app --reload --port 8000` | Opening turn + evaluation |
-| **3 — Pipecat** | `cd pipecat-worker && uvicorn main:app --host 0.0.0.0 --port 9000` | Live voice pipeline |
-| **4 — Flutter** | `cd client && flutter run` | Mobile app |
+| # | Service | Command |
+|---|---------|---------|
+| 1 | Node API | `cd server && npm run dev` |
+| 2 | AI server | `cd ai-server && source venv/bin/activate && uvicorn app.main:app --reload --port 8000` |
+| 3 | Pipecat worker | `cd pipecat-worker && source venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 9000` |
+| 4 | Flutter app | `cd client && flutter run` |
 
-**Verify each service is up:**
+**Health checks:**
 
 ```
-http://localhost:3000          → Node (any response = OK)
-http://localhost:8000/health   → {"status":"ok",...}
-http://localhost:9000/health   → {"status":"ok","active_bots":0,...}
+http://localhost:3000            → Node API is up (any response)
+http://localhost:8000/health     → {"status":"ok", ...}
+http://localhost:9000/health     → {"status":"ok","active_bots":0, ...}
 ```
 
 ---
 
-## Seeding Scenarios
-
-On a fresh database, seed the default practice scenarios:
+## Testing
 
 ```bash
-cd server
-node scripts/seed-scenarios.js
-```
+# Node backend
+cd server && npm test
 
-This adds all built-in HR, Technical, GD, and Sales scenarios to Firestore.
+# AI server
+cd ai-server && pytest
+
+# Flutter client (unit + widget tests)
+cd client && flutter test
+```
 
 ---
 
@@ -292,64 +304,79 @@ This adds all built-in HR, Technical, GD, and Sales scenarios to Firestore.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `PORT` | No | Node port (default 3000) |
+| `PORT` | No | Node port (default `3000`) |
 | `FIREBASE_PROJECT_ID` | Yes | Firebase project ID |
-| `FIREBASE_CLIENT_EMAIL` | Yes | Service account email |
-| `FIREBASE_PRIVATE_KEY` | Yes | Service account private key |
-| `FASTAPI_URL` | Yes | URL of the ai-server (default `http://localhost:8000`) |
+| `FIREBASE_CLIENT_EMAIL` | Yes | Service-account email |
+| `FIREBASE_PRIVATE_KEY` | Yes | Service-account private key |
+| `FASTAPI_URL` | Yes | ai-server URL (default `http://localhost:8000`) |
+| `AI_SERVER_INTERNAL_KEY` | Yes | Shared server-to-server secret with the ai-server |
 | `ADMIN_SECRET` | Yes | Secret for admin-only endpoints |
+| `ALLOWED_ORIGINS` | No | CORS allow-list |
 | `LIVEKIT_ENABLED` | No | `true` to enable live voice mode |
-| `LIVEKIT_URL` | If enabled | LiveKit server WebSocket URL |
-| `LIVEKIT_API_KEY` | If enabled | LiveKit API key |
-| `LIVEKIT_API_SECRET` | If enabled | LiveKit API secret |
-| `PIPECAT_WORKER_URL` | If enabled | Pipecat worker URL (default `http://localhost:9000`) |
-| `PIPECAT_WEBHOOK_SECRET` | If enabled | Shared secret between Node and Pipecat worker |
+| `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | If live voice | LiveKit connection details |
+| `PIPECAT_WORKER_URL` | If live voice | Pipecat worker URL (default `http://localhost:9000`) |
+| `PIPECAT_WEBHOOK_SECRET` | If live voice | Shared secret with the Pipecat worker |
 
 ### `ai-server/.env`
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GROQ_API_KEY` | Yes | Groq cloud API key |
-| `PORT` | No | FastAPI port (default 8000) |
-| `ASR_BACKEND` | No | `groq` (default) |
-| `LLM_BACKEND` | No | `groq` (default) |
-| `TTS_BACKEND` | No | `edge` (default) |
-| `LLM_MODEL` | No | Groq model for conversation (default `qwen/qwen3.8-27b`) |
-| `EVAL_LLM_MODEL` | No | Groq model for evaluation (default `openai/gpt-oss-120b`) |
+| `GROQ_API_KEY` | Yes | Groq API key |
+| `PORT` | No | FastAPI port (default `8000`) |
+| `AI_SERVER_INTERNAL_KEY` | Yes | Same value as in `server/.env` |
+| `ASR_BACKEND` | No | `groq` (default) or `local` (faster-whisper, GPU) |
+| `LLM_BACKEND` / `EVAL_LLM_BACKEND` | No | `groq` (default); `ollama`, `vllm` or an OpenAI-compatible backend for local models |
+| `TTS_BACKEND` | No | `edge` (default) or `local` (Kokoro) |
+| `LLM_MODEL` / `EVAL_LLM_MODEL` | No | Model IDs for conversation and evaluation |
 
 ### `pipecat-worker/.env`
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `PORT` | No | Worker port (default 9000) |
-| `GROQ_API_KEY` | Yes | Same Groq key as ai-server |
-| `NODE_BACKEND_URL` | Yes | Node backend URL for posting turn transcripts |
-| `PIPECAT_WEBHOOK_SECRET` | Yes | Must match `server/.env` |
+| `PORT` | No | Worker port (default `9000`) |
+| `GROQ_API_KEY` | Yes | Groq API key |
+| `NODE_BACKEND_URL` | Yes | Node API URL for posting turn transcripts |
+| `PIPECAT_WEBHOOK_SECRET` | Yes | Same value as in `server/.env` |
+
+> `.env` files are git-ignored. Never commit real keys.
 
 ---
 
-## Practice Scenarios
+## API Overview
 
-| Type | Description |
-|------|-------------|
-| **HR Interview** | Behavioural questions, STAR probing, confidence testing |
-| **Technical Interview** | System design, trade-offs, depth over buzzwords |
-| **Group Discussion** | Topic-based debate with a neutral AI moderator |
-| **Sales Call** | Pitch to a skeptical client, handle objections |
+All Node routes except the health check need a Firebase ID token in the `Authorization: Bearer <token>` header.
 
-Difficulty levels: **Beginner → Intermediate → Advanced**
+| Area | Example endpoints |
+|------|-------------------|
+| Auth | `POST /auth/register`, `POST /auth/google`, `GET /auth/me`, `DELETE /auth/account` |
+| Scenarios | `GET /scenarios`, `GET /scenarios/:scenarioId` |
+| Sessions | `POST /sessions/start`, `POST /sessions/livekit-token`, `POST /sessions/turn`, `POST /sessions/end`, `GET /sessions/:sessionId/report` |
+| Learning | `GET /learning/progress`, `POST /learning/answer`, `POST /learning/levels/:levelId/complete` |
+| Contests | `POST /contest/submit`, `GET /contest/history`, `GET /contest/leaderboard` |
+| User | `GET /user/profile`, `PATCH /user/profile`, `POST /user/visual-reports` |
+
+The full request and response contracts are in [`docs/API_CONTRACTS.md`](docs/API_CONTRACTS.md).
 
 ---
 
-## Performance Evaluation
+## Deployment
 
-After every session you receive:
+- **Node API + AI server:** deployed to Render with the blueprint in [`render.yaml`](render.yaml). Fill in every secret marked `sync: false` in the Render dashboard.
+- **Pipecat worker:** containerised with [`pipecat-worker/Dockerfile`](pipecat-worker/Dockerfile).
+- **LiveKit:** LiveKit Cloud, or self-hosted with [`livekit/docker-compose.prod.yml`](livekit/docker-compose.prod.yml).
+- **Firestore rules:** `firebase deploy --only firestore:rules`
 
-- **Six skill scores (0–100):** Clarity, Fluency, Confidence, Vocabulary, Grammar, Pronunciation
-- **Filler word count** — which fillers appeared and how often
-- **Two specific strengths** from that session (quoted from your speech)
-- **Two actionable improvements** with before/after examples
-- **Recommended next scenario** (e.g. `hr_interview_intermediate`)
+---
+
+## Further Documentation
+
+| Document | Contents |
+|----------|----------|
+| [`documentation/project_setup.md`](documentation/project_setup.md) | Detailed local setup |
+| [`documentation/ai_server_setup.md`](documentation/ai_server_setup.md) | AI server backends (cloud and local models) |
+| [`documentation/architecture.md`](documentation/architecture.md) | End-to-end architecture and session flow |
+| [`docs/API_CONTRACTS.md`](docs/API_CONTRACTS.md) | API request and response contracts |
+| [`training/README.md`](training/README.md) | Dataset generation and fine-tuning pipeline |
 
 ---
 
