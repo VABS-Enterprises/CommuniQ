@@ -1,15 +1,20 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/services/offline_cache_service.dart';
 import 'package:communiq/core/services/profile_cache_service.dart';
 import 'package:communiq/core/services/level_service.dart';
+import 'package:communiq/core/services/onboarding_service.dart';
 
 /// Thrown when the user dismisses the Google sign-in picker without selecting
 /// an account. Callers should catch this and stay on the current screen.
@@ -35,13 +40,13 @@ class AuthService {
   /// Signs the user in with email and password.
   static Future<void> signInWithEmailPassword(
       String email, String password) async {
-    debugPrint('[AuthService] signInWithEmailPassword → email=$email');
+    debugPrint('[AuthService] signInWithEmailPassword →');
     try {
-      await _auth.signInWithEmailAndPassword(
-          email: email, password: password);
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
       debugPrint('[AuthService] signInWithEmailPassword ✓');
     } on FirebaseAuthException catch (e) {
-      debugPrint('[AuthService] signInWithEmailPassword ✗ code=${e.code}: ${e.message}');
+      debugPrint(
+          '[AuthService] signInWithEmailPassword ✗ code=${e.code}: ${e.message}');
       throw _handleFirebaseError(e);
     } catch (e) {
       debugPrint('[AuthService] signInWithEmailPassword ✗ unexpected: $e');
@@ -63,19 +68,21 @@ class AuthService {
       String name, String email, String password) async {
     debugPrint('');
     debugPrint('[Email Auth] ── Starting registration ───────────────');
-    debugPrint('[Email Auth] email=$email, name=$name');
     try {
       debugPrint('[Email Auth] Step 1: Creating Firebase user...');
       final credential = await _auth.createUserWithEmailAndPassword(
           email: email, password: password);
-      debugPrint('[Email Auth] Step 1: ✅ Firebase user created uid=${credential.user?.uid}');
+      debugPrint(
+          '[Email Auth] Step 1: ✅ Firebase user created uid=${credential.user?.uid}');
       await credential.user?.updateDisplayName(name);
 
       // Step 2 is best-effort: if the backend is unreachable the user is still
       // authenticated via Firebase. GET /auth/me auto-creates the Firestore doc
       // on the first home-screen load (same resilience strategy as Google sign-in).
-      debugPrint('[Email Auth] Step 2: Calling Node backend ${ApiConstants.authRegister}...');
-      debugPrint('[Email Auth]   Server: ${ApiService.instance.dio.options.baseUrl}');
+      debugPrint(
+          '[Email Auth] Step 2: Calling Node backend ${ApiConstants.authRegister}...');
+      debugPrint(
+          '[Email Auth]   Server: ${ApiService.instance.dio.options.baseUrl}');
       try {
         await ApiService.post(ApiConstants.authRegister, body: {
           'name': name,
@@ -84,8 +91,8 @@ class AuthService {
         debugPrint('[Email Auth] Step 2: ✅ Firestore profile created');
       } on DioException catch (e) {
         if (e.response?.statusCode == 409) {
-          // User doc already exists — idempotent retry, treat as success.
-          debugPrint('[Email Auth] Step 2: ✅ User already registered (409 — idempotent)');
+          // Older servers answered 409 for an existing doc — treat as success.
+          debugPrint('[Email Auth] Step 2: ✅ User already registered');
         } else {
           // Backend unreachable or server error — profile will be auto-created
           // by GET /auth/me when the home screen loads.
@@ -100,7 +107,8 @@ class AuthService {
       debugPrint('[Email Auth] ── Registration complete ✅ ────────────');
       debugPrint('');
     } on FirebaseAuthException catch (e) {
-      debugPrint('[Email Auth] ❌ FirebaseAuthException code=${e.code}: ${e.message}');
+      debugPrint(
+          '[Email Auth] ❌ FirebaseAuthException code=${e.code}: ${e.message}');
       throw _handleFirebaseError(e);
     } catch (e) {
       debugPrint('[Email Auth] ❌ Unexpected error: $e');
@@ -119,15 +127,14 @@ class AuthService {
       // Play Services takes ~68 s to give up on its own when it cannot reach
       // Google. Nobody waits that long in front of a sign-in button, and the
       // browser fallback below needs the failure promptly to be useful.
-      final GoogleSignInAccount? googleUser = await _googleSignIn
-          .signIn()
-          .timeout(const Duration(seconds: 12));
+      final GoogleSignInAccount? googleUser =
+          await _googleSignIn.signIn().timeout(const Duration(seconds: 12));
 
       if (googleUser == null) {
         debugPrint('[Google Auth] Step 1: ⚠️  User cancelled the picker');
         throw const CancelledException();
       }
-      debugPrint('[Google Auth] Step 1: ✅ User selected: ${googleUser.email}');
+      debugPrint('[Google Auth] Step 1: ✅ Account selected');
 
       debugPrint('[Google Auth] Step 2: Fetching auth tokens...');
       final GoogleSignInAuthentication googleAuth =
@@ -140,12 +147,15 @@ class AuthService {
 
       if (accessToken == null || idToken == null) {
         debugPrint('[Google Auth] Step 2: ❌ TOKENS ARE NULL');
-        debugPrint('[Google Auth]   → The signing certificate of THIS build is not');
-        debugPrint('[Google Auth]   → registered in Firebase for com.vabs.communiq.');
+        debugPrint(
+            '[Google Auth]   → The signing certificate of THIS build is not');
+        debugPrint(
+            '[Google Auth]   → registered in Firebase for com.vabs.communiq.');
         debugPrint('[Google Auth]   → Print the one actually in use with:');
         debugPrint('[Google Auth]   →   ./gradlew signingReport');
         debugPrint('[Google Auth]   → then add it under Firebase Console →');
-        debugPrint('[Google Auth]   →   Project Settings → Android app → Add fingerprint,');
+        debugPrint(
+            '[Google Auth]   →   Project Settings → Android app → Add fingerprint,');
         debugPrint('[Google Auth]   → and re-download google-services.json.');
         throw Exception(
             "This build's signing certificate isn't registered in Firebase. "
@@ -160,7 +170,7 @@ class AuthService {
       );
       final userCredential = await _auth.signInWithCredential(credential);
       debugPrint('[Google Auth] Step 3: ✅ Firebase sign-in success — '
-          'uid=${userCredential.user?.uid}, email=${userCredential.user?.email}');
+          'uid=${userCredential.user?.uid}');
 
       // Step 4 is fire-and-forget: if the backend is unreachable the user is
       // still authenticated via Firebase. The GET /auth/me auto-recovery will
@@ -237,9 +247,12 @@ class AuthService {
   /// certificate mismatch would fail the same way twice.
   static bool _isRecoverableGmsFailure(PlatformException e) {
     final detail = '${e.code} ${e.message ?? ''}';
-    final status = RegExp(r'ApiException:\s*(\d+)').firstMatch(detail)?.group(1);
+    final status =
+        RegExp(r'ApiException:\s*(\d+)').firstMatch(detail)?.group(1);
     // 7 NETWORK_ERROR, 8 INTERNAL_ERROR, 17 API_NOT_CONNECTED.
-    return e.code == 'network_error' || status == '7' || status == '8' ||
+    return e.code == 'network_error' ||
+        status == '7' ||
+        status == '8' ||
         status == '17';
   }
 
@@ -255,7 +268,7 @@ class AuthService {
 
     final userCredential = await _auth.signInWithProvider(provider);
     debugPrint('[Google Auth] ✅ Browser OAuth success — '
-        'uid=${userCredential.user?.uid}, email=${userCredential.user?.email}');
+        'uid=${userCredential.user?.uid}');
 
     try {
       await ApiService.post(ApiConstants.authGoogle);
@@ -277,7 +290,8 @@ class AuthService {
   @visibleForTesting
   static Exception googleSignInErrorFor(PlatformException e) {
     final detail = '${e.code} ${e.message ?? ''}';
-    final status = RegExp(r'ApiException:\s*(\d+)').firstMatch(detail)?.group(1);
+    final status =
+        RegExp(r'ApiException:\s*(\d+)').firstMatch(detail)?.group(1);
 
     // The picker was dismissed — not an error worth showing.
     if (status == '12501' || e.code == 'sign_in_canceled') {
@@ -289,8 +303,7 @@ class AuthService {
         return Exception(
             "Can't reach Google — check your internet connection.");
       case '10': // DEVELOPER_ERROR — signing cert / OAuth client mismatch
-        return Exception(
-            "This build isn't registered for Google Sign-In. Run "
+        return Exception("This build isn't registered for Google Sign-In. Run "
             './gradlew signingReport and add that SHA-1 to the Firebase '
             'console.');
       case '12502': // SIGN_IN_CURRENTLY_IN_PROGRESS
@@ -304,14 +317,106 @@ class AuthService {
     }
 
     if (e.code == 'network_error') {
-      return Exception(
-          "Can't reach Google — check your internet connection.");
+      return Exception("Can't reach Google — check your internet connection.");
     }
     return Exception('Google Sign-In failed. Please try again.');
   }
 
-  /// Signs the user out from both Firebase and Google, and clears the local
-  /// profile cache so a stale profile is never shown to the next user.
+  /// Whether to offer Sign in with Apple. App Store guideline 4.8 requires it
+  /// on iOS whenever another social login (Google) is offered.
+  static bool get appleSignInAvailable =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+  /// Signs the user in with Apple. Throws [CancelledException] if the user
+  /// dismisses the sheet.
+  static Future<void> signInWithApple() async {
+    debugPrint('[Apple Auth] ── Starting sign-in flow ──────────────');
+    // Firebase checks the SHA-256 of this nonce against the identity token,
+    // which stops a token from another app being replayed here.
+    final rawNonce = _randomNonce();
+    final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+    try {
+      final apple = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: hashedNonce,
+      );
+
+      final credential = OAuthProvider('apple.com').credential(
+        idToken: apple.identityToken,
+        rawNonce: rawNonce,
+        accessToken: apple.authorizationCode,
+      );
+      final userCredential = await _auth.signInWithCredential(credential);
+      debugPrint(
+          '[Apple Auth] ✅ Firebase sign-in uid=${userCredential.user?.uid}');
+
+      // Apple shares the user's name only on the very first authorisation and
+      // never puts it in the ID token, so pass it to the server now or lose it.
+      final fullName = [apple.givenName, apple.familyName]
+          .whereType<String>()
+          .where((p) => p.trim().isNotEmpty)
+          .join(' ')
+          .trim();
+      if (fullName.isNotEmpty) {
+        await userCredential.user?.updateDisplayName(fullName);
+      }
+
+      try {
+        await ApiService.post(
+          ApiConstants.authGoogle,
+          body: {if (fullName.isNotEmpty) 'name': fullName},
+        );
+      } catch (apiErr) {
+        debugPrint('[Apple Auth] ⚠️  Backend unreachable — profile will be '
+            'created on first home load. ($apiErr)');
+      }
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw const CancelledException();
+      }
+      debugPrint('[Apple Auth] ❌ ${e.code}: ${e.message}');
+      throw Exception('Sign in with Apple failed. Please try again.');
+    } on FirebaseAuthException catch (e) {
+      debugPrint('[Apple Auth] ❌ FirebaseAuthException code=${e.code}');
+      throw _handleFirebaseError(e);
+    }
+  }
+
+  static String _randomNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
+        .join();
+  }
+
+  /// Permanently deletes the account: the server removes every stored record
+  /// (sessions, reports, contest attempts, visual reports, profile) and the
+  /// Firebase Auth user, then this device is signed out and wiped.
+  ///
+  /// Both stores require in-app account deletion.
+  static Future<void> deleteAccount() async {
+    try {
+      await ApiService.instance.dio.delete(ApiConstants.authAccount);
+    } on DioException catch (e) {
+      debugPrint('[AuthService] deleteAccount ✗ $e');
+      if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout) {
+        throw Exception(
+            "Can't reach CommuniQ. Check your connection and try again.");
+      }
+      throw Exception('Could not delete your account. Please try again.');
+    }
+    await signOut();
+  }
+
+  /// Signs the user out from both Firebase and Google, and clears every local
+  /// cache so nothing from this account is shown to — or synced as — the next
+  /// user on this device.
   static Future<void> signOut() async {
     debugPrint('[AuthService] signOut →');
     try {
@@ -321,6 +426,9 @@ class AuthService {
         ProfileCacheService.clear(),
         OfflineCacheService.clear(),
         LevelService.instance.clearProgress(),
+        // Pending onboarding answers belong to whoever entered them; left in
+        // place they would sync into the next account that signs in.
+        OnboardingService.clearLocal(),
       ]);
       debugPrint('[AuthService] signOut ✓');
     } catch (e) {
@@ -330,12 +438,13 @@ class AuthService {
 
   /// Sends a password reset email to [email].
   static Future<void> sendPasswordReset(String email) async {
-    debugPrint('[AuthService] sendPasswordReset → email=$email');
+    debugPrint('[AuthService] sendPasswordReset →');
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
       debugPrint('[AuthService] sendPasswordReset ✓');
     } on FirebaseAuthException catch (e) {
-      debugPrint('[AuthService] sendPasswordReset ✗ code=${e.code}: ${e.message}');
+      debugPrint(
+          '[AuthService] sendPasswordReset ✗ code=${e.code}: ${e.message}');
       throw _handleFirebaseError(e);
     } catch (e) {
       debugPrint('[AuthService] sendPasswordReset ✗ $e');

@@ -2,6 +2,10 @@ class RoleplayConfig {
   /// Firestore scenario document ID — required to call POST /sessions/start.
   final String scenarioId;
 
+  /// Preset key from `kScenarioPresets` (e.g. 'job_interview'); null for a
+  /// custom scenario.
+  final String? scenarioKey;
+
   /// Display title shown in the conversation and feedback screens.
   final String scenarioTitle;
 
@@ -24,6 +28,7 @@ class RoleplayConfig {
 
   RoleplayConfig({
     this.scenarioId = '',
+    this.scenarioKey,
     this.scenarioTitle = 'Roleplay Session',
     required this.scenario,
     required this.persona,

@@ -353,4 +353,43 @@ void main() {
       });
     }
   });
+
+  group('LevelCompletionResult.fromJson', () {
+    test('parses XP, level and streak from the completion response', () {
+      final r = LevelCompletionResult.fromJson(const {
+        'completedLevelIds': [1, '2'],
+        'coinsAwarded': 35,
+        'totalCoins': 175,
+        'levelCoins': 75,
+        'alreadyComplete': false,
+        'xpAwarded': 20,
+        'newLevel': 3,
+        'leveledUp': true,
+        'newStreak': 4,
+      });
+      expect(r.completedLevelIds, [1, 2]);
+      expect(r.xpAwarded, 20);
+      expect(r.newLevel, 3);
+      expect(r.leveledUp, isTrue);
+      expect(r.newStreak, 4);
+    });
+
+    test('a replay (null progress fields) parses without XP', () {
+      final r = LevelCompletionResult.fromJson(const {
+        'completedLevelIds': [1],
+        'coinsAwarded': 0,
+        'totalCoins': 100,
+        'levelCoins': 40,
+        'alreadyComplete': true,
+        'xpAwarded': 0,
+        'newLevel': null,
+        'leveledUp': false,
+        'newStreak': null,
+      });
+      expect(r.alreadyComplete, isTrue);
+      expect(r.xpAwarded, 0);
+      expect(r.newLevel, isNull);
+      expect(r.leveledUp, isFalse);
+    });
+  });
 }

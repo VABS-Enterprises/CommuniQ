@@ -10,24 +10,6 @@ abstract final class AppRoutes {
   static const login = '/login';
   static const signup = '/signup';
 
-  // ── Onboarding funnel ────────────────────────────────────────────────────
-  // A flat chain rather than nested children: each step is independently
-  // addressable, so a user resuming a half-finished funnel can be sent
-  // straight to where they stopped.
-  static const onboardingContext = '/onboarding/context';
-  static const onboardingGoal = '/onboarding/goal';
-  static const onboardingChallenges = '/onboarding/challenges';
-  static const onboardingSkill = '/onboarding/skill';
-  static const onboardingStyle = '/onboarding/style';
-  static const onboardingLevel = '/onboarding/level';
-  static const onboardingConfirm = '/onboarding/confirm';
-  static const onboardingCommitment = '/onboarding/commitment';
-  static const onboardingValidation = '/onboarding/validation';
-  static const onboardingTransformation = '/onboarding/transformation';
-  static const onboardingFirstRoleplay = '/onboarding/first-roleplay';
-  static const onboardingRoleplayIntro = '/onboarding/roleplay-intro';
-  static const onboardingPlanReady = '/onboarding/plan-ready';
-
   // ── Main tabs (shell branches) ───────────────────────────────────────────
   static const home = '/home';
   static const learning = '/learning';
@@ -44,6 +26,8 @@ abstract final class AppRoutes {
   static const roleplayScenarios = '/roleplay/scenarios';
   static const roleplayConversation = '/roleplay/conversation';
   static const roleplayFeedback = '/roleplay/feedback';
+
+  /// A past session's stored evaluation, opened from history.
   static const sessionReport = '/session-report';
 
   static const contestPlay = '/contest/play';
@@ -54,8 +38,6 @@ abstract final class AppRoutes {
   /// App-wide XP standings — distinct from [contestLeaderboard], which ranks
   /// contest scores.
   static const leaderboard = '/leaderboard';
-
-  static const premium = '/premium';
 
   // ── Debug ────────────────────────────────────────────────────────────────
   static const devGallery = '/dev/gallery';

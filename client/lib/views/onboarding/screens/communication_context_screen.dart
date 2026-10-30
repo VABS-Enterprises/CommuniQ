@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/models/onboarding_data.dart';
@@ -13,8 +12,7 @@ class CommunicationContextScreen extends StatefulWidget {
       _CommunicationContextScreenState();
 }
 
-class _CommunicationContextScreenState
-    extends State<CommunicationContextScreen>
+class _CommunicationContextScreenState extends State<CommunicationContextScreen>
     with SingleTickerProviderStateMixin {
   final Set<String> _selected = {};
   late AnimationController _entranceCtrl;

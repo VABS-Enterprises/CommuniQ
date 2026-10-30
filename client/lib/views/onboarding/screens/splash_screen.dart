@@ -104,7 +104,8 @@ class _SplashScreenState extends State<SplashScreen>
           fit: StackFit.expand,
           children: [
             _SplashBackground(glowAnimation: _glowAnimation),
-            _OrbitRings(ringController: _ringController, glowAnimation: _glowAnimation),
+            _OrbitRings(
+                ringController: _ringController, glowAnimation: _glowAnimation),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -241,8 +242,8 @@ class _OrbitRings extends StatelessWidget {
                   angle: ringController.value * 2 * 3.14159,
                   child: _DashedRing(
                     radius: 115,
-                    color: AppColors.brand
-                        .withOpacity(0.10 * glowAnimation.value),
+                    color:
+                        AppColors.brand.withOpacity(0.10 * glowAnimation.value),
                     dashCount: 6,
                     strokeWidth: 1.0,
                   ),
@@ -258,8 +259,8 @@ class _OrbitRings extends StatelessWidget {
                   angle: -ringController.value * 2 * 3.14159,
                   child: _DashedRing(
                     radius: 145,
-                    color: AppColors.brand
-                        .withOpacity(0.06 * glowAnimation.value),
+                    color:
+                        AppColors.brand.withOpacity(0.06 * glowAnimation.value),
                     dashCount: 10,
                     strokeWidth: 0.5,
                   ),

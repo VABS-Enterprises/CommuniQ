@@ -4,7 +4,9 @@ class ApiConstants {
   // Auth endpoints
   static const String authMe = '/auth/me';
   static const String authRegister = '/auth/register';
+  /// Google and Apple sign-in both upsert through this endpoint.
   static const String authGoogle = '/auth/google';
+  static const String authAccount = '/auth/account';
 
   // Onboarding endpoints
   static const String onboarding = '/onboarding';
@@ -12,17 +14,14 @@ class ApiConstants {
   static const String onboardingTranscribe = '/onboarding/transcribe';
 
   // Session endpoints
-  static const String scenarios = '/scenarios';
   static const String sessionsStart = '/sessions/start';
   static const String sessionsOpening = '/sessions/opening';
   static const String sessionsTurn = '/sessions/turn';
 
-  /// Streamed variant of [sessionsTurn]. Same work, NDJSON response, so the
-  /// reply can start playing before the last sentence is synthesised.
-  static const String sessionsTurnStream = '/sessions/turn/stream';
   static const String sessionsEnd = '/sessions/end';
   static const String sessionsAbandon = '/sessions/abandon';
   static const String sessionsHistory = '/sessions/history';
+  static String sessionReport(String sessionId) => '/sessions/$sessionId/report';
 
   // CP2: LiveKit token endpoint — used when live voice mode is enabled
   static const String sessionsLivekitToken = '/sessions/livekit-token';
@@ -45,6 +44,7 @@ class ApiConstants {
   static const String userTrainingConsent = '/user/training-consent';
   // Self-learning evaluation model transparency data (skillHistory, etc.)
   static const String userEvaluationProfile = '/user/evaluation-profile';
+  static const String visualReports = '/user/visual-reports';
 
   // Leaderboards
   static const String leaderboard = '/leaderboard';

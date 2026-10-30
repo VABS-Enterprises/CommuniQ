@@ -13,9 +13,16 @@ import 'package:communiq/views/visual_analysis/widgets/gaze_radar_widget.dart';
 class VisualAnalysisResultsScreen extends StatefulWidget {
   final VisionSessionResult sessionResult;
 
+  /// True when this result was already evaluated and stored (the roleplay
+  /// conversation saves its camera report with the session id). The screen
+  /// then shows [sessionResult]'s insights as-is instead of saving a second
+  /// copy of the same report.
+  final bool alreadySaved;
+
   const VisualAnalysisResultsScreen({
     super.key,
     required this.sessionResult,
+    this.alreadySaved = false,
   });
 
   @override
@@ -24,13 +31,21 @@ class VisualAnalysisResultsScreen extends StatefulWidget {
 
 class _VisualAnalysisResultsScreenState extends State<VisualAnalysisResultsScreen> {
   List<VisualInsight>? _aiInsights;
-  bool _isLoadingAi = true;
+  late bool _isLoadingAi;
+
+  /// Client wait for the evaluate+save call. The server allows the AI
+  /// evaluator 15 s, so anything shorter discards answers that were coming.
+  static const _aiTimeout = Duration(seconds: 16);
 
   @override
   void initState() {
     super.initState();
-    _aiInsights = widget.sessionResult.insights;
-    _fetchAiInsights();
+    _isLoadingAi = !widget.alreadySaved;
+    if (widget.alreadySaved) {
+      _aiInsights = widget.sessionResult.insights;
+    } else {
+      _fetchAiInsights();
+    }
   }
 
   Future<void> _fetchAiInsights() async {
@@ -38,10 +53,15 @@ class _VisualAnalysisResultsScreenState extends State<VisualAnalysisResultsScree
     List<VisualInsight>? aiInsights;
 
     try {
-      // Node server queries Python ai-server Groq LLM model & persists report directly into Firestore!
+      // Evaluates via the ai-server and stores the report. Demo (synthetic
+      // camera) runs are flagged so the server does not keep them.
       aiInsights = await SessionService.instance
-          .evaluateAndSaveVisualReport(res)
-          .timeout(const Duration(seconds: 4));
+          .evaluateAndSaveVisualReport(
+            res,
+            isDemo: res.isDemoMode,
+            timeout: _aiTimeout,
+          )
+          .timeout(_aiTimeout + const Duration(seconds: 2));
     } catch (_) {}
 
     if (mounted) {
@@ -587,7 +607,7 @@ class _VisualAnalysisResultsScreenState extends State<VisualAnalysisResultsScree
   }
 
   Widget _buildInsightsCard() {
-    final insights = _aiInsights ?? widget.sessionResult.insights;
+    final insights = _aiInsights ?? const <VisualInsight>[];
     return GlassCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -616,6 +636,14 @@ class _VisualAnalysisResultsScreenState extends State<VisualAnalysisResultsScree
             ],
           ),
           const SizedBox(height: 16),
+          if (_isLoadingAi)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Generating your AI coaching insights…',
+                style: TextStyle(color: AppColors.inkMuted, fontSize: 13),
+              ),
+            ),
           ...insights.map((insight) {
             Color cardColor = AppColors.primary;
             IconData icon = Icons.check_circle_outline_rounded;

@@ -29,8 +29,16 @@ class UserProfile {
   /// skill → { avg: 0–100, sessions: count }
   final Map<String, SkillStat> skillProgress;
 
-  /// Total completed sessions (populated separately from session history).
+  /// Total completed roleplay sessions (`completedSessionCount`, counted
+  /// server-side).
   final int sessionsCompleted;
+
+  /// XP earned this ISO week (0 once the week has passed).
+  final int weeklyXp;
+
+  /// Beginner / Intermediate / Advanced as chosen in onboarding, if any.
+  /// Separate from [level], which is earned through XP.
+  final String? selfAssessedLevel;
 
   /// Learning module progress: list of completed scenarios with coins/scores.
   /// The raw `learningProgress` map from the user document: `coins`,
@@ -55,6 +63,8 @@ class UserProfile {
     required this.isPremium,
     this.skillProgress = const {},
     this.sessionsCompleted = 0,
+    this.weeklyXp = 0,
+    this.selfAssessedLevel,
     this.learningProgress = const {},
   });
 
@@ -74,7 +84,10 @@ class UserProfile {
       badges: _readStringList(json['badges']),
       isPremium: json['isPremium'] == true,
       skillProgress: skillMap,
-      sessionsCompleted: _readInt(json['_sessionsCompleted']),
+      sessionsCompleted:
+          _readInt(json['completedSessionCount'] ?? json['_sessionsCompleted']),
+      weeklyXp: _readInt(json['weeklyXp']),
+      selfAssessedLevel: _readSelfAssessedLevel(json),
       learningProgress: _readLearningProgress(json),
     );
   }
@@ -107,6 +120,11 @@ class UserProfile {
   static Map<String, dynamic> _readLearningProgress(Map<String, dynamic> json) =>
       _readMap(json['learningProgress'] ?? json['learning_progress']);
 
+  static String? _readSelfAssessedLevel(Map<String, dynamic> json) {
+    final v = json['selfAssessedLevel'] ?? _readMap(json['onboarding'])['selfAssessedLevel'];
+    return v is String && v.isNotEmpty ? v : null;
+  }
+
   Map<String, dynamic> toJson() => {
         'uid': uid,
         'email': email,
@@ -120,25 +138,11 @@ class UserProfile {
         'skillProgress': skillProgress.map(
           (k, v) => MapEntry(k, {'avg': v.avg, 'sessions': v.sessions}),
         ),
-        '_sessionsCompleted': sessionsCompleted,
+        'completedSessionCount': sessionsCompleted,
+        'weeklyXp': weeklyXp,
+        if (selfAssessedLevel != null) 'selfAssessedLevel': selfAssessedLevel,
         'learningProgress': learningProgress,
       };
-
-  /// Returns a copy with [sessionsCompleted] filled in.
-  UserProfile copyWithSessions(int count) => UserProfile(
-        uid: uid,
-        email: email,
-        name: name,
-        photoURL: photoURL,
-        xp: xp,
-        level: level,
-        streak: streak,
-        badges: badges,
-        isPremium: isPremium,
-        skillProgress: skillProgress,
-        sessionsCompleted: count,
-        learningProgress: learningProgress,
-      );
 
   // ── XP thresholds ──────────────────────────────────────────────────────────
 

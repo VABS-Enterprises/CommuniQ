@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:communiq/core/constants/api_constants.dart';
+import 'package:communiq/core/services/activity_bus.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/models/demo_evaluation_result.dart';
 import 'package:communiq/models/onboarding_data.dart';
@@ -77,13 +80,12 @@ class OnboardingService {
     debugPrint('');
     debugPrint('[Onboarding] ── Syncing to Firestore ───────────────────────');
     debugPrint('[Onboarding]   POST ${ApiConstants.onboarding}');
-    debugPrint('[Onboarding]   payload: ${data.toJson()}');
     try {
-      final response =
-          await ApiService.post(ApiConstants.onboarding, body: data.toJson());
+      await ApiService.post(ApiConstants.onboarding, body: data.toJson());
       await clearLocal();
       debugPrint('[Onboarding] ✅ Firestore write confirmed');
-      debugPrint('[Onboarding]   server response: $response');
+      // Profile shows the onboarding answers — refresh it if it's on screen.
+      unawaited(ActivityBus.instance.record(ActivityKind.onboarding));
       debugPrint('[Onboarding] ─────────────────────────────────────────────');
       debugPrint('');
     } catch (e) {
@@ -101,13 +103,15 @@ class OnboardingService {
   /// Throws on network/server errors; callers should handle and show UI feedback.
   static Future<DemoEvaluationResult> evaluateDemoIntro(
       String introduction) async {
-    debugPrint('[Onboarding] Evaluating demo intro (${introduction.length} chars)');
+    debugPrint(
+        '[Onboarding] Evaluating demo intro (${introduction.length} chars)');
     final response = await ApiService.post(
       ApiConstants.onboardingDemo,
       body: {'userIntroduction': introduction},
     );
     final result = DemoEvaluationResult.fromJson(response);
-    debugPrint('[Onboarding] Demo eval complete — overall=${result.overallScore}');
+    debugPrint(
+        '[Onboarding] Demo eval complete — overall=${result.overallScore}');
     return result;
   }
 
@@ -135,7 +139,8 @@ class OnboardingService {
       if (body is Map) {
         serverMsg = (body['detail'] ?? body['error'])?.toString();
       }
-      debugPrint('[Onboarding] Transcription error (${e.response?.statusCode}): $serverMsg');
+      debugPrint(
+          '[Onboarding] Transcription error (${e.response?.statusCode}): $serverMsg');
       throw Exception(serverMsg ?? 'Transcription failed. Please try again.');
     }
   }

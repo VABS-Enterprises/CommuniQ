@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:communiq/common_widgets/chunky_button.dart';
 import 'package:communiq/common_widgets/chunky_card.dart';
@@ -17,9 +19,9 @@ import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/core/constants/api_constants.dart';
+import 'package:communiq/core/constants/app_config.dart';
 import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/models/user_profile.dart';
-import 'package:communiq/views/premium_view/screens/premium_screen.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -35,6 +37,8 @@ class _ProfileViewState extends State<ProfileView> {
   bool _error = false;
   bool _trainingOptedIn = true;
   bool _trainingConsentUpdating = false;
+  String _appVersion = '';
+  bool _deleting = false;
 
   StreamSubscription<UserProfile>? _profileSub;
 
@@ -43,9 +47,19 @@ class _ProfileViewState extends State<ProfileView> {
     super.initState();
     // Update silently when background refresh completes.
     _profileSub = SessionService.instance.profileUpdates.listen((fresh) {
-      if (mounted) setState(() { _profile = fresh; _error = false; });
+      if (mounted)
+        setState(() {
+          _profile = fresh;
+          _error = false;
+        });
     });
     _load();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) {
+        setState(
+            () => _appVersion = '${info.version} (build ${info.buildNumber})');
+      }
+    }).catchError((_) {});
   }
 
   @override
@@ -78,10 +92,10 @@ class _ProfileViewState extends State<ProfileView> {
       }
       bool trainingOptedIn = _trainingOptedIn;
       try {
-        final res =
-            await ApiService.instance.dio.get(ApiConstants.userEvaluationProfile);
-        final consent =
-            (res.data as Map<String, dynamic>?)?['trainingConsent'] as Map<String, dynamic>?;
+        final res = await ApiService.instance.dio
+            .get(ApiConstants.userEvaluationProfile);
+        final consent = (res.data as Map<String, dynamic>?)?['trainingConsent']
+            as Map<String, dynamic>?;
         if (consent != null && consent['optedIn'] is bool) {
           trainingOptedIn = consent['optedIn'] as bool;
         }
@@ -129,8 +143,8 @@ class _ProfileViewState extends State<ProfileView> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text('Log Out',
-                style: AppTextStyles.labelMedium
-                    .copyWith(color: AppColors.error)),
+                style:
+                    AppTextStyles.labelMedium.copyWith(color: AppColors.error)),
           ),
         ],
       ),
@@ -156,12 +170,159 @@ class _ProfileViewState extends State<ProfileView> {
       if (mounted) {
         setState(() => _trainingOptedIn = previous);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not update your preference. Try again.')),
+          const SnackBar(
+              content: Text('Could not update your preference. Try again.')),
         );
       }
     } finally {
       if (mounted) setState(() => _trainingConsentUpdating = false);
     }
+  }
+
+  Future<void> _editName() async {
+    final controller = TextEditingController(text: _profile?.name ?? '');
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.cardRadius),
+        title: Text('Display name', style: AppTextStyles.titleLarge),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 100,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(hintText: 'Your name'),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel',
+                style: AppTextStyles.labelMedium
+                    .copyWith(color: AppColors.inkMuted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: Text('Save',
+                style:
+                    AppTextStyles.labelMedium.copyWith(color: AppColors.brand)),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    final trimmed = newName?.trim() ?? '';
+    if (trimmed.isEmpty || trimmed == _profile?.name || !mounted) return;
+    try {
+      final updated = await SessionService.instance.updateName(trimmed);
+      if (mounted) setState(() => _profile = updated);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteAccount() async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.cardRadius),
+          title: Text('Delete account?', style: AppTextStyles.titleLarge),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'This permanently deletes your account and everything in it — '
+                'sessions, reports, XP, contest results and lesson progress. '
+                'It cannot be undone.\n\nType DELETE to confirm.',
+                style: AppTextStyles.bodyMedium.copyWith(height: 1.5),
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(hintText: 'DELETE'),
+                onChanged: (_) => setDialogState(() {}),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel',
+                  style: AppTextStyles.labelMedium
+                      .copyWith(color: AppColors.inkMuted)),
+            ),
+            TextButton(
+              onPressed: controller.text.trim().toUpperCase() == 'DELETE'
+                  ? () => Navigator.pop(ctx, true)
+                  : null,
+              child: Text('Delete',
+                  style: AppTextStyles.labelMedium
+                      .copyWith(color: AppColors.error)),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deleting = true);
+    try {
+      // On success AuthService signs out and the router returns to welcome.
+      await AuthService.deleteAccount();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _deleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  /// Opens the public policy page when one is configured (AppConfig), and
+  /// falls back to the copy bundled in the app.
+  Future<void> _openLegal(String title, String url, String fallbackBody) async {
+    if (url.isNotEmpty) {
+      final ok =
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      if (ok) return;
+    }
+    if (mounted) _showInfoDialog(title, fallbackBody);
+  }
+
+  Future<void> _contactSupport() async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: AppConfig.supportEmail,
+      queryParameters: {'subject': 'CommuniQ support'},
+    );
+    final ok = await launchUrl(uri).catchError((_) => false);
+    if (!ok && mounted) {
+      _showInfoDialog(
+          'Help & Support', 'Write to us at ${AppConfig.supportEmail}');
+    }
+  }
+
+  void _showVisualReports() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const _VisualReportsSheet(),
+    );
   }
 
   void _showInfoDialog(String title, String body) {
@@ -172,14 +333,15 @@ class _ProfileViewState extends State<ProfileView> {
         shape: RoundedRectangleBorder(borderRadius: AppRadius.cardRadius),
         title: Text(title, style: AppTextStyles.titleLarge),
         content: SingleChildScrollView(
-          child: Text(body, style: AppTextStyles.bodyMedium.copyWith(height: 1.6)),
+          child:
+              Text(body, style: AppTextStyles.bodyMedium.copyWith(height: 1.6)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text('Close',
-                style: AppTextStyles.labelMedium
-                    .copyWith(color: AppColors.brand)),
+                style:
+                    AppTextStyles.labelMedium.copyWith(color: AppColors.brand)),
           ),
         ],
       ),
@@ -217,28 +379,19 @@ class _ProfileViewState extends State<ProfileView> {
                         children: [
                           _ProfileHeroHeader(profile: _profile),
                           const SizedBox(height: AppSpacing.section),
-
-                          if (_profile?.isPremium != true) ...[
-                            _PremiumBanner(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const PremiumScreen()),
-                              ),
+                          if (_onboarding != null) ...[
+                            _OnboardingSection(
+                              onboarding: _onboarding!,
+                              selfAssessedLevel: _profile?.selfAssessedLevel,
                             ),
                             const SizedBox(height: AppSpacing.section),
                           ],
-
-                          if (_onboarding != null) ...[
-                            _OnboardingSection(onboarding: _onboarding!),
-                            const SizedBox(height: AppSpacing.section),
-                          ],
-
                           _buildSection('Account', [
                             _Tile(
                               icon: Icons.person_outline_rounded,
                               title: 'Display Name',
                               subtitle: _profile?.name ?? '—',
+                              onTap: _editName,
                             ),
                             _Tile(
                               icon: Icons.email_outlined,
@@ -249,32 +402,19 @@ class _ProfileViewState extends State<ProfileView> {
                                     ClipboardData(text: _profile?.email ?? ''));
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content: Text('Email copied to clipboard')),
+                                      content:
+                                          Text('Email copied to clipboard')),
                                 );
                               },
                             ),
                             _Tile(
-                              icon: _profile?.isPremium == true
-                                  ? Icons.workspace_premium_rounded
-                                  : Icons.stars_outlined,
-                              title: 'Plan',
-                              subtitle: _profile?.isPremium == true
-                                  ? 'Premium'
-                                  : 'Free (Tap to upgrade)',
-                              iconColor: _profile?.isPremium == true
-                                  ? AppColors.sun
-                                  : AppColors.brand,
-                              onTap: _profile?.isPremium == true
-                                  ? null
-                                  : () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) =>
-                                                const PremiumScreen()),
-                                      ),
+                              icon: Icons.videocam_outlined,
+                              title: 'Camera Reports',
+                              subtitle:
+                                  'Eye contact and posture from past sessions',
+                              onTap: _showVisualReports,
                             ),
                           ]),
-
                           _buildSection('Privacy', [
                             _SwitchTile(
                               icon: Icons.model_training_rounded,
@@ -288,42 +428,56 @@ class _ProfileViewState extends State<ProfileView> {
                               onChanged: _updateTrainingConsent,
                             ),
                           ]),
-
                           _buildSection('Legal', [
                             _Tile(
                               icon: Icons.description_outlined,
                               title: 'Terms & Conditions',
-                              onTap: () => _showInfoDialog(
-                                  'Terms & Conditions', _kTerms),
+                              onTap: () => _openLegal('Terms & Conditions',
+                                  AppConfig.termsUrl, _kTerms),
                             ),
                             _Tile(
                               icon: Icons.privacy_tip_outlined,
                               title: 'Privacy Policy',
-                              onTap: () =>
-                                  _showInfoDialog('Privacy Policy', _kPrivacy),
+                              onTap: () => _openLegal('Privacy Policy',
+                                  AppConfig.privacyPolicyUrl, _kPrivacy),
                             ),
                           ]),
-
                           _buildSection('App', [
-                            const _Tile(
+                            _Tile(
                               icon: Icons.info_outline_rounded,
                               title: 'App Version',
-                              subtitle: '1.0.0 (build 1)',
+                              subtitle: _appVersion.isEmpty ? '—' : _appVersion,
                             ),
                             _Tile(
                               icon: Icons.help_outline_rounded,
                               title: 'Help & Support',
-                              onTap: () => _showInfoDialog('Help & Support',
-                                  'For support, reach us at support@communiq.app'),
+                              subtitle: AppConfig.supportEmail,
+                              onTap: _contactSupport,
                             ),
                           ]),
-
                           const SizedBox(height: AppSpacing.s8),
                           ChunkyButton(
                             label: 'Log Out',
                             icon: Icons.logout_rounded,
                             variant: ChunkyButtonVariant.danger,
-                            onPressed: _handleLogout,
+                            onPressed: _deleting ? null : _handleLogout,
+                          ),
+                          const SizedBox(height: AppSpacing.s12),
+                          Center(
+                            child: _deleting
+                                ? const Padding(
+                                    padding: EdgeInsets.all(AppSpacing.s12),
+                                    child: CircularProgressIndicator(
+                                        color: AppColors.error),
+                                  )
+                                : TextButton(
+                                    onPressed: _confirmDeleteAccount,
+                                    child: Text(
+                                      'Delete account',
+                                      style: AppTextStyles.labelMedium
+                                          .copyWith(color: AppColors.error),
+                                    ),
+                                  ),
                           ),
                         ],
                       ),
@@ -342,7 +496,9 @@ class _ProfileViewState extends State<ProfileView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionHeader(title: title, padding: const EdgeInsets.only(bottom: AppSpacing.s10)),
+          SectionHeader(
+              title: title,
+              padding: const EdgeInsets.only(bottom: AppSpacing.s10)),
           ChunkyCard(
             padding: EdgeInsets.zero,
             child: Column(
@@ -350,7 +506,8 @@ class _ProfileViewState extends State<ProfileView> {
                 for (int i = 0; i < tiles.length; i++) ...[
                   tiles[i],
                   if (i < tiles.length - 1)
-                    const Divider(height: 1, color: AppColors.outline, indent: 62),
+                    const Divider(
+                        height: 1, color: AppColors.outline, indent: 62),
                 ],
               ],
             ),
@@ -371,19 +528,17 @@ class _Tile extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.onTap,
-    this.iconColor,
   });
 
   final IconData icon;
   final String title;
   final String? subtitle;
   final VoidCallback? onTap;
-  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: IconTile(size: 40, icon: icon, color: iconColor),
+      leading: IconTile(size: 40, icon: icon),
       title: Text(title, style: AppTextStyles.titleSmall),
       subtitle: subtitle != null
           ? Text(subtitle!, style: AppTextStyles.bodySmall)
@@ -422,7 +577,8 @@ class _SwitchTile extends StatelessWidget {
     return ListTile(
       leading: IconTile(size: 40, icon: icon),
       title: Text(title, style: AppTextStyles.titleSmall),
-      subtitle: Text(subtitle, style: AppTextStyles.bodySmall.copyWith(height: 1.4)),
+      subtitle:
+          Text(subtitle, style: AppTextStyles.bodySmall.copyWith(height: 1.4)),
       isThreeLine: true,
       trailing: updating
           ? const SizedBox(
@@ -456,12 +612,11 @@ class _ProfileHeroHeader extends StatelessWidget {
     final name = profile?.name ?? user?.displayName ?? 'User';
     final email = profile?.email ?? user?.email ?? '';
     final photo = profile?.photoURL ?? user?.photoURL;
-    final isPremium = profile?.isPremium ?? false;
     final level = profile?.level ?? 1;
     final levelLabel = profile?.levelLabel ?? 'Starter';
 
     return ChunkyCard(
-      accent: isPremium ? AppColors.sun : AppColors.brand,
+      accent: AppColors.brand,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -473,14 +628,15 @@ class _ProfileHeroHeader extends StatelessWidget {
                 height: 76,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isPremium ? AppColors.sun : AppColors.brand,
+                  color: AppColors.brand,
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: photo != null
                     ? Image.network(
                         photo,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _InitialAvatar(name: name),
+                        errorBuilder: (_, __, ___) =>
+                            _InitialAvatar(name: name),
                       )
                     : _InitialAvatar(name: name),
               ),
@@ -530,19 +686,13 @@ class _ProfileHeroHeader extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    CountBadge(label: levelLabel, icon: Icons.military_tech_rounded),
-                    if (isPremium)
-                      const CountBadge(
-                        label: 'Premium',
-                        color: AppColors.sun,
-                        icon: Icons.workspace_premium_rounded,
-                      )
-                    else
-                      const CountBadge(
-                        label: 'Free Plan',
-                        color: AppColors.inkSoft,
-                        icon: Icons.stars_outlined,
-                      ),
+                    CountBadge(
+                        label: levelLabel, icon: Icons.military_tech_rounded),
+                    CountBadge(
+                      label: '${profile?.xp ?? 0} XP',
+                      color: AppColors.sun,
+                      icon: Icons.bolt_rounded,
+                    ),
                   ],
                 ),
               ],
@@ -571,61 +721,13 @@ class _InitialAvatar extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PREMIUM BANNER
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _PremiumBanner extends StatelessWidget {
-  final VoidCallback onTap;
-  const _PremiumBanner({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return ChunkyCard(
-      onTap: onTap,
-      fill: AppColors.brand,
-      borderColor: AppColors.brandDark,
-      child: Row(
-        children: [
-          const IconTile(
-            icon: Icons.workspace_premium_rounded,
-            color: AppColors.inkOnDark,
-            tinted: false,
-          ),
-          const SizedBox(width: AppSpacing.s16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Upgrade to Premium',
-                  style: AppTextStyles.titleLarge
-                      .copyWith(color: AppColors.inkOnDark),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Unlock all 150 sessions & advanced AI',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.inkOnDark.withValues(alpha: 0.85)),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.chevron_right_rounded,
-              color: AppColors.inkOnDark.withValues(alpha: 0.85)),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // ONBOARDING PREFERENCES SECTION
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _OnboardingSection extends StatelessWidget {
   final OnboardingData onboarding;
-  const _OnboardingSection({required this.onboarding});
+  final String? selfAssessedLevel;
+  const _OnboardingSection({required this.onboarding, this.selfAssessedLevel});
 
   @override
   Widget build(BuildContext context) {
@@ -638,10 +740,14 @@ class _OnboardingSection extends StatelessWidget {
       if (o.speakingStyle != null)
         _infoTile(Icons.record_voice_over_outlined, 'Speaking Style',
             o.speakingStyle!),
-      if (o.level != null)
-        _infoTile(Icons.signal_cellular_alt_rounded, 'Skill Level', o.level!),
+      if ((o.level ?? selfAssessedLevel) != null)
+        _infoTile(Icons.signal_cellular_alt_rounded, 'Self-assessed level',
+            (o.level ?? selfAssessedLevel)!),
       if (o.primaryGoal != null)
         _infoTile(Icons.flag_outlined, 'Primary Goal', o.primaryGoal!),
+      if (o.commitmentDays != null)
+        _infoTile(Icons.event_repeat_rounded, 'Practice goal',
+            '${o.commitmentDays} days a week'),
       if (o.speakingNote != null && o.speakingNote!.isNotEmpty)
         _infoTile(Icons.notes_rounded, 'Personal Note', o.speakingNote!),
     ];
@@ -662,7 +768,8 @@ class _OnboardingSection extends StatelessWidget {
               for (int i = 0; i < tiles.length; i++) ...[
                 tiles[i],
                 if (i < tiles.length - 1)
-                  const Divider(height: 1, color: AppColors.outline, indent: 62),
+                  const Divider(
+                      height: 1, color: AppColors.outline, indent: 62),
               ],
             ],
           ),
@@ -721,54 +828,163 @@ class _OnboardingSection extends StatelessWidget {
       );
 }
 
+// ── Camera reports ────────────────────────────────────────────────────────
+
+class _VisualReportsSheet extends StatefulWidget {
+  const _VisualReportsSheet();
+
+  @override
+  State<_VisualReportsSheet> createState() => _VisualReportsSheetState();
+}
+
+class _VisualReportsSheetState extends State<_VisualReportsSheet> {
+  late Future<List<Map<String, dynamic>>> _future =
+      SessionService.instance.fetchVisualReports();
+
+  static int _pct(Object? v) => v is num ? v.round() : 0;
+
+  static String _date(Object? v) {
+    final dt = v is String ? DateTime.tryParse(v)?.toLocal() : null;
+    if (dt == null) return '';
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.page),
+              child: Text('Camera reports', style: AppTextStyles.titleLarge),
+            ),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _future,
+                builder: (context, snap) {
+                  if (snap.connectionState != ConnectionState.done) {
+                    return const LoadingStateView();
+                  }
+                  if (snap.hasError) {
+                    return ErrorStateView(
+                      title: 'Could not load reports',
+                      message:
+                          snap.error.toString().replaceFirst('Exception: ', ''),
+                      onRetry: () => setState(() {
+                        _future = SessionService.instance.fetchVisualReports();
+                      }),
+                    );
+                  }
+                  final reports = snap.data ?? const [];
+                  if (reports.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.all(AppSpacing.page),
+                      child: Text(
+                        'Turn the camera on during a roleplay to get feedback on '
+                        'your eye contact and posture. Your reports appear here.',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.bodyMedium,
+                      ),
+                    );
+                  }
+                  return ListView.separated(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                    itemCount: reports.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, color: AppColors.outline),
+                    itemBuilder: (_, i) {
+                      final r = reports[i];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: IconTile(
+                          size: 40,
+                          icon: Icons.videocam_rounded,
+                          color: AppColors.forScore(
+                              _pct(r['visualEngagementScore'])),
+                        ),
+                        title: Text(
+                          'Engagement ${_pct(r['visualEngagementScore'])}%',
+                          style: AppTextStyles.titleSmall,
+                        ),
+                        subtitle: Text(
+                          'Eye contact ${_pct(r['eyeContactPercentage'])}% · '
+                          'Posture ${_pct(r['overallPostureScore'])}%',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                        trailing: Text(_date(r['createdAt']),
+                            style: AppTextStyles.bodySmall),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Static legal text ─────────────────────────────────────────────────────
+// Shown when no public URL is configured in AppConfig. Keep it in step with
+// the published policy — the store listings link to that one.
 
 const String _kTerms = '''
-Last updated: March 2026
+Last updated: October 2026
 
 1. Acceptance of Terms
-By accessing or using CommuniQ, you agree to be bound by these Terms and Conditions. If you do not agree, please do not use the app.
+By creating an account or using CommuniQ, you agree to these Terms. If you do not agree, do not use the app.
 
-2. Use of the App
-CommuniQ is provided for personal, non-commercial use. You agree not to misuse the platform, including but not limited to attempting to reverse-engineer, disrupt, or compromise the service.
+2. The Service
+CommuniQ helps you practise spoken communication with AI conversation partners, lessons, contests and optional camera-based feedback. Feedback and scores are generated automatically for practice purposes and may be imperfect.
 
-3. User Accounts
-You are responsible for maintaining the confidentiality of your account credentials. You agree to notify us immediately of any unauthorized use of your account.
+3. Your Account
+You are responsible for keeping your sign-in credentials secure. You can delete your account at any time from Profile → Delete account.
 
-4. Content
-All AI-generated content within the app is for practice and educational purposes only. CommuniQ does not guarantee the accuracy or fitness of any generated content for specific situations.
+4. Acceptable Use
+Do not misuse the service: no attempts to disrupt, reverse-engineer or overload it, and no unlawful, abusive or harmful content in your conversations or answers.
 
-5. Limitation of Liability
-CommuniQ is provided "as is" without warranties of any kind. We are not liable for any indirect, incidental, or consequential damages arising from your use of the app.
+5. Content
+You keep ownership of what you say and write. You allow us to process it to provide the service, as described in the Privacy Policy.
 
-6. Changes to Terms
-We reserve the right to modify these terms at any time. Continued use of the app after changes constitutes acceptance of the updated terms.
+6. No Warranty and Limitation of Liability
+CommuniQ is provided "as is", without warranties of any kind. To the extent permitted by law, we are not liable for indirect or consequential damages arising from your use of the app.
 
-7. Contact
-For questions regarding these terms, contact us at legal@communiq.app.
+7. Changes
+We may update these Terms. We will update the date above when we do; continued use means you accept the updated Terms.
+
+8. Contact
+Questions about these Terms: ${AppConfig.supportEmail}
 ''';
 
 const String _kPrivacy = '''
-Last updated: March 2026
+Last updated: October 2026
 
-1. Information We Collect
-We collect information you provide directly (name, email) and data generated through your use of the app (session history, onboarding preferences, XP, streak).
+1. What we collect
+• Account: your name, email address and, if you use Google or Apple sign-in, the profile details they share.
+• Practice data: your onboarding answers, conversation transcripts, typed answers, scores, feedback, XP, streak, lesson and contest progress.
+• Voice: audio you record in roleplay sessions is sent to our servers to be transcribed and answered. Recordings are processed to produce text and are not kept as audio files.
+• Camera (optional): if you turn the camera on, your video is analysed on your device only. Video never leaves your phone — we store only summary scores such as eye-contact and posture percentages.
 
-2. How We Use Your Information
-Your data is used to personalise your experience, track progress, and improve the service. We do not sell your personal information to third parties.
+2. How we use it
+To run your practice sessions, give you feedback, track your progress, show leaderboards (your display name, XP and best contest scores are visible to other users) and keep the service secure. If you leave "Improve CommuniQ with my sessions" on, anonymised session data may be used to improve our models; you can switch this off in Profile at any time.
 
-3. Data Storage
-Your data is securely stored using Google Firebase (Firestore and Authentication). We implement industry-standard security measures to protect your information.
+3. Service providers
+Your data is stored with Google Firebase. Speech recognition, AI replies and evaluations are processed by AI service providers acting on our behalf, who receive the transcript or audio needed for each request. We do not sell your personal information or use it for advertising.
 
-4. Third-Party Services
-CommuniQ uses Google Sign-In for authentication and Firebase for backend services. These services have their own privacy policies.
+4. Retention and deletion
+We keep your data while your account exists. Profile → Delete account permanently removes your account and all associated data immediately.
 
-5. Data Retention
-You may delete your account at any time. Upon deletion, your personal data will be removed from our systems within 30 days.
+5. Your rights
+You can access and correct your data in the app, and delete it at any time. For any other request, contact ${AppConfig.supportEmail}.
 
-6. Your Rights
-You have the right to access, correct, or delete your personal data. Contact us at privacy@communiq.app to exercise these rights.
+6. Children
+CommuniQ is not directed at children under 13.
 
 7. Contact
-For privacy concerns, reach us at privacy@communiq.app.
+${AppConfig.supportEmail}
 ''';

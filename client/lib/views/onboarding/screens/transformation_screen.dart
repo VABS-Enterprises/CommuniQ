@@ -139,8 +139,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                             color: _levelColor(level).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color:
-                                  _levelColor(level).withValues(alpha: 0.30),
+                              color: _levelColor(level).withValues(alpha: 0.30),
                             ),
                           ),
                           child: Text(
@@ -245,12 +244,11 @@ class _TransformationScreenState extends State<TransformationScreen>
         children: [
           // Header row
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
             decoration: BoxDecoration(
               color: AppColors.surfaceAlt.withValues(alpha: 0.5),
-              borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Row(
               children: [
@@ -312,8 +310,8 @@ class _TransformationScreenState extends State<TransformationScreen>
             return Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 18, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -323,8 +321,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Icon(Icons.remove_rounded,
-                                color: AppColors.error,
-                                size: 14),
+                                color: AppColors.error, size: 14),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -346,8 +343,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Icon(Icons.arrow_forward_rounded,
-                                color: AppColors.success,
-                                size: 14),
+                                color: AppColors.success, size: 14),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -370,8 +366,7 @@ class _TransformationScreenState extends State<TransformationScreen>
                   Container(
                       height: 1,
                       color: AppColors.outline,
-                      margin:
-                          const EdgeInsets.symmetric(horizontal: 18)),
+                      margin: const EdgeInsets.symmetric(horizontal: 18)),
               ],
             );
           }),
@@ -455,9 +450,8 @@ class _TransformationScreenState extends State<TransformationScreen>
                       Text(
                         labels[i],
                         style: TextStyle(
-                          color: reached
-                              ? AppColors.inkMuted
-                              : AppColors.inkSoft,
+                          color:
+                              reached ? AppColors.inkMuted : AppColors.inkSoft,
                           fontSize: 10.5,
                           fontWeight:
                               reached ? FontWeight.w600 : FontWeight.w400,
@@ -485,23 +479,6 @@ class _TransformationScreenState extends State<TransformationScreen>
       default:
         return AppColors.success;
     }
-  }
-
-  Widget _backButton() {
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: AppColors.outline, width: 1),
-      ),
-      child: const Icon(
-        Icons.arrow_back_ios_new_rounded,
-        color: AppColors.inkMuted,
-        size: 16,
-      ),
-    );
   }
 }
 
@@ -535,7 +512,6 @@ class _ProgressGraphPainter extends CustomPainter {
   ];
 
   static const _indigo = Color(0xFF6366F1);
-  static const _violet = Color(0xFF7C3AED);
   static const _indigoLight = Color(0xFF818CF8);
 
   @override
@@ -553,9 +529,12 @@ class _ProgressGraphPainter extends CustomPainter {
     for (int i = 0; i < pts.length - 1; i++) {
       final cpx = (pts[i].dx + pts[i + 1].dx) / 2;
       path.cubicTo(
-        cpx, pts[i].dy,
-        cpx, pts[i + 1].dy,
-        pts[i + 1].dx, pts[i + 1].dy,
+        cpx,
+        pts[i].dy,
+        cpx,
+        pts[i + 1].dy,
+        pts[i + 1].dx,
+        pts[i + 1].dy,
       );
     }
 
@@ -613,7 +592,8 @@ class _ProgressGraphPainter extends CustomPainter {
 
       // Outer glow
       canvas.drawCircle(
-        pt, 9,
+        pt,
+        9,
         Paint()
           ..color = _indigo.withValues(alpha: 0.18)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
@@ -622,7 +602,8 @@ class _ProgressGraphPainter extends CustomPainter {
       canvas.drawCircle(pt, 5, Paint()..color = bgColor);
       // Border ring
       canvas.drawCircle(
-        pt, 5,
+        pt,
+        5,
         Paint()
           ..color = _indigo
           ..style = PaintingStyle.stroke

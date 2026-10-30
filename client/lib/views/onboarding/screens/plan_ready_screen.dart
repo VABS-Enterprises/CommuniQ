@@ -348,7 +348,8 @@ class _BuildingViewState extends State<_BuildingView>
                     ? Container(
                         key: const ValueKey('check'),
                         decoration: BoxDecoration(
-                          color: AppColors.scoreExcellent.withValues(alpha: 0.15),
+                          color:
+                              AppColors.scoreExcellent.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -384,8 +385,7 @@ class _BuildingViewState extends State<_BuildingView>
                           ? AppColors.ink
                           : AppColors.inkSoft,
                   fontSize: 13.5,
-                  fontWeight:
-                      isCurrent ? FontWeight.w600 : FontWeight.w500,
+                  fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
             ),
@@ -491,102 +491,102 @@ class _RevealView extends StatelessWidget {
         animation: revealCtrl,
         builder: (_, __) => SingleChildScrollView(
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 12),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 12),
 
-            // ── 0. Progress bar + back button ──────────────────────────────
-            buildOnboardingHeader(context, 6),
+              // ── 0. Progress bar + back button ──────────────────────────────
+              buildOnboardingHeader(context, 6),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // ── 1. Header ──────────────────────────────────────────────────
-            FadeTransition(
-              opacity: _anim(0.0, 0.45),
-              child: SlideTransition(
-                position: Tween<Offset>(
-                        begin: const Offset(0, 0.2), end: Offset.zero)
-                    .animate(_anim(0.0, 0.45)),
-                child: _buildHeader(level, goal, levelColor),
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            // ── 2. Coach insight — personalized from style + challenges ────
-            FadeTransition(
-              opacity: _anim(0.18, 0.58),
-              child: SlideTransition(
-                position: Tween<Offset>(
-                        begin: const Offset(0, 0.15), end: Offset.zero)
-                    .animate(_anim(0.18, 0.58)),
-                child: _buildCoachInsight(
-                  style: data.speakingStyle,
-                  challenges: data.challenges,
-                  goal: goal,
-                  note: data.speakingNote,
+              // ── 1. Header ──────────────────────────────────────────────────
+              FadeTransition(
+                opacity: _anim(0.0, 0.45),
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                          begin: const Offset(0, 0.2), end: Offset.zero)
+                      .animate(_anim(0.0, 0.45)),
+                  child: _buildHeader(level, goal, levelColor),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 12),
+              const SizedBox(height: 14),
 
-            // ── 3. Module preview card ─────────────────────────────────────
-            FadeTransition(
-              opacity: _anim(0.32, 0.70),
-              child: SlideTransition(
-                position: Tween<Offset>(
-                        begin: const Offset(0, 0.15), end: Offset.zero)
-                    .animate(_anim(0.32, 0.70)),
-                child: _buildModuleCard(preview),
+              // ── 2. Coach insight — personalized from style + challenges ────
+              FadeTransition(
+                opacity: _anim(0.18, 0.58),
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                          begin: const Offset(0, 0.15), end: Offset.zero)
+                      .animate(_anim(0.18, 0.58)),
+                  child: _buildCoachInsight(
+                    style: data.speakingStyle,
+                    challenges: data.challenges,
+                    goal: goal,
+                    note: data.speakingNote,
+                  ),
+                ),
               ),
-            ),
 
-            const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-            // ── 4. Roleplay teaser ─────────────────────────────────────────
-            FadeTransition(
-              opacity: _anim(0.44, 0.78),
-              child: SlideTransition(
-                position: Tween<Offset>(
-                        begin: const Offset(0, 0.15), end: Offset.zero)
-                    .animate(_anim(0.44, 0.78)),
-                child: _buildRoleplayTeaser(),
+              // ── 3. Module preview card ─────────────────────────────────────
+              FadeTransition(
+                opacity: _anim(0.32, 0.70),
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                          begin: const Offset(0, 0.15), end: Offset.zero)
+                      .animate(_anim(0.32, 0.70)),
+                  child: _buildModuleCard(preview),
+                ),
               ),
-            ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
-            // ── 4. CTA ─────────────────────────────────────────────────────
-            FadeTransition(
-              opacity: _anim(0.55, 1.0),
-              child: SlideTransition(
-                position: Tween<Offset>(
-                        begin: const Offset(0, 0.3), end: Offset.zero)
-                    .animate(_anim(0.55, 1.0)),
-                child: Column(
-                  children: [
-                    OnboardingButton(
-                      label: 'Unlock All 150 Sessions',
-                      showGradient: false,
-                      onPressed: onContinue,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Free forever · No credit card needed',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.inkSoft,
-                        fontSize: 13,
+              // ── 4. Roleplay teaser ─────────────────────────────────────────
+              FadeTransition(
+                opacity: _anim(0.44, 0.78),
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                          begin: const Offset(0, 0.15), end: Offset.zero)
+                      .animate(_anim(0.44, 0.78)),
+                  child: _buildRoleplayTeaser(),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── 4. CTA ─────────────────────────────────────────────────────
+              FadeTransition(
+                opacity: _anim(0.55, 1.0),
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                          begin: const Offset(0, 0.3), end: Offset.zero)
+                      .animate(_anim(0.55, 1.0)),
+                  child: Column(
+                    children: [
+                      OnboardingButton(
+                        label: 'Create My Free Account',
+                        showGradient: false,
+                        onPressed: onContinue,
                       ),
-                    ),
-                    const SizedBox(height: 28),
-                  ],
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Free · No credit card needed',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.inkSoft,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );
@@ -625,7 +625,7 @@ class _RevealView extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         const Text(
-          '150 sessions,\nall built for you.',
+          '20 lessons and\nunlimited roleplay.',
           style: TextStyle(
             color: AppColors.ink,
             fontSize: 27,
@@ -646,15 +646,14 @@ class _RevealView extends StatelessWidget {
               const TextSpan(text: 'Calibrated for '),
               TextSpan(
                 text: level,
-                style: TextStyle(
-                    color: levelColor, fontWeight: FontWeight.w600),
+                style:
+                    TextStyle(color: levelColor, fontWeight: FontWeight.w600),
               ),
               const TextSpan(text: ' · '),
               TextSpan(
                 text: goal,
                 style: const TextStyle(
-                    color: AppColors.brandLight,
-                    fontWeight: FontWeight.w600),
+                    color: AppColors.brandLight, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -764,7 +763,7 @@ class _RevealView extends StatelessWidget {
                     color: AppColors.inkSoft, size: 14),
                 const SizedBox(width: 6),
                 Text(
-                  '+${preview.remainingCount} more sessions',
+                  '+${preview.remainingCount} more lessons',
                   style: const TextStyle(
                     color: AppColors.inkSoft,
                     fontSize: 11.5,
@@ -830,8 +829,7 @@ class _RevealView extends StatelessWidget {
               ),
             ),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: AppColors.success.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
@@ -912,8 +910,7 @@ class _RevealView extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.brand.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-            color: AppColors.brand.withValues(alpha: 0.20)),
+        border: Border.all(color: AppColors.brand.withValues(alpha: 0.20)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -958,7 +955,8 @@ class _RevealView extends StatelessWidget {
           // Show their own words back if they wrote a note
           if (hasNote) ...[
             const SizedBox(height: 10),
-            Container(height: 1, color: AppColors.brand.withValues(alpha: 0.15)),
+            Container(
+                height: 1, color: AppColors.brand.withValues(alpha: 0.15)),
             const SizedBox(height: 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -973,7 +971,7 @@ class _RevealView extends StatelessWidget {
                 ),
                 Expanded(
                   child: Text(
-                    '"${note!.trim()}"',
+                    '"${note.trim()}"',
                     style: const TextStyle(
                       color: AppColors.brandLight,
                       fontSize: 12,
@@ -993,12 +991,12 @@ class _RevealView extends StatelessWidget {
   /// Generates a 2-sentence personalized insight from speaking style
   /// and selected challenges. Each combination feels like a real coach
   /// who actually read what the user said.
-  String _generateInsight(
-      String? style, List<String> challenges, String goal) {
+  String _generateInsight(String? style, List<String> challenges, String goal) {
     final hasNervous = challenges.contains('Feeling nervous');
     final hasNoWords = challenges.contains('Running out of words');
     final hasLostIdeas = challenges.contains('Ideas get lost in translation');
-    final hasInterrupted = challenges.contains('Being interrupted or talked over');
+    final hasInterrupted =
+        challenges.contains('Being interrupted or talked over');
     final hasAvoidance = challenges.contains('Avoiding difficult talks');
     final hasNoConfidence = challenges.contains('Lack of confidence');
     final hasPace = challenges.contains('Speaking too fast or slow');
@@ -1205,8 +1203,8 @@ class _RevealView extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.success.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                  color: AppColors.success.withValues(alpha: 0.25)),
+              border:
+                  Border.all(color: AppColors.success.withValues(alpha: 0.25)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1231,142 +1229,72 @@ class _RevealView extends StatelessWidget {
     );
   }
 
-  // ── Module data — sourced from communiq_levels_v4.json ────────────────────
+  // ── Module data — the real curriculum (communiq_levels_1_20.json) ────────
+  //
+  // Four journeys of five lessons. This screen runs before sign-in, when
+  // GET /levels (authenticated) isn't available, so the titles are copied
+  // here — keep them in step with the curriculum file.
+
+  static const _totalLessons = 20;
+
+  static const _everyday = _ModulePreview(
+    journeyTitle: 'Everyday Conversations',
+    levelRange: 'Lessons 1–5',
+    levels: [
+      _LP(1, 'Breaking the Ice'),
+      _LP(2, 'Joining a Group Mid-Conversation'),
+      _LP(3, 'Keeping a Conversation Alive'),
+      _LP(4, 'Ending a Conversation Gracefully'),
+    ],
+    remainingCount: _totalLessons - 4,
+  );
+
+  static const _speakingUp = _ModulePreview(
+    journeyTitle: 'Speaking Up',
+    levelRange: 'Lessons 6–10',
+    levels: [
+      _LP(6, 'Saying No Without Guilt'),
+      _LP(7, 'Asking for What You Need'),
+      _LP(8, 'Asking for Clarification'),
+      _LP(9, 'Sharing an Opinion in a Group'),
+    ],
+    remainingCount: _totalLessons - 4,
+  );
+
+  static const _atWork = _ModulePreview(
+    journeyTitle: 'At Work',
+    levelRange: 'Lessons 11–15',
+    levels: [
+      _LP(11, 'Introducing Yourself Professionally'),
+      _LP(12, 'Explaining Something Complex'),
+      _LP(13, 'Requesting a Deadline Extension'),
+      _LP(14, 'Giving Honest Feedback'),
+    ],
+    remainingCount: _totalLessons - 4,
+  );
+
+  static const _hardConversations = _ModulePreview(
+    journeyTitle: 'Hard Conversations',
+    levelRange: 'Lessons 16–20',
+    levels: [
+      _LP(16, 'Taking Criticism Well'),
+      _LP(17, 'Disagreeing Without Damage'),
+      _LP(18, 'Supporting Someone in Distress'),
+      _LP(20, 'De-escalating a Heated Moment'),
+    ],
+    remainingCount: _totalLessons - 4,
+  );
 
   _ModulePreview _modulePreview(String level, String goal) {
+    if (goal == 'Tough Conversations') return _hardConversations;
     if (level == 'Advanced') {
-      if (goal == 'Tough Conversations') {
-        return const _ModulePreview(
-          journeyTitle: 'Difficult Conversations',
-          levelRange: 'Levels 91–100',
-          levels: [
-            _LP(91, 'Telling a Friend Something Hard'),
-            _LP(92, 'Confronting Someone Who Takes Credit'),
-            _LP(93, 'Rebuilding Trust After It Has Been Broken'),
-            _LP(94, 'Bringing Up a Sensitive Personal Topic'),
-          ],
-          remainingCount: 56,
-        );
-      }
-      if (goal == 'Public Speaking') {
-        return const _ModulePreview(
-          journeyTitle: 'Public Speaking Mastery',
-          levelRange: 'Levels 101–110',
-          levels: [
-            _LP(101, 'Opening a Presentation with Impact'),
-            _LP(102, 'Telling a Story to an Audience'),
-            _LP(103, 'Handling Tough Q&A Questions'),
-            _LP(104, 'Contributing on a Panel'),
-          ],
-          remainingCount: 46,
-        );
-      }
-      if (goal == 'Persuasion') {
-        return const _ModulePreview(
-          journeyTitle: 'Influence & Persuasion',
-          levelRange: 'Levels 71–80',
-          levels: [
-            _LP(71, 'Getting Buy-In on a New Idea'),
-            _LP(72, 'Overcoming Objections'),
-            _LP(73, 'Pitching Under Time Pressure'),
-            _LP(74, 'Convincing a Sceptical Stakeholder'),
-          ],
-          remainingCount: 76,
-        );
-      }
-      // Confidence, Clarity, default
-      return const _ModulePreview(
-        journeyTitle: 'Professional Presence',
-        levelRange: 'Levels 61–70',
-        levels: [
-          _LP(61, 'Making a Strong First Impression'),
-          _LP(62, 'Speaking Up in a Large Meeting'),
-          _LP(63, 'Networking at a Professional Event'),
-          _LP(64, 'Asking for a Promotion'),
-        ],
-        remainingCount: 86,
-      );
+      return goal == 'Confidence' ? _speakingUp : _atWork;
     }
-
     if (level == 'Intermediate') {
-      if (goal == 'Tough Conversations') {
-        return const _ModulePreview(
-          journeyTitle: 'Navigating Disagreements',
-          levelRange: 'Levels 51–60',
-          levels: [
-            _LP(51, "Disagreeing with a Friend's Decision"),
-            _LP(52, 'Receiving Critical Feedback'),
-            _LP(53, 'Clearing Up a Misunderstanding'),
-            _LP(54, 'Standing Firm Under Group Pressure'),
-          ],
-          remainingCount: 96,
-        );
-      }
-      if (goal == 'Persuasion') {
-        return const _ModulePreview(
-          journeyTitle: 'Influence & Persuasion',
-          levelRange: 'Levels 71–80',
-          levels: [
-            _LP(71, 'Getting Buy-In on a New Idea'),
-            _LP(72, 'Overcoming Objections'),
-            _LP(73, 'Pitching Under Time Pressure'),
-            _LP(74, 'Convincing a Sceptical Stakeholder'),
-          ],
-          remainingCount: 76,
-        );
-      }
-      if (goal == 'Public Speaking') {
-        return const _ModulePreview(
-          journeyTitle: 'Professional Presence',
-          levelRange: 'Levels 61–70',
-          levels: [
-            _LP(61, 'Making a Strong First Impression'),
-            _LP(62, 'Speaking Up in a Large Meeting'),
-            _LP(63, 'Networking at a Professional Event'),
-            _LP(64, 'Asking for a Promotion'),
-          ],
-          remainingCount: 86,
-        );
-      }
-      if (goal == 'Confidence') {
-        return const _ModulePreview(
-          journeyTitle: 'Expressing Yourself',
-          levelRange: 'Levels 21–30',
-          levels: [
-            _LP(21, 'Sharing a Differing Opinion'),
-            _LP(22, 'Talking About Your Emotions'),
-            _LP(23, 'Telling a Personal Story'),
-            _LP(24, "Admitting You Don't Know"),
-          ],
-          remainingCount: 126,
-        );
-      }
-      // Clarity, default
-      return const _ModulePreview(
-        journeyTitle: 'Workplace Basics',
-        levelRange: 'Levels 31–40',
-        levels: [
-          _LP(31, 'Introducing Yourself to a New Team'),
-          _LP(32, 'Asking Your Manager for Clarification'),
-          _LP(33, 'Contributing in a Team Meeting'),
-          _LP(34, 'Sending a Professional Email'),
-        ],
-        remainingCount: 116,
-      );
+      return goal == 'Confidence' ? _speakingUp : _atWork;
     }
-
-    // Beginner (default)
-    return const _ModulePreview(
-      journeyTitle: 'Social Foundations',
-      levelRange: 'Levels 1–10',
-      levels: [
-        _LP(1, 'Introducing Yourself'),
-        _LP(2, 'Starting a Conversation'),
-        _LP(3, 'Making Small Talk'),
-        _LP(4, 'Paying a Genuine Compliment'),
-      ],
-      remainingCount: 146,
-    );
+    // Beginner (default) starts at the beginning.
+    return goal == 'Confidence' ? _speakingUp : _everyday;
   }
 
   Color _levelColor(String level) {

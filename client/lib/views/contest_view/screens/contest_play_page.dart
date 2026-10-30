@@ -10,6 +10,7 @@ import 'package:communiq/core/constants/app_text_styles.dart';
 import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/routes/app_routes.dart';
+import 'package:communiq/core/services/activity_bus.dart';
 import 'package:communiq/core/services/contest_service.dart';
 import 'package:communiq/models/contest_models.dart';
 import 'package:communiq/views/contest_view/contest_prompts.dart';
@@ -73,6 +74,10 @@ class _ContestPlayPageState extends State<ContestPlayPage> {
         motion: _prompt,
         position: _position,
       );
+      // XP, level and streak changed server-side: refresh the cached profile
+      // and tell the kept-alive tabs (contest hub, home, profile) to reload.
+      // Fire-and-forget — it never throws and must not delay the result.
+      ActivityBus.instance.record(ActivityKind.contest);
       if (!mounted) return;
       // Replace so Back from the result returns to the hub, not to a filled-in
       // form that has already been submitted.

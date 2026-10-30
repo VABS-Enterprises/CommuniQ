@@ -52,10 +52,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     _fadeLogo = CurvedAnimation(
         parent: _entranceCtrl,
         curve: const Interval(0.0, 0.45, curve: Curves.easeOut));
-    _scaleOrb = Tween<double>(begin: 0.6, end: 1.0).animate(
-        CurvedAnimation(
-            parent: _entranceCtrl,
-            curve: const Interval(0.0, 0.5, curve: Curves.easeOutBack)));
+    _scaleOrb = Tween<double>(begin: 0.6, end: 1.0).animate(CurvedAnimation(
+        parent: _entranceCtrl,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOutBack)));
 
     _fadeTitle = CurvedAnimation(
         parent: _entranceCtrl,
@@ -102,127 +101,127 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         // uses — replaces this screen's old, much busier three-blob
         // animated background (one of which sat behind the CTA button).
         child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                children: [
-                  const Spacer(flex: 1),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              children: [
+                const Spacer(flex: 1),
 
-                  // Orb
-                  FadeTransition(
-                    opacity: _fadeLogo,
-                    child: ScaleTransition(
-                      scale: _scaleOrb,
-                      child: AnimatedBuilder(
-                        animation: _orbCtrl,
-                        builder: (_, __) => _buildOrb(),
+                // Orb
+                FadeTransition(
+                  opacity: _fadeLogo,
+                  child: ScaleTransition(
+                    scale: _scaleOrb,
+                    child: AnimatedBuilder(
+                      animation: _orbCtrl,
+                      builder: (_, __) => _buildOrb(),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+
+                // Headline
+                FadeTransition(
+                  opacity: _fadeTitle,
+                  child: SlideTransition(
+                    position: _slideTitle,
+                    child: const Text(
+                      'Speak It Like You\nMean It',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        // Was Colors.white — the app's headline, drawn in
+                        // white on the cream ground, so the first thing a
+                        // new user saw was blank space.
+                        color: AppColors.ink,
+                        fontSize: 38,
+                        fontWeight: FontWeight.w800,
+                        height: 1.18,
+                        letterSpacing: -0.8,
                       ),
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 40),
+                const SizedBox(height: 14),
 
-                  // Headline
-                  FadeTransition(
-                    opacity: _fadeTitle,
-                    child: SlideTransition(
-                      position: _slideTitle,
-                      child: const Text(
-                          'Speak It Like You\nMean It',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            // Was Colors.white — the app's headline, drawn in
-                            // white on the cream ground, so the first thing a
-                            // new user saw was blank space.
-                            color: AppColors.ink,
-                            fontSize: 38,
-                            fontWeight: FontWeight.w800,
-                            height: 1.18,
-                            letterSpacing: -0.8,
-                          ),
-                        ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Tagline
-                  FadeTransition(
-                    opacity: _fadeSub,
-                    child: SlideTransition(
-                      position: _slideSub,
-                      child: const Text(
-                        'Master real conversations with\nAI-powered voice practice',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.inkMuted,
-                          fontSize: 16,
-                          height: 1.65,
-                          letterSpacing: 0.1,
-                        ),
+                // Tagline
+                FadeTransition(
+                  opacity: _fadeSub,
+                  child: SlideTransition(
+                    position: _slideSub,
+                    child: const Text(
+                      'Master real conversations with\nAI-powered voice practice',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.inkMuted,
+                        fontSize: 16,
+                        height: 1.65,
+                        letterSpacing: 0.1,
                       ),
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 32),
+                const SizedBox(height: 32),
 
-                  // Stats
-                  FadeTransition(
-                    opacity: _fadeStats,
-                    child: _buildStatsRow(),
-                  ),
+                // Stats
+                FadeTransition(
+                  opacity: _fadeStats,
+                  child: _buildStatsRow(),
+                ),
 
-                  const Spacer(flex: 2),
+                const Spacer(flex: 2),
 
-                  // CTA
-                  FadeTransition(
-                    opacity: _fadeBtn,
-                    child: SlideTransition(
-                      position: _slideBtn,
-                      child: OnboardingButton(
-                        label: 'Begin Your Journey',
-                        onPressed: () => Navigator.push(
-                          context,
-                          slideRoute(const CommunicationContextScreen()),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  FadeTransition(
-                    opacity: _fadeBtn,
-                    child: GestureDetector(
-                      onTap: () => Navigator.push(
+                // CTA
+                FadeTransition(
+                  opacity: _fadeBtn,
+                  child: SlideTransition(
+                    position: _slideBtn,
+                    child: OnboardingButton(
+                      label: 'Begin Your Journey',
+                      onPressed: () => Navigator.push(
                         context,
-                        slideRoute(const LoginScreen()),
-                      ),
-                      child: RichText(
-                        text: const TextSpan(
-                          text: 'Already training? ',
-                          style: TextStyle(
-                              color: AppColors.inkSoft, fontSize: 14),
-                          children: [
-                            TextSpan(
-                              text: 'Sign in',
-                              style: TextStyle(
-                                color: AppColors.brandLight,
-                                fontWeight: FontWeight.w600,
-                                decoration: TextDecoration.underline,
-                                decorationColor: AppColors.brandLight,
-                              ),
-                            ),
-                          ],
-                        ),
+                        slideRoute(const CommunicationContextScreen()),
                       ),
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 40),
-                ],
-              ),
+                const SizedBox(height: 18),
+
+                FadeTransition(
+                  opacity: _fadeBtn,
+                  child: GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      slideRoute(const LoginScreen()),
+                    ),
+                    child: RichText(
+                      text: const TextSpan(
+                        text: 'Already training? ',
+                        style:
+                            TextStyle(color: AppColors.inkSoft, fontSize: 14),
+                        children: [
+                          TextSpan(
+                            text: 'Sign in',
+                            style: TextStyle(
+                              color: AppColors.brandLight,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                              decorationColor: AppColors.brandLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+              ],
             ),
+          ),
         ),
       ),
     );
@@ -260,11 +259,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildStat('10K+', 'Learners'),
+          _buildStat('20', 'Lessons'),
           _buildDivider(),
           _buildStat('6', 'Skills Scored'),
           _buildDivider(),
-          _buildStat('95%', 'Improve Fast'),
+          _buildStat('7', 'Roleplays'),
         ],
       ),
     );

@@ -89,16 +89,15 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       duration: const Duration(milliseconds: 900),
     )..forward();
 
-    _micScale = Tween<double>(begin: 0.93, end: 1.05).animate(
-        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
-    _micGlow = Tween<double>(begin: 0.3, end: 0.6).animate(
-        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    _micScale = Tween<double>(begin: 0.93, end: 1.05)
+        .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    _micGlow = Tween<double>(begin: 0.3, end: 0.6)
+        .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
     _fadeContent = CurvedAnimation(
         parent: _entranceCtrl,
         curve: const Interval(0.2, 1.0, curve: Curves.easeOut));
-    _slideContent = Tween<Offset>(
-            begin: const Offset(0, 0.2), end: Offset.zero)
+    _slideContent = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
         .animate(CurvedAnimation(
             parent: _entranceCtrl,
             curve: const Interval(0.2, 1.0, curve: Curves.easeOut)));
@@ -108,8 +107,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       duration: const Duration(milliseconds: 500),
     );
     _phaseFade = CurvedAnimation(parent: _phaseCtrl, curve: Curves.easeOut);
-    _phaseSlide = Tween<Offset>(
-            begin: const Offset(0, 0.12), end: Offset.zero)
+    _phaseSlide = Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero)
         .animate(CurvedAnimation(parent: _phaseCtrl, curve: Curves.easeOut));
 
     _resultCtrl = AnimationController(
@@ -117,15 +115,15 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       duration: const Duration(milliseconds: 700),
     );
     _resultFade = CurvedAnimation(parent: _resultCtrl, curve: Curves.easeOut);
-    _resultSlide = Tween<Offset>(
-            begin: const Offset(0, 0.15), end: Offset.zero)
+    _resultSlide = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
         .animate(CurvedAnimation(parent: _resultCtrl, curve: Curves.easeOut));
 
     _ringCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    _ringProgress = CurvedAnimation(parent: _ringCtrl, curve: Curves.easeOutCubic);
+    _ringProgress =
+        CurvedAnimation(parent: _ringCtrl, curve: Curves.easeOutCubic);
 
     _micRecordCtrl = AnimationController(
       vsync: this,
@@ -197,11 +195,17 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
         if (!mounted) return;
         final raw = e.toString();
         String msg;
-        if (raw.contains('No speech') || raw.contains('no speech') || raw.contains('silence')) {
+        if (raw.contains('No speech') ||
+            raw.contains('no speech') ||
+            raw.contains('silence')) {
           msg = 'No speech detected — speak close to the mic and try again.';
-        } else if (raw.contains('too small') || raw.contains('too short') || raw.contains('1 KB')) {
+        } else if (raw.contains('too small') ||
+            raw.contains('too short') ||
+            raw.contains('1 KB')) {
           msg = 'Recording too short. Speak for a few seconds then tap stop.';
-        } else if (raw.contains('network') || raw.contains('connection') || raw.contains('SocketException')) {
+        } else if (raw.contains('network') ||
+            raw.contains('connection') ||
+            raw.contains('SocketException')) {
           msg = 'Network error. Check your connection and retry.';
         } else {
           msg = raw.replaceFirst('Exception: ', '');
@@ -224,10 +228,12 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
     }
 
     final dir = await getTemporaryDirectory();
-    _recordingPath = '${dir.path}/demo_intro_${DateTime.now().millisecondsSinceEpoch}.wav';
+    _recordingPath =
+        '${dir.path}/demo_intro_${DateTime.now().millisecondsSinceEpoch}.wav';
 
     await _recorder.start(
-      const RecordConfig(encoder: AudioEncoder.wav, sampleRate: 16000, numChannels: 1),
+      const RecordConfig(
+          encoder: AudioEncoder.wav, sampleRate: 16000, numChannels: 1),
       path: _recordingPath!,
     );
 
@@ -268,7 +274,8 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
   Future<void> _submitIntro() async {
     final text = _textCtrl.text.trim();
     if (text.length < _minChars) {
-      setState(() => _errorMessage = 'Please write at least $_minChars characters.');
+      setState(
+          () => _errorMessage = 'Please write at least $_minChars characters.');
       return;
     }
 
@@ -291,7 +298,8 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
       if (!mounted) return;
       setState(() {
         _phase = _Phase.input;
-        _errorMessage = 'Could not reach the AI coach. Check your connection and try again.';
+        _errorMessage =
+            'Could not reach the AI coach. Check your connection and try again.';
       });
       _phaseCtrl.forward(from: 0);
     }
@@ -328,14 +336,11 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           const SizedBox(height: 12),
           buildOnboardingHeader(context, 6),
           const Spacer(flex: 1),
-
           AnimatedBuilder(
             animation: Listenable.merge([_pulseCtrl, _waveCtrl]),
             builder: (_, __) => _buildMicVisual(),
           ),
-
           const SizedBox(height: 32),
-
           FadeTransition(
             opacity: _fadeContent,
             child: SlideTransition(
@@ -371,17 +376,13 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               ),
             ),
           ),
-
           const Spacer(flex: 2),
-
           OnboardingButton(
             label: "Try the Demo — It's Free",
             showGradient: true,
             onPressed: _enterInputPhase,
           ),
-
           const SizedBox(height: 12),
-
           TextButton(
             onPressed: _goToSignup,
             style: TextButton.styleFrom(
@@ -392,7 +393,6 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
               style: TextStyle(fontSize: 14),
             ),
           ),
-
           const SizedBox(height: 24),
         ],
       ),
@@ -560,7 +560,10 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                 maxLines: 6,
                 minLines: 4,
                 maxLength: _maxChars,
-                buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
+                buildCounter: (_,
+                        {required currentLength,
+                        required isFocused,
+                        maxLength}) =>
                     const SizedBox.shrink(),
                 style: const TextStyle(
                   color: AppColors.ink,
@@ -580,9 +583,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                 ),
               ),
             ),
-
             const SizedBox(height: 6),
-
             Text(
               '$len / $_maxChars  ·  min $_minChars chars',
               style: TextStyle(
@@ -638,14 +639,16 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                   children: [
                     Icon(
                       Icons.auto_awesome_rounded,
-                      color: canSubmit ? AppColors.inkOnDark : AppColors.inkSoft,
+                      color:
+                          canSubmit ? AppColors.inkOnDark : AppColors.inkSoft,
                       size: 18,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       'Evaluate My Intro',
                       style: TextStyle(
-                        color: canSubmit ? AppColors.inkOnDark : AppColors.inkSoft,
+                        color:
+                            canSubmit ? AppColors.inkOnDark : AppColors.inkSoft,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.2,
@@ -921,7 +924,8 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           child: AnimatedBuilder(
             animation: _ringProgress,
             builder: (_, __) {
-              final progress = (_ringProgress.value * score / 100).clamp(0.0, 1.0);
+              final progress =
+                  (_ringProgress.value * score / 100).clamp(0.0, 1.0);
               return Stack(
                 children: [
                   Container(
@@ -1225,8 +1229,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
           Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.brand.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6),
@@ -1408,9 +1411,7 @@ class _RoleplayIntroScreenState extends State<RoleplayIntroScreen>
                     height: 58,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isBusy
-                          ? AppColors.surfaceAlt
-                          : bgColor,
+                      color: isBusy ? AppColors.surfaceAlt : bgColor,
                       boxShadow: isBusy
                           ? null
                           : [

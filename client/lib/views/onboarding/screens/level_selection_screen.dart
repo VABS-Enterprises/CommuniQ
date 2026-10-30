@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:communiq/core/constants/app_colors.dart';
@@ -89,11 +88,8 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 12),
-
                 buildOnboardingHeader(context, 4),
-
                 const SizedBox(height: 28),
-
                 const Text(
                   'Where are you\nright now?',
                   style: TextStyle(
@@ -113,9 +109,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
                     height: 1.5,
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 Expanded(
                   child: ListView(
                     physics: const BouncingScrollPhysics(),
@@ -149,15 +143,12 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
                     }),
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 OnboardingButton(
                   label: 'Continue',
                   enabled: _selected != null,
                   onPressed: () {
-                    debugPrint(
-                        '[Onboarding] Step 4/6 — Level: "$_selected"');
+                    debugPrint('[Onboarding] Step 4/6 — Level: "$_selected"');
                     Navigator.push(
                       context,
                       slideRoute(TransformationScreen(
@@ -166,7 +157,6 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen>
                     );
                   },
                 ),
-
                 const SizedBox(height: 28),
               ],
             ),
@@ -245,9 +235,8 @@ class _LevelCard extends StatelessWidget {
                       Text(
                         level.label,
                         style: TextStyle(
-                          color: isSelected
-                              ? AppColors.ink
-                              : AppColors.inkMuted,
+                          color:
+                              isSelected ? AppColors.ink : AppColors.inkMuted,
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.1,
@@ -297,9 +286,8 @@ class _LevelCard extends StatelessWidget {
                   Text(
                     level.description,
                     style: TextStyle(
-                      color: isSelected
-                          ? AppColors.inkMuted
-                          : AppColors.inkSoft,
+                      color:
+                          isSelected ? AppColors.inkMuted : AppColors.inkSoft,
                       fontSize: 12.5,
                       height: 1.5,
                     ),

@@ -168,12 +168,26 @@ class LevelCompletionResult {
   /// coins were awarded for it a second time.
   final bool alreadyComplete;
 
+  /// XP for finishing the level — awarded on first completion only.
+  final int xpAwarded;
+
+  /// The user's level after [xpAwarded], when the server sent it.
+  final int? newLevel;
+  final bool leveledUp;
+
+  /// The user's streak after this completion, when the server sent it.
+  final int? newStreak;
+
   const LevelCompletionResult({
     required this.completedLevelIds,
     required this.coinsAwarded,
     required this.totalCoins,
     required this.levelCoins,
     required this.alreadyComplete,
+    this.xpAwarded = 0,
+    this.newLevel,
+    this.leveledUp = false,
+    this.newStreak,
   });
 
   factory LevelCompletionResult.fromJson(Map<String, dynamic> json) {
@@ -186,7 +200,11 @@ class LevelCompletionResult {
       coinsAwarded: (json['coinsAwarded'] as num?)?.toInt() ?? 0,
       totalCoins: (json['totalCoins'] as num?)?.toInt() ?? 0,
       levelCoins: (json['levelCoins'] as num?)?.toInt() ?? 0,
-      alreadyComplete: json['alreadyComplete'] as bool? ?? false,
+      alreadyComplete: json['alreadyComplete'] == true,
+      xpAwarded: (json['xpAwarded'] as num?)?.toInt() ?? 0,
+      newLevel: (json['newLevel'] as num?)?.toInt(),
+      leveledUp: json['leveledUp'] == true,
+      newStreak: (json['newStreak'] as num?)?.toInt(),
     );
   }
 }
@@ -235,24 +253,21 @@ class LearningService {
   /// MCQ step for the level was answered correctly before marking it
   /// complete, then awards the written-response coins and the completion
   /// bonus. May reject with a 400 (e.g. if called out of order); callers
-  /// should catch and handle that gracefully rather than crash.
+  /// must treat a throw as "not completed".
   ///
-  /// [responseScore] is the AI evaluation score for the written response.
-  /// The coins for it are computed and persisted server-side — the client
-  /// must not add them to any displayed total itself.
-  static Future<LevelCompletionResult> completeLevel(
-    int levelId, {
-    int? responseScore,
-  }) async {
-    debugPrint('[LearningService] completeLevel → levelId=$levelId '
-        'responseScore=$responseScore');
+  /// The response coins come from the score the server stored when
+  /// [evaluateLearningResponse] was called with this `levelId` — the server
+  /// ignores any score the client sends, so none is sent.
+  static Future<LevelCompletionResult> completeLevel(int levelId) async {
+    debugPrint('[LearningService] completeLevel → levelId=$levelId');
     final response = await ApiService.post(
       '${ApiConstants.learningLevelsBase}/$levelId/complete',
-      body: {if (responseScore != null) 'responseScore': responseScore},
+      body: const {},
     );
     final result = LevelCompletionResult.fromJson(response);
     debugPrint('[LearningService] completeLevel ✓ '
-        'coinsAwarded=${result.coinsAwarded} total=${result.totalCoins}');
+        'coinsAwarded=${result.coinsAwarded} total=${result.totalCoins} '
+        'xp=${result.xpAwarded}');
     return result;
   }
 
@@ -264,15 +279,19 @@ class LearningService {
   /// [topic]              — journey/topic name (e.g. "Hard Conversations")
   /// [difficulty]         — 'beginner' | 'intermediate' | 'advanced'
   /// [expectedKeyPoints]  — optional list of expected ideas in a good answer
+  /// [levelId]            — the level being answered. The server records the
+  ///                        score against it, and [completeLevel] pays the
+  ///                        response coins from that stored score.
   static Future<DemoEvaluationResult> evaluateLearningResponse({
     required String question,
     required String userResponse,
     required String topic,
     String difficulty = 'beginner',
     List<String> expectedKeyPoints = const [],
+    int? levelId,
   }) async {
     debugPrint('[LearningService] Evaluating response '
-        '(${userResponse.length} chars) topic=$topic');
+        '(${userResponse.length} chars) topic=$topic levelId=$levelId');
     final response = await ApiService.post(
       ApiConstants.levelsEvaluate,
       body: {
@@ -281,6 +300,7 @@ class LearningService {
         'topic': topic,
         'difficulty': difficulty,
         'expectedKeyPoints': expectedKeyPoints,
+        if (levelId != null) 'levelId': levelId,
       },
     );
     final result = DemoEvaluationResult.fromJson(response);

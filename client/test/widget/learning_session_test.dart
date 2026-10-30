@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:communiq/core/constants/app_colors.dart';
+import 'package:communiq/core/services/activity_bus.dart';
 import 'package:communiq/core/services/learning_progress_store.dart';
 import 'package:communiq/core/services/learning_service.dart';
 import 'package:communiq/models/communiq_level.dart';
+import 'package:communiq/models/demo_evaluation_result.dart';
 import 'package:communiq/views/learning_view/screens/learning_session_screen.dart';
 
 const _optionA = 'I would really like to help, but I have my own deadline.';
@@ -194,6 +196,142 @@ void main() {
       // Skips the solved question and lands on the written response.
       expect(find.text('Your turn'), findsOneWidget);
       expect(find.text('Write your reply.'), findsOneWidget);
+    });
+  });
+
+  group('Learning session — completing the level', () {
+    const evaluation = DemoEvaluationResult(
+      scores: {'clarity': 80},
+      overallScore: 80,
+      strengths: ['Clear.'],
+      improvements: ['Warmer.'],
+      feedback: 'Good answer.',
+    );
+
+    final recorded = <ActivityKind>[];
+
+    /// Pushes the session over a home route, as the journey map does, and
+    /// captures what it pops with.
+    Future<List<Object?>> pumpOverHome(
+      WidgetTester tester, {
+      required Future<LevelCompletionResult> Function(int) complete,
+    }) async {
+      // Step 1 already solved server-side, so Continue lands on the response.
+      LearningProgressStore.instance.applyAnswer(
+        levelId: 6,
+        step: 1,
+        result: const LearningAnswerResult(
+          correct: true,
+          coinsAwarded: 10,
+          totalCoins: 50,
+          attemptNumber: 1,
+          feedback: 'Correct!',
+          totalSteps: 1,
+        ),
+      );
+      final popped = <Object?>[];
+      recorded.clear();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                popped.add(await Navigator.of(context).push<Object?>(
+                  MaterialPageRoute(
+                    builder: (_) => LearningSessionScreen(
+                      level: _level(),
+                      initialCoins: 50,
+                      evaluateOverride: (_) async => evaluation,
+                      completeOverride: complete,
+                      recordActivityOverride: recorded.add,
+                    ),
+                  ),
+                ));
+              },
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.text('Continue'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.enterText(find.byType(TextField), 'Sorry, not tonight.');
+      await tester.pump();
+      await tester.tap(find.text('Submit answer'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+      return popped;
+    }
+
+    testWidgets('a failed completion shows Retry and is not reported done',
+        (tester) async {
+      final popped = await pumpOverHome(
+        tester,
+        complete: (_) async => throw Exception('Could not complete level'),
+      );
+
+      // Still on the response page, with the error and a retry.
+      expect(find.text('Your turn'), findsOneWidget);
+      expect(find.textContaining("couldn't be saved"), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.text('Back to the journey'), findsNothing);
+      expect(LearningProgressStore.instance.isComplete(6), isFalse);
+      expect(recorded, isEmpty);
+
+      // Leave: the journey must not be told the level was completed.
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Leave this level?'), findsOneWidget);
+      await tester.tap(find.text('Leave'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(popped, hasLength(1));
+      expect((popped.single as Map)['completed'], isFalse);
+    });
+
+    testWidgets('Retry re-sends only the completion, then reports done',
+        (tester) async {
+      var completeCalls = 0;
+      final popped = await pumpOverHome(
+        tester,
+        complete: (levelId) async {
+          completeCalls++;
+          if (completeCalls == 1) throw Exception('Server unavailable');
+          return LevelCompletionResult(
+            completedLevelIds: [levelId],
+            coinsAwarded: 35,
+            totalCoins: 85,
+            levelCoins: 45,
+            alreadyComplete: false,
+            xpAwarded: 20,
+          );
+        },
+      );
+      expect(find.text('Retry'), findsOneWidget);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(completeCalls, 2);
+      expect(LearningProgressStore.instance.isComplete(6), isTrue);
+      expect(find.text('+20 XP'), findsOneWidget);
+      expect(recorded, [ActivityKind.learning]);
+
+      await tester.tap(find.text('Back to the journey'));
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 3));
+
+      expect(popped, hasLength(1));
+      expect((popped.single as Map)['completed'], isTrue);
     });
   });
 }

@@ -39,10 +39,10 @@ class _ContestHistoryPageState extends State<ContestHistoryPage> {
       _error = null;
     });
     try {
-      final attempts = await ContestService.instance.history(limit: 50);
+      final history = await ContestService.instance.history(limit: 50);
       if (!mounted) return;
       setState(() {
-        _attempts = attempts;
+        _attempts = history.attempts;
         _loading = false;
       });
     } catch (e) {

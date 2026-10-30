@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -28,13 +27,11 @@ import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/services/gaze_detector_service.dart';
 import 'package:communiq/core/services/live_voice_service.dart';
+import 'package:communiq/core/services/activity_bus.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/core/services/visual_analysis_calculator.dart';
-import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/roleplay_config.dart';
 import 'package:communiq/models/visual_analysis_models.dart';
-import 'package:communiq/views/roleplay_view/screens/roleplay_feedback_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── State machine ─────────────────────────────────────────────────────────────
 //
@@ -52,13 +49,13 @@ enum _AiPlaybackStage { none, afterOpening, afterTurnFirstPlay, afterTurnReplay 
 class RoleplayConversationScreen extends StatefulWidget {
   final RoleplayConfig config;
 
-  /// Pass an empty string or omit to activate demo mode (no backend calls).
+  /// Server session id from POST /sessions/start. Without one ('demo' or
+  /// empty) there is nothing to talk to, so the screen backs out.
   final String sessionId;
-  final bool isOnboarding;
 
-  /// When supplied (from the learning path), the level is written to
-  /// SharedPreferences as "completed" the moment the user ends the call so
-  /// the learning view can fire the XP animation and unlock the next node.
+  /// Legacy route args — still passed by the router, no longer used. The
+  /// onboarding first-roleplay flow and the learning-path launch were removed.
+  final bool isOnboarding;
   final int? levelId;
 
   const RoleplayConversationScreen({
@@ -90,7 +87,6 @@ class _RoleplayConversationScreenState
   // The text shown in the large conversation card and who is speaking.
   // Updated on every meaningful state change.
   String _cardText = '';
-  int _cardAnimKey = 0; // increment to trigger AnimatedSwitcher
 
   Timer? _sessionTimer;
   int _secondsElapsed = 0;
@@ -204,20 +200,9 @@ class _RoleplayConversationScreenState
     }
   }
 
-  /// True when running without a real session (onboarding demo, no auth).
-  bool get _isDemoMode =>
+  /// True when the screen was opened without a server session.
+  bool get _hasNoSession =>
       widget.sessionId == 'demo' || widget.sessionId.isEmpty;
-
-  /// Scripted AI lines for the demo "Introduce yourself" session.
-  static const List<String> _demoReplies = [
-    "Hi there! Great to meet you. Tell me a little about yourself — "
-        "what do you do and what brings you here today?",
-    "That's really interesting! It sounds like you have a great background. "
-        "What would you say is the thing you're most excited about in your work or life right now?",
-    "Love that! You're doing really well — you're coming across as warm, "
-        "clear and engaging. One small tip: try to end with a question to keep the conversation flowing. "
-        "Shall we wrap up the practice?",
-  ];
 
   /// Total spoken seconds including the currently-running mic session.
   /// In live voice mode _stopMic() is never called mid-session, so
@@ -303,8 +288,6 @@ class _RoleplayConversationScreenState
     if (widget.config.backstory.isNotEmpty) {
       debugPrint('   backstory:  ${widget.config.backstory}');
     }
-    debugPrint('   demo mode:  $_isDemoMode');
-    debugPrint('   onboarding: ${widget.isOnboarding}');
 
     _pulseController = AnimationController(
       vsync: this,
@@ -321,8 +304,15 @@ class _RoleplayConversationScreenState
     // _playBase64Audio and _connectLiveVoice so it begins when audio/voice
     // actually starts, not when the screen loads.
     _audioPlayer.playerStateStream.listen(_onPlayerStateChange);
-    if (_isDemoMode) {
-      _bootstrapDemoOpening();
+    if (_hasNoSession) {
+      // Nothing to converse with — never fabricate a scripted session.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No active session — please start again.')),
+        );
+        context.go(AppRoutes.roleplay);
+      });
     } else {
       _bootstrapRealOpening();
     }
@@ -354,7 +344,7 @@ class _RoleplayConversationScreenState
   /// Connect to LiveKit for the current session.
   /// Falls back to classic HTTP mode silently if the server does not support it.
   Future<void> _connectLiveVoice() async {
-    if (_isDemoMode || widget.sessionId.isEmpty) return;
+    if (_hasNoSession) return;
     if (_isLiveVoiceActive) return;
     debugPrint('[LiveVoice] Attempting connection — session=${widget.sessionId}');
     try {
@@ -409,7 +399,6 @@ class _RoleplayConversationScreenState
           _state = _ConvState.ai_speaking;
           _karaokeChunk = '';
           _karaokeWordCount = 0;
-          _cardAnimKey++;
         });
         debugPrint('[LiveVoice] AI says: "${msg.text.length > 60 ? '${msg.text.substring(0, 60)}…' : msg.text}"');
 
@@ -437,7 +426,6 @@ class _RoleplayConversationScreenState
           _karaokeChunk = '';
           _karaokeWordCount = 0;
           _lastUserTranscript = '';
-          _cardAnimKey++;
         });
         debugPrint('[LiveVoice] AI finished speaking — user turn');
 
@@ -513,27 +501,6 @@ class _RoleplayConversationScreenState
     }
   }
 
-  Future<void> _startSttListening() async {
-    if (!_sttAvailable) return;
-    try {
-      await _stt.listen(
-        onResult: (result) {
-          if (!mounted || _state != _ConvState.user_turn) return;
-          setState(() {
-            _liveTranscript = result.recognizedWords;
-          });
-        },
-        listenFor: const Duration(minutes: 5),
-        pauseFor: const Duration(seconds: 15),
-        partialResults: true,
-        localeId: 'en_IN',
-        listenMode: ListenMode.dictation,
-      );
-    } catch (e) {
-      debugPrint('[STT] Listen failed (graceful): $e');
-    }
-  }
-
   void _stopSttListening() {
     if (_sttAvailable) {
       _stt.stop();
@@ -542,30 +509,6 @@ class _RoleplayConversationScreenState
 
   int get _completedUserTurns =>
       _conversationHistory.where((m) => m['role'] == 'user').length;
-
-  /// Demo: scripted opener on card, then mic (no backend, no Colab replay).
-  void _bootstrapDemoOpening() {
-    setState(() {
-      _state = _ConvState.processing;
-      _cardText = '';
-      _cardAnimKey++;
-    });
-    Future<void>.microtask(() async {
-      await Future.delayed(const Duration(milliseconds: 900));
-      if (!mounted) return;
-      final opener = _demoReplies.first;
-      _conversationHistory.add({'role': 'ai', 'transcript': opener});
-      setState(() {
-        _state = _ConvState.ai_speaking;
-        _cardText = opener;
-        _cardAnimKey++;
-      });
-      await Future.delayed(const Duration(seconds: 3));
-      if (!mounted) return;
-      _aiPlaybackStage = _AiPlaybackStage.none;
-      await _startMic();
-    });
-  }
 
   void _bootstrapRealOpening() {
     Future<void>.microtask(() async {
@@ -593,7 +536,6 @@ class _RoleplayConversationScreenState
           _cardText = opening.aiReply; // kept for history; karaoke drives display
           _karaokeChunk = '';
           _karaokeWordCount = 0;
-          _cardAnimKey++;
         });
         _aiPlaybackStage = _AiPlaybackStage.afterOpening;
         // Stream karaoke chunks concurrently with audio playback so text
@@ -701,7 +643,6 @@ class _RoleplayConversationScreenState
         _cardText = '';
         _karaokeChunk = '';
         _karaokeWordCount = 0;
-        _cardAnimKey++;
       });
       _pulseController.duration = const Duration(milliseconds: 800);
       _pulseController.repeat(reverse: true);
@@ -753,7 +694,6 @@ class _RoleplayConversationScreenState
     setState(() {
       _state = _ConvState.user_turn;
       _cardText = '';
-      _cardAnimKey++;
     });
     _pulseController.duration = const Duration(milliseconds: 800);
     _pulseController.repeat(reverse: true);
@@ -807,7 +747,6 @@ class _RoleplayConversationScreenState
     setState(() {
       _state = _ConvState.processing;
       _cardText = '';
-      _cardAnimKey++;
     });
 
     if (path == null) {
@@ -865,41 +804,6 @@ class _RoleplayConversationScreenState
     final turnNumber = _completedUserTurns + 1;
     debugPrint('🔄 [Conversation] Processing turn #$turnNumber...');
 
-    // ── Demo mode ──────────────────────────────────────────────────────────────
-    if (_isDemoMode) {
-      await Future.delayed(const Duration(milliseconds: 1200));
-      if (!mounted) return;
-
-      final fakeUserTranscript =
-          'Great to be here — let me tell you a bit about myself.';
-      final replyIndex =
-          (_completedUserTurns + 1).clamp(0, _demoReplies.length - 1);
-      final aiReply = _demoReplies[replyIndex];
-
-      _conversationHistory.addAll([
-        {'role': 'user', 'transcript': fakeUserTranscript},
-        {'role': 'ai', 'transcript': aiReply},
-      ]);
-
-      // Briefly show what "you said"
-      setState(() {
-        _state = _ConvState.user_turn;
-        _cardText = fakeUserTranscript;
-        _cardAnimKey++;
-      });
-      await Future.delayed(const Duration(milliseconds: 900));
-      if (!mounted) return;
-
-      setState(() {
-        _state = _ConvState.ai_speaking;
-        _cardText = aiReply;
-        _cardAnimKey++;
-      });
-      _aiPlaybackStage = _AiPlaybackStage.none;
-      await _onAudioFinished();
-      return;
-    }
-
     // ── Real mode ──────────────────────────────────────────────────────────────
     try {
       final bytes = await File(audioPath).readAsBytes();
@@ -935,7 +839,6 @@ class _RoleplayConversationScreenState
         setState(() {
           _state = _ConvState.user_turn;
           _cardText = result.userTranscript;
-          _cardAnimKey++;
           _liveTranscript = '';
         });
         await Future.delayed(const Duration(milliseconds: 1000));
@@ -947,7 +850,6 @@ class _RoleplayConversationScreenState
         _cardText = result.aiReply; // kept for history; karaoke drives display
         _karaokeChunk = '';
         _karaokeWordCount = 0;
-        _cardAnimKey++;
       });
 
       _lastAiAudioForReplay = result.aiAudioBase64;
@@ -970,7 +872,6 @@ class _RoleplayConversationScreenState
       setState(() {
         _liveTranscript = '';
         _cardText = '';
-        _cardAnimKey++;
       });
       await _startMic();
     }
@@ -1082,15 +983,9 @@ class _RoleplayConversationScreenState
     await _recorder.stop();
     _sessionTimer?.cancel();
 
-    // ── Mark level complete in SharedPreferences ───────────────────────────────
-    // This fires before any async AI call so the learning view always receives
-    // a completion signal when it reads prefs on return, even if the AI fails.
-    await _markLevelComplete();
-
     setState(() {
       _state = _ConvState.ending;
       _cardText = '';
-      _cardAnimKey++;
     });
 
     // ── Compute Visual Session Result if Camera Eye-Tracking was enabled ──────
@@ -1099,66 +994,6 @@ class _RoleplayConversationScreenState
       visualResult = VisualAnalysisCalculator.calculateSessionResult(
         frames: List.from(_visionFrames),
       );
-    }
-
-    // ── Demo mode ──────────────────────────────────────────────────────────────
-    if (_isDemoMode) {
-      await Future.delayed(const Duration(seconds: 2));
-      if (!mounted) return;
-      context.pushReplacement(
-        AppRoutes.roleplayFeedback,
-        extra: FeedbackArgs(
-          config: FeedbackConfig(
-              scenarioTitle: widget.config.scenarioTitle.isNotEmpty
-                  ? widget.config.scenarioTitle
-                  : 'Introduce Yourself',
-              overallScore: 78,
-              skills: const [
-                SkillCard(
-                    title: 'Clarity & Fluency',
-                    score: 82,
-                    tags: ['Clear', 'Natural']),
-                SkillCard(
-                    title: 'Confidence',
-                    score: 74,
-                    tags: ['Developing', 'Growing']),
-                SkillCard(
-                    title: 'Vocabulary & Grammar',
-                    score: 79,
-                    tags: ['Solid', 'Good']),
-                SkillCard(
-                    title: 'Pronunciation',
-                    score: 76,
-                    tags: ['Good', 'Solid']),
-              ],
-              insights: const [
-                'You came across as warm and approachable — great first impression.',
-                'Your introduction had a clear structure. Keep building on that.',
-                'No major filler words detected — clean, direct speech.',
-              ],
-              improvements: const [
-                'End with a question to invite the other person to share.',
-                'Vary your sentence length for a more dynamic delivery.',
-                'Add one specific detail about your work to make it memorable.',
-              ],
-            ),
-            visualResult: visualResult,
-            conversationHistory: _conversationHistory.isNotEmpty
-                ? List.from(_conversationHistory)
-                : const [
-                    {'role': 'ai', 'transcript': 'Hello! I\'m glad we could meet today. What brings you in?'},
-                    {'role': 'user', 'transcript': 'I want to di-ve-lop my negoshiation skills.'},
-                    {'role': 'ai', 'transcript': 'That\'s a great goal. Let\'s start with the basics.'},
-                  ],
-            isOnboarding: widget.isOnboarding,
-            xpAwarded: 50,
-            newLevel: 1,
-            leveledUp: false,
-          newBadges: const [],
-          newStreak: 1,
-        ),
-      );
-      return;
     }
 
     // ── Real mode ──────────────────────────────────────────────────────────────
@@ -1174,7 +1009,11 @@ class _RoleplayConversationScreenState
       if (finalVisualResult != null) {
         try {
           debugPrint('⏳ [Conversation] Evaluating & saving roleplay visual report to Firestore...');
-          final aiInsights = await SessionService.instance.evaluateAndSaveVisualReport(finalVisualResult);
+          final aiInsights = await SessionService.instance.evaluateAndSaveVisualReport(
+            finalVisualResult,
+            sessionId: widget.sessionId,
+            timeout: const Duration(seconds: 16),
+          );
           if (aiInsights != null && aiInsights.isNotEmpty) {
             finalVisualResult = finalVisualResult.copyWith(insights: aiInsights);
           }
@@ -1184,6 +1023,9 @@ class _RoleplayConversationScreenState
       }
 
       debugPrint('✅ [Conversation] Evaluation received');
+      // XP / streak / history changed server-side — let the tabs reload.
+      // Fire-and-forget: never hold up the feedback screen on a refresh.
+      unawaited(ActivityBus.instance.record(ActivityKind.roleplay));
       if (!mounted) return;
       // Page-based route: go through the router, or this throws on arrival at
       // the one screen the whole session exists to reach.
@@ -1194,12 +1036,12 @@ class _RoleplayConversationScreenState
           report: result.report,
           visualResult: finalVisualResult,
           conversationHistory: List.from(_conversationHistory),
-          isOnboarding: widget.isOnboarding,
           xpAwarded: result.xpAwarded,
           newLevel: result.newLevel,
           leveledUp: result.leveledUp,
           newBadges: result.newBadges,
           newStreak: result.newStreak,
+          sessionId: widget.sessionId,
         ),
       );
     } catch (e) {
@@ -1237,31 +1079,11 @@ class _RoleplayConversationScreenState
       );
       setState(() {
         _cardText = '';
-        _cardAnimKey++;
       });
       _sessionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() => _secondsElapsed++);
       });
       await _startMic();
-    }
-  }
-
-  // ─── Mark level complete (SharedPreferences) ──────────────────────────────
-
-  /// Saves [widget.levelId] into the 'completed_level_ids' SharedPreferences
-  /// list so the learning view can detect completion on return and fire the
-  /// XP flying animation plus unlock the next node.
-  Future<void> _markLevelComplete() async {
-    final id = widget.levelId;
-    if (id == null) return; // not launched from the learning path
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final existing = (prefs.getStringList('completed_level_ids') ?? []).toSet();
-      existing.add(id.toString());
-      await prefs.setStringList('completed_level_ids', existing.toList());
-      debugPrint('✅ [LevelComplete] Level $id saved to SharedPreferences');
-    } catch (e) {
-      debugPrint('❌ [LevelComplete] Failed to save level $id: $e');
     }
   }
 

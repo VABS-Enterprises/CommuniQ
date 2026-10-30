@@ -12,6 +12,7 @@ import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/core/services/contest_service.dart';
+import 'package:communiq/core/services/leaderboard_service.dart';
 import 'package:communiq/models/contest_models.dart';
 
 /// Contest standings from `GET /contest/leaderboard`.
@@ -33,6 +34,7 @@ class _ContestLeaderboardPageState extends State<ContestLeaderboardPage> {
   List<ContestRank> _rows = [];
   bool _loading = true;
   String? _error;
+  final RequestSequencer _requests = RequestSequencer();
 
   @override
   void initState() {
@@ -41,19 +43,22 @@ class _ContestLeaderboardPageState extends State<ContestLeaderboardPage> {
   }
 
   Future<void> _load() async {
+    final ticket = _requests.next();
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final rows = await ContestService.instance.leaderboard(type: _filter);
-      if (!mounted) return;
+      // Tapping filters quickly fires overlapping requests; only the newest
+      // may land, or a slow "All" response could show under "Debate".
+      if (!mounted || !_requests.isCurrent(ticket)) return;
       setState(() {
         _rows = rows;
         _loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || !_requests.isCurrent(ticket)) return;
       setState(() {
         _loading = false;
         _error = e.toString().replaceFirst('Exception: ', '');

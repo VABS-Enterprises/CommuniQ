@@ -189,3 +189,77 @@ ScenarioPreset? presetForKey(String? key) {
   }
   return null;
 }
+
+/// Difficulty suffixes the evaluator appends to `recommendedNextType`
+/// (`job_interview_intermediate`) — and older level words, for tolerance.
+const _kLevelSuffixes = [
+  'beginner',
+  'intermediate',
+  'advanced',
+  'easy',
+  'medium',
+  'hard',
+];
+
+/// Pre-preset scenario types still found in older stored reports.
+const _kLegacyScenarioAliases = <String, String>{
+  'hr_interview': 'job_interview',
+  'interview': 'job_interview',
+  'sales': 'negotiation',
+  'salary_negotiation': 'negotiation',
+  // "gd" = group discussion, which is the `feedback` preset's scenario.
+  'gd': 'feedback',
+  'group_discussion': 'feedback',
+};
+
+/// Maps the evaluator's free-form `recommendedNextType` (or any scenario
+/// name) back to a [ScenarioPreset] key so the setup page can be prefilled.
+///
+/// Accepts `job_interview_intermediate` → `job_interview`, a bare preset key,
+/// a preset title ("Group Discussion"), and legacy types (`hr_interview`,
+/// `sales`, `gd`). Returns null when nothing matches — including the
+/// server's `general_intermediate` fallback — so callers open setup blank
+/// rather than prefilling the wrong scenario.
+String? presetKeyForRecommendation(String? raw) {
+  if (raw == null) return null;
+  final norm = raw
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[\s\-]+'), '_')
+      .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+  if (norm.isEmpty) return null;
+
+  String? resolve(String s) {
+    if (presetForKey(s) != null) return s;
+    final alias = _kLegacyScenarioAliases[s];
+    if (alias != null) return alias;
+    for (final p in kScenarioPresets) {
+      if (p.title.toLowerCase().replaceAll(RegExp(r'\s+'), '_') == s) {
+        return p.key;
+      }
+    }
+    return null;
+  }
+
+  final direct = resolve(norm);
+  if (direct != null) return direct;
+
+  for (final level in _kLevelSuffixes) {
+    final suffix = '_$level';
+    if (norm.endsWith(suffix) && norm.length > suffix.length) {
+      return resolve(norm.substring(0, norm.length - suffix.length));
+    }
+  }
+  return null;
+}
+
+/// The difficulty word on a `recommendedNextType` (`advanced` from
+/// `negotiation_advanced`), or null when there is none.
+String? recommendationLevel(String? raw) {
+  if (raw == null) return null;
+  final norm = raw.trim().toLowerCase();
+  for (final level in _kLevelSuffixes) {
+    if (norm.endsWith('_$level')) return level;
+  }
+  return null;
+}

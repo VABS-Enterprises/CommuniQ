@@ -139,9 +139,9 @@ class _ValidationScreenState extends State<ValidationScreen>
                         anim: _a(0.30, 0.62),
                         dy: 0.22,
                         child: _ProofCard(
-                          stat: '7/10',
-                          label: 'struggle with self-\nexpression daily',
-                          icon: Icons.people_outline_rounded,
+                          stat: '20',
+                          label: 'bite-sized\nlessons',
+                          icon: Icons.menu_book_rounded,
                         ),
                       ),
                     ),
@@ -151,9 +151,9 @@ class _ValidationScreenState extends State<ValidationScreen>
                         anim: _a(0.37, 0.69),
                         dy: 0.22,
                         child: _ProofCard(
-                          stat: '83%',
-                          label: 'say confidence\nchanged their career',
-                          icon: Icons.trending_up_rounded,
+                          stat: '6',
+                          label: 'skills scored\nevery session',
+                          icon: Icons.insights_rounded,
                         ),
                       ),
                     ),
@@ -163,8 +163,8 @@ class _ValidationScreenState extends State<ValidationScreen>
                         anim: _a(0.44, 0.76),
                         dy: 0.22,
                         child: _ProofCard(
-                          stat: '2 wks',
-                          label: 'average time to\nnotice real change',
+                          stat: '24/7',
+                          label: 'AI partner to\npractise with',
                           icon: Icons.bolt_rounded,
                         ),
                       ),
@@ -173,27 +173,6 @@ class _ValidationScreenState extends State<ValidationScreen>
                 ),
 
                 const SizedBox(height: 20),
-
-                // ── 4. Testimonials — swipeable cards with star ratings ─────
-                _Enter(
-                  anim: _a(0.50, 0.76),
-                  child: const Text(
-                    'WHAT OTHERS SAY',
-                    style: TextStyle(
-                      color: AppColors.inkSoft,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                _Enter(
-                  anim: _a(0.54, 0.88),
-                  child: _TestimonialsCarousel(),
-                ),
 
                 const Spacer(),
 
@@ -244,36 +223,19 @@ class _HeroStat extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // The big number
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: const [
-                    Text(
-                      '9',
-                      style: TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 62,
-                        fontWeight: FontWeight.w900,
-                        height: 1,
-                        letterSpacing: -3,
-                      ),
-                    ),
-                    SizedBox(width: 2),
-                    Text(
-                      '/10',
-                      style: TextStyle(
-                        color: AppColors.inkSoft,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ],
+                const Text(
+                  "You're not alone.",
+                  style: TextStyle(
+                    color: AppColors.ink,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                    letterSpacing: -1,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'people held back what they really\nwanted to say — at least once this week.',
+                  'Holding back what you really want to say is common.\nIt is a skill — and skills get better with practice.',
                   style: TextStyle(
                     color: AppColors.inkMuted,
                     fontSize: 13,
@@ -309,337 +271,52 @@ class _ProofCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
       child: Container(
-          padding: const EdgeInsets.fromLTRB(13, 14, 13, 14),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: AppColors.outline,
-              width: 1.5,
-            ),
+        padding: const EdgeInsets.fromLTRB(13, 14, 13, 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: AppColors.outline,
+            width: 1.5,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Icon chip
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: AppColors.brand.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Icon(icon, color: AppColors.brandLight, size: 15),
-              ),
-              const SizedBox(height: 10),
-              // Stat number
-              Text(
-                stat,
-                style: const TextStyle(
-                  color: AppColors.ink,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  height: 1,
-                  letterSpacing: -0.8,
-                ),
-              ),
-              const SizedBox(height: 5),
-              // Description
-              Text(
-                label,
-                style: TextStyle(
-                  color: AppColors.inkMuted,
-                  fontSize: 10.5,
-                  height: 1.42,
-                ),
-              ),
-            ],
-          ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Testimonials Carousel — horizontal swipeable review cards with star ratings
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ReviewItem {
-  const _ReviewItem({
-    required this.initial,
-    required this.avatarColors,
-    required this.name,
-    required this.meta,
-    required this.quote,
-    this.stars = 5,
-  });
-
-  final String initial;
-  final List<Color> avatarColors;
-  final String name;
-  final String meta;
-  final String quote;
-  final int stars;
-}
-
-class _TestimonialsCarousel extends StatefulWidget {
-  @override
-  State<_TestimonialsCarousel> createState() => _TestimonialsCarouselState();
-}
-
-/// Uses an [AnimationController] (vsync'd to the display refresh) to drive
-/// a [ScrollController] frame-by-frame via [jumpTo].  A 100× item repeat
-/// gives ~50 minutes of scroll before the silent reset — invisible to the user.
-class _TestimonialsCarouselState extends State<_TestimonialsCarousel>
-    with SingleTickerProviderStateMixin {
-  late final ScrollController _scrollCtrl;
-  late final AnimationController _animCtrl;
-
-  // Pixels scrolled per second
-  static const double _speed = 52.0;
-  // How many times to repeat the data list for the seamless buffer
-  static const int _repeatCount = 100;
-
-  // Width of exactly one full pass of all cards (computed from MediaQuery)
-  double _singleSetWidth = 0;
-  bool _started = false;
-
-  static const _reviews = [
-    _ReviewItem(
-      initial: 'P',
-      avatarColors: [AppColors.brand, AppColors.brandLight],
-      name: 'Priya S.',
-      meta: '26 · Marketing Manager',
-      quote:
-          'I used to go quiet in every group discussion. Three weeks in, I was the one leading them.',
-    ),
-    _ReviewItem(
-      initial: 'R',
-      avatarColors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
-      name: 'Rohan M.',
-      meta: '29 · Product Manager',
-      quote:
-          'Went from dreading presentations to actually looking forward to them.',
-    ),
-    _ReviewItem(
-      initial: 'A',
-      avatarColors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
-      name: 'Aisha K.',
-      meta: '24 · Software Engineer',
-      quote:
-          'Stopped second-guessing every word I said — within just two weeks.',
-    ),
-    _ReviewItem(
-      initial: 'K',
-      avatarColors: [Color(0xFF10B981), Color(0xFF059669)],
-      name: 'Karan V.',
-      meta: '31 · Sales Lead',
-      quote:
-          'My confidence in client calls went from 3/10 to 9/10. Night and day.',
-    ),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollCtrl = ScrollController();
-    // Placeholder duration — updated in didChangeDependencies once we have
-    // the screen width to compute _singleSetWidth.
-    _animCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 22),
-    );
-    _animCtrl.addListener(_driveScroll);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final cardWidth = MediaQuery.of(context).size.width - 86;
-    // Each item slot = card width + 10 px gap on the right
-    _singleSetWidth = _reviews.length * (cardWidth + 10);
-
-    if (!_started) {
-      _started = true;
-      // Set the real duration: time to traverse one full set at constant speed
-      _animCtrl.duration = Duration(
-        milliseconds: (_singleSetWidth / _speed * 1000).round(),
-      );
-      // Start after entrance animations finish
-      Future.delayed(const Duration(milliseconds: 1800), () {
-        if (mounted) _animCtrl.repeat();
-      });
-    }
-  }
-
-  /// Called every display frame by [_animCtrl].
-  /// Maps controller value (0 → 1) to scroll offset (0 → _singleSetWidth).
-  /// When the controller repeats (value resets to 0), the scroll jumps back
-  /// to 0 — which is visually seamless because the buffer is identical.
-  void _driveScroll() {
-    if (!_scrollCtrl.hasClients || _singleSetWidth == 0) return;
-    _scrollCtrl.jumpTo(_animCtrl.value * _singleSetWidth);
-  }
-
-  @override
-  void dispose() {
-    _animCtrl
-      ..removeListener(_driveScroll)
-      ..dispose();
-    _scrollCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cardWidth = MediaQuery.of(context).size.width - 86;
-    return SizedBox(
-      height: 124,
-      child: ListView.builder(
-        controller: _scrollCtrl,
-        scrollDirection: Axis.horizontal,
-        // Programmatic-only scroll — no user gesture interference
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: _reviews.length * _repeatCount,
-        itemBuilder: (context, index) {
-          final item = _reviews[index % _reviews.length];
-          return Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: SizedBox(
-              width: cardWidth,
-              child: _ReviewCard(item: item),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _ReviewCard extends StatelessWidget {
-  const _ReviewCard({required this.item});
-  final _ReviewItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-      decoration: BoxDecoration(
-        color: AppColors.brand.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppColors.brand.withValues(alpha: 0.22),
-          width: 1,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Stars + name row ──
-          Row(
-            children: [
-              // Amber star rating
-              Row(
-                children: List.generate(
-                  item.stars,
-                  (_) => const Padding(
-                    padding: EdgeInsets.only(right: 2),
-                    child: Icon(
-                      Icons.star_rounded,
-                      color: AppColors.scoreNeedsWork,
-                      size: 14,
-                    ),
-                  ),
-                ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Icon chip
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: AppColors.brand.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(9),
               ),
-              const Spacer(),
-              // Name chip
-              Text(
-                item.name,
-                style: const TextStyle(
-                  color: AppColors.inkMuted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // ── Quote ──
-          Expanded(
-            child: Text(
-              '"${item.quote}"',
+              child: Icon(icon, color: AppColors.brandLight, size: 15),
+            ),
+            const SizedBox(height: 10),
+            // Stat number
+            Text(
+              stat,
               style: const TextStyle(
                 color: AppColors.ink,
-                fontSize: 13,
-                height: 1.48,
-                fontStyle: FontStyle.italic,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                height: 1,
+                letterSpacing: -0.8,
               ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // ── Avatar + meta ──
-          Row(
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: const BoxDecoration(
-                  color: AppColors.brand,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    item.initial,
-                    style: const TextStyle(
-                      color: AppColors.inkOnDark,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+            const SizedBox(height: 5),
+            // Description
+            Text(
+              label,
+              style: TextStyle(
+                color: AppColors.inkMuted,
+                fontSize: 10.5,
+                height: 1.42,
               ),
-              const SizedBox(width: 8),
-              Text(
-                item.meta,
-                style: const TextStyle(
-                  color: AppColors.inkSoft,
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Back button
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _BackBtn extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: AppColors.outline, width: 1),
-      ),
-      child: const Icon(
-        Icons.arrow_back_ios_new_rounded,
-        color: AppColors.inkMuted,
-        size: 16,
+            ),
+          ],
+        ),
       ),
     );
   }

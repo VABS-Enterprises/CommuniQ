@@ -17,8 +17,11 @@ import 'package:communiq/core/constants/app_text_styles.dart';
 import 'package:communiq/core/constants/motion.dart';
 import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/core/constants/spacing.dart';
+import 'package:communiq/core/routes/app_router.dart' show SessionReportArgs;
 import 'package:communiq/core/routes/app_routes.dart';
+import 'package:communiq/core/services/activity_bus.dart';
 import 'package:communiq/core/services/auth_service.dart';
+import 'package:communiq/core/services/learning_progress_store.dart';
 import 'package:communiq/core/services/leaderboard_service.dart';
 import 'package:communiq/core/services/session_service.dart';
 import 'package:communiq/models/user_profile.dart';
@@ -58,13 +61,23 @@ class _HomeViewState extends State<HomeView> {
         _profileError = false;
       });
     });
+    // A finished session, contest or lesson changes the history and the
+    // leaderboard shown here; this tab stays alive underneath those screens.
+    ActivityBus.instance.addListener(_onActivity);
     _loadAll();
   }
 
   @override
   void dispose() {
     _profileSub?.cancel();
+    ActivityBus.instance.removeListener(_onActivity);
     super.dispose();
+  }
+
+  void _onActivity() {
+    if (!mounted) return;
+    _loadSessions();
+    _loadLeaderboard();
   }
 
   /// First load reads cache; pull-to-refresh forces the network.
@@ -431,7 +444,8 @@ class _MascotGreeting extends StatelessWidget {
     if (p.streak >= 3) {
       return '${p.streak} days in a row. That consistency is exactly how fluency builds.';
     }
-    if (p.streak == 1) return 'You practised today. Come back tomorrow to start a streak.';
+    if (p.streak == 1)
+      return 'You practised today. Come back tomorrow to start a streak.';
     if (p.sessionsCompleted > 0) {
       return "You've finished ${p.sessionsCompleted} "
           "${p.sessionsCompleted == 1 ? 'session' : 'sessions'}. Ready for another?";
@@ -620,57 +634,65 @@ class _JourneyCard extends StatelessWidget {
 
   final UserProfile? profile;
 
-  /// The full curriculum length the journey is measured against.
-  static const _totalSessions = 150;
-
   @override
   Widget build(BuildContext context) {
-    final done = profile?.sessionsCompleted ?? 0;
-    final pct = (done / _totalSessions).clamp(0.0, 1.0);
+    // Measured against the real curriculum: lessons completed out of the
+    // levels the server reports (one stepTotals entry per level).
+    return AnimatedBuilder(
+      animation: LearningProgressStore.instance,
+      builder: (context, _) {
+        final store = LearningProgressStore.instance;
+        final total = store.progress.stepTotals.length;
+        final done = store.completedLevelIds.length;
+        final pct = total == 0 ? 0.0 : (done / total).clamp(0.0, 1.0);
+        final sessions = profile?.sessionsCompleted ?? 0;
 
-    return ChunkyCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
+        return ChunkyCard(
+          onTap: () => context.go(AppRoutes.learning),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Learning journey',
-                        style: AppTextStyles.titleLarge),
-                    const SizedBox(height: 2),
-                    Text('$done of $_totalSessions sessions',
-                        style: AppTextStyles.bodySmall),
-                  ],
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Learning journey',
+                            style: AppTextStyles.titleLarge),
+                        const SizedBox(height: 2),
+                        Text(
+                          total == 0
+                              ? 'Open Learn to load your lessons'
+                              : '$done of $total lessons complete',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (total > 0)
+                    CountBadge(
+                      label: '${(pct * 100).round()}%',
+                      color: pct > 0 ? AppColors.brand : AppColors.inkSoft,
+                    ),
+                ],
               ),
-              CountBadge(
-                label: '${(pct * 100).round()}%',
-                color: pct > 0 ? AppColors.brand : AppColors.inkSoft,
+              const SizedBox(height: AppSpacing.s14),
+              ChunkyProgressBar(value: pct, color: AppColors.brand),
+              const SizedBox(height: AppSpacing.s8),
+              Text(
+                sessions == 0
+                    ? 'Start your first roleplay session!'
+                    : '$sessions roleplay ${sessions == 1 ? 'session' : 'sessions'} completed',
+                style: AppTextStyles.bodySmall,
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.s14),
-          ChunkyProgressBar(value: pct, color: AppColors.brand),
-          const SizedBox(height: AppSpacing.s8),
-          Text(
-            done == 0
-                ? 'Start your first session!'
-                : 'Next milestone at ${_nextMilestone(done)} sessions',
-            style: AppTextStyles.bodySmall,
-          ),
-        ],
-      ),
+        );
+      },
     );
-  }
-
-  int _nextMilestone(int done) {
-    const milestones = [10, 25, 50, 100, _totalSessions];
-    return milestones.firstWhere((m) => m > done, orElse: () => _totalSessions);
   }
 }
 
@@ -745,8 +767,11 @@ class _SkillGrid extends StatelessWidget {
     'confidence': ('Confidence', Icons.bolt_rounded, AppColors.brand),
     'vocabulary': ('Vocabulary', Icons.menu_book_rounded, AppColors.brand),
     'grammar': ('Grammar', Icons.spellcheck_rounded, AppColors.brand),
-    'pronunciation': ('Pronunciation', Icons.record_voice_over_rounded,
-        AppColors.success),
+    'pronunciation': (
+      'Pronunciation',
+      Icons.record_voice_over_rounded,
+      AppColors.success
+    ),
   };
 
   @override
@@ -902,7 +927,10 @@ class _LeaderboardTeaser extends StatelessWidget {
               padding: EdgeInsets.only(bottom: i < 2 ? AppSpacing.s12 : 0),
               child: const Row(
                 children: [
-                  SkeletonBox(width: 32, height: 32, radius: BorderRadius.all(Radius.circular(16))),
+                  SkeletonBox(
+                      width: 32,
+                      height: 32,
+                      radius: BorderRadius.all(Radius.circular(16))),
                   SizedBox(width: AppSpacing.s12),
                   Expanded(child: SkeletonBox(height: 14)),
                 ],
@@ -1162,7 +1190,7 @@ class _SessionRow extends StatelessWidget {
   }
 
   String get _when {
-    final raw = session['createdAt'] ?? session['endedAt'];
+    final raw = session['startedAt'] ?? session['endedAt'];
     DateTime? dt;
     if (raw is String) dt = DateTime.tryParse(raw);
     if (raw is int) {
@@ -1184,46 +1212,60 @@ class _SessionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final score = _score;
     final tint = score != null ? AppColors.forScore(score) : AppColors.inkSoft;
+    final sessionId = session['sessionId'];
+    final canOpen = session['status'] == 'completed' && sessionId is String;
 
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.s14),
-      child: Row(
-        children: [
-          IconTile(icon: Icons.mic_rounded, color: tint, size: 40),
-          const SizedBox(width: AppSpacing.s12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _title,
-                  style: AppTextStyles.titleSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+    return InkWell(
+      onTap: canOpen
+          ? () => context.push(
+                AppRoutes.sessionReport,
+                extra: SessionReportArgs(
+                  sessionId: sessionId,
+                  scenarioTitle: _title,
                 ),
-                if (_when.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(_when, style: AppTextStyles.bodySmall),
+              )
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.s14),
+        child: Row(
+          children: [
+            IconTile(icon: Icons.mic_rounded, color: tint, size: 40),
+            const SizedBox(width: AppSpacing.s12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _title,
+                    style: AppTextStyles.titleSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (_when.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(_when, style: AppTextStyles.bodySmall),
+                  ],
                 ],
-              ],
-            ),
-          ),
-          if (score != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: tint,
-                borderRadius: AppRadius.pillRadius,
               ),
-              child: Text(
-                '$score',
-                style: AppTextStyles.numeralSmall.copyWith(
-                  color: AppColors.inkOnDark,
+            ),
+            if (score != null)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: tint,
+                  borderRadius: AppRadius.pillRadius,
+                ),
+                child: Text(
+                  '$score',
+                  style: AppTextStyles.numeralSmall.copyWith(
+                    color: AppColors.inkOnDark,
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

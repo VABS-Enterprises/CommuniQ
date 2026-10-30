@@ -13,7 +13,9 @@ import 'package:communiq/core/constants/motion.dart';
 import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/routes/app_routes.dart';
+import 'package:communiq/core/services/activity_bus.dart';
 import 'package:communiq/core/services/contest_service.dart';
+import 'package:communiq/core/services/leaderboard_service.dart';
 import 'package:communiq/models/contest_models.dart';
 import 'package:communiq/views/contest_view/contest_prompts.dart';
 
@@ -31,29 +33,51 @@ class ContestHubPage extends StatefulWidget {
 
 class _ContestHubPageState extends State<ContestHubPage> {
   List<ContestAttempt> _attempts = [];
+  ContestStats? _stats;
   bool _loading = true;
   String? _error;
+
+  /// A slow earlier load (e.g. pull-to-refresh racing an ActivityBus reload)
+  /// must not overwrite a newer one.
+  final RequestSequencer _requests = RequestSequencer();
 
   @override
   void initState() {
     super.initState();
+    // This tab is kept alive by the shell, so initState runs once. A contest
+    // submitted from here (and the result page's `go` back to this tab) would
+    // otherwise leave the history and best score from before it.
+    ActivityBus.instance.addListener(_onActivity);
     _load();
   }
 
+  @override
+  void dispose() {
+    ActivityBus.instance.removeListener(_onActivity);
+    super.dispose();
+  }
+
+  void _onActivity() {
+    if (ActivityBus.instance.last == ActivityKind.contest) _load();
+  }
+
   Future<void> _load() async {
+    final ticket = _requests.next();
     setState(() {
-      _loading = true;
+      // Keep showing what we have while a background refresh runs.
+      _loading = _attempts.isEmpty;
       _error = null;
     });
     try {
-      final attempts = await ContestService.instance.history(limit: 5);
-      if (!mounted) return;
+      final history = await ContestService.instance.history(limit: 5);
+      if (!mounted || !_requests.isCurrent(ticket)) return;
       setState(() {
-        _attempts = attempts;
+        _attempts = history.attempts;
+        _stats = history.stats;
         _loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || !_requests.isCurrent(ticket)) return;
       setState(() {
         _loading = false;
         _error = e.toString().replaceFirst('Exception: ', '');
@@ -61,9 +85,17 @@ class _ContestHubPageState extends State<ContestHubPage> {
     }
   }
 
-  double? get _best => _attempts.isEmpty
-      ? null
-      : _attempts.map((a) => a.overallScore).reduce((a, b) => a > b ? a : b);
+  /// Lifetime attempt count — from the server's stats, which cover every
+  /// attempt, not just the five shown here.
+  int get _attemptCount => _stats?.attempts ?? _attempts.length;
+
+  double? get _best {
+    final stats = _stats;
+    if (stats != null) return stats.attempts > 0 ? stats.bestScore : null;
+    return _attempts.isEmpty
+        ? null
+        : _attempts.map((a) => a.overallScore).reduce((a, b) => a > b ? a : b);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +128,7 @@ class _ContestHubPageState extends State<ContestHubPage> {
               AppSpacing.navClearance,
             ),
             children: [
-              _Intro(best: _best, attempts: _attempts.length),
+              _Intro(best: _best, attempts: _attemptCount),
               const SizedBox(height: AppSpacing.section),
 
               const SectionHeader(

@@ -5,9 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:communiq/core/constants/api_constants.dart';
 import 'package:communiq/core/services/api_service.dart';
 import 'package:communiq/core/services/profile_cache_service.dart';
-import 'package:communiq/models/scenario_model.dart';
 import 'package:communiq/models/session_result_model.dart'
-    show OpeningResult, SessionEndResult, TurnResult, TurnEvent;
+    show OpeningResult, SessionEndResult, TurnResult;
 import 'package:communiq/models/user_profile.dart';
 import 'package:communiq/models/visual_analysis_models.dart';
 
@@ -69,7 +68,9 @@ class SessionService {
     return fresh;
   }
 
-  /// Core network fetch: GET /user/profile + optional GET /sessions/history.
+  /// Core network fetch: GET /user/profile, which includes the completed
+  /// session count (counted server-side — it used to be derived from
+  /// /sessions/history, which returns at most 20 rows).
   Future<UserProfile> _fetchFromNetwork() async {
     try {
       debugPrint('[SessionService] _fetchFromNetwork →');
@@ -80,29 +81,13 @@ class SessionService {
               as Map<String, dynamic>?;
       if (profileData == null) throw Exception('Profile data missing');
 
-      // Session count is optional — a missing Firestore index or 5xx must not
-      // prevent the profile from rendering.
-      int completed = 0;
-      try {
-        final sessionsResponse = await _dio.get(ApiConstants.sessionsHistory);
-        final sessions =
-            (sessionsResponse.data as Map<String, dynamic>?)?['sessions']
-                as List? ??
-                [];
-        completed = sessions
-            .where((s) => (s as Map<String, dynamic>)['status'] == 'completed')
-            .length;
-      } catch (e) {
-        debugPrint('[SessionService] sessions history failed (non-fatal): $e');
-      }
-
-      final profile =
-          UserProfile.fromJson(profileData).copyWithSessions(completed);
-      debugPrint('[SessionService] _fetchFromNetwork ✓  sessions=$completed');
+      final profile = UserProfile.fromJson(profileData);
+      debugPrint('[SessionService] _fetchFromNetwork ✓  sessions=${profile.sessionsCompleted}');
       return profile;
     } on DioException catch (e) {
       debugPrint('[SessionService] _fetchFromNetwork ✗ DioException: $e');
-      // Last-resort fallback to /auth/me (lighter endpoint, no skillProgress).
+      // Last-resort fallback to /auth/me, which also recreates a missing
+      // user document.
       try {
         final r = await _dio.get(ApiConstants.authMe);
         final d = (r.data as Map<String, dynamic>?)?['user']
@@ -116,25 +101,22 @@ class SessionService {
     }
   }
 
-  // ─── Scenarios ─────────────────────────────────────────────────────────────
-
-  /// Fetches the list of scenarios available to the current user's level.
-  Future<List<ScenarioModel>> fetchScenarios() async {
+  /// Renames the user. Returns the updated profile and broadcasts it.
+  Future<UserProfile> updateName(String name) async {
     try {
-      debugPrint('[SessionService] fetchScenarios →');
-      final response = await _dio.get(ApiConstants.scenarios);
-      final raw =
-          (response.data as Map<String, dynamic>?)?['scenarios'] as List? ?? [];
-      debugPrint('[SessionService] fetchScenarios ✓ (${raw.length} items)');
-      return raw
-          .map((e) => ScenarioModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final response = await _dio.patch(
+        ApiConstants.userProfile,
+        data: {'name': name.trim()},
+      );
+      final data =
+          (response.data as Map<String, dynamic>?)?['user'] as Map<String, dynamic>?;
+      if (data == null) throw Exception('Profile data missing');
+      final profile = UserProfile.fromJson(data);
+      await ProfileCacheService.save(profile);
+      _profileController.add(profile);
+      return profile;
     } on DioException catch (e) {
-      debugPrint('[SessionService] fetchScenarios ✗ DioException: $e');
-      throw Exception(_dioMessage(e, 'Could not load scenarios'));
-    } catch (e) {
-      debugPrint('[SessionService] fetchScenarios ✗ $e');
-      rethrow;
+      throw Exception(_dioMessage(e, 'Could not update your name'));
     }
   }
 
@@ -147,6 +129,7 @@ class SessionService {
   /// At least one of the two must be non-empty.
   Future<String> startSession(
     String scenarioId, {
+    String? scenarioKey,
     String? scenarioPrompt,
     String? scenarioTitle,
     String? persona,
@@ -168,6 +151,7 @@ class SessionService {
         ApiConstants.sessionsStart,
         data: {
           if (scenarioId.isNotEmpty) 'scenarioId': scenarioId,
+          if (scenarioKey != null && scenarioKey.isNotEmpty) 'scenarioKey': scenarioKey,
           if (scenarioPrompt != null && scenarioPrompt.isNotEmpty)
             'scenarioPrompt': scenarioPrompt,
           if (scenarioTitle != null && scenarioTitle.isNotEmpty)
@@ -269,80 +253,6 @@ class SessionService {
     }
   }
 
-  /// One message from the streamed turn endpoint.
-  ///
-  /// The transcript arrives first, then one event per synthesised sentence,
-  /// then [done]. [error] can replace the tail at any point — once the stream
-  /// has started the HTTP status is already committed, so a mid-stream failure
-  /// can only be reported as data.
-  ///
-  /// Streams the turn instead of waiting for the whole reply.
-  ///
-  /// The non-streaming [processTurn] cannot return until the last sentence has
-  /// been synthesised. Measured against the AI server, the transcript is ready
-  /// about a second before the audio is, and on longer replies the gap is much
-  /// wider — so the user sees what they said, and hears the first sentence,
-  /// well before the reply is finished.
-  Stream<TurnEvent> processTurnStreamed({
-    required String sessionId,
-    required Uint8List audioBytes,
-    required String filename,
-    required List<Map<String, String>> conversationHistory,
-  }) async* {
-    debugPrint('[SessionService] processTurnStreamed → sessionId=$sessionId, '
-        'file=$filename (${audioBytes.length}B)');
-
-    final formData = FormData.fromMap({
-      'audioFile': MultipartFile.fromBytes(
-        audioBytes,
-        filename: filename,
-        contentType: DioMediaType.parse(_mimeFromFilename(filename)),
-      ),
-      'sessionId': sessionId,
-      'conversationHistory': _encodeHistory(conversationHistory),
-    });
-
-    final Response<ResponseBody> response;
-    try {
-      response = await _dio.post<ResponseBody>(
-        ApiConstants.sessionsTurnStream,
-        data: formData,
-        options: Options(
-          responseType: ResponseType.stream,
-          sendTimeout: const Duration(seconds: 120),
-          receiveTimeout: const Duration(seconds: 120),
-        ),
-      );
-    } on DioException catch (e) {
-      debugPrint('[SessionService] processTurnStreamed ✗ $e');
-      throw Exception(_dioMessage(e, 'Turn processing failed'));
-    }
-
-    // NDJSON: one JSON object per line. A chunk boundary can land anywhere,
-    // including mid-line, so the tail is carried into the next chunk.
-    var buffer = '';
-    await for (final chunk in response.data!.stream) {
-      buffer += utf8.decode(chunk, allowMalformed: true);
-      final lines = buffer.split('\n');
-      buffer = lines.removeLast();
-
-      for (final line in lines) {
-        if (line.trim().isEmpty) continue;
-        try {
-          yield TurnEvent.fromJson(jsonDecode(line) as Map<String, dynamic>);
-        } catch (e) {
-          debugPrint('[SessionService] skipping malformed stream line: $e');
-        }
-      }
-    }
-    if (buffer.trim().isNotEmpty) {
-      try {
-        yield TurnEvent.fromJson(jsonDecode(buffer) as Map<String, dynamic>);
-      } catch (_) {/* truncated trailing line — nothing useful left */}
-    }
-    debugPrint('[SessionService] processTurnStreamed ✓ stream closed');
-  }
-
   /// Abandons a session without evaluation. Used when the user backs out of
   /// the conversation screen mid-session.
   Future<void> abandonSession(String sessionId) async {
@@ -404,6 +314,32 @@ class SessionService {
     }
   }
 
+  /// The stored evaluation report for a completed session
+  /// (GET /sessions/:id/report), shaped like the `report` in [endSession]'s
+  /// response so the feedback screen can re-open it.
+  Future<Map<String, dynamic>> fetchSessionReport(String sessionId) async {
+    try {
+      final response = await _dio.get(ApiConstants.sessionReport(sessionId));
+      final report =
+          (response.data as Map<String, dynamic>?)?['report'] as Map<String, dynamic>?;
+      if (report == null) throw Exception('Report missing');
+      return report;
+    } on DioException catch (e) {
+      throw Exception(_dioMessage(e, 'Could not load this report'));
+    }
+  }
+
+  /// The user's saved visual (camera) reports, newest first.
+  Future<List<Map<String, dynamic>>> fetchVisualReports() async {
+    try {
+      final response = await _dio.get(ApiConstants.visualReports);
+      final raw = (response.data as Map<String, dynamic>?)?['reports'] as List? ?? [];
+      return raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    } on DioException catch (e) {
+      throw Exception(_dioMessage(e, 'Could not load visual reports'));
+    }
+  }
+
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
   String _mimeFromFilename(String filename) {
@@ -442,9 +378,19 @@ class SessionService {
   }
 
   /// Evaluates computer vision metrics via AI LLM and persists report to Firestore under the user's account.
-  Future<List<VisualInsight>?> evaluateAndSaveVisualReport(VisionSessionResult result) async {
+  ///
+  /// [isDemo] runs (synthetic camera data) get insights but are not stored.
+  /// [sessionId] ties the report to the roleplay it was recorded in.
+  Future<List<VisualInsight>?> evaluateAndSaveVisualReport(
+    VisionSessionResult result, {
+    String? sessionId,
+    bool isDemo = false,
+    Duration? timeout,
+  }) async {
     try {
       final payload = {
+        if (sessionId != null && sessionId.isNotEmpty) 'sessionId': sessionId,
+        'isDemo': isDemo,
         'visualEngagementScore': result.visualEngagementScore,
         'overallPostureScore': result.overallPostureScore,
         'eyeContactPercentage': result.eyeContactPercentage,
@@ -457,7 +403,11 @@ class SessionService {
         'gestureScore': result.gestureScore,
       };
 
-      final response = await _dio.post('/user/visual-reports', data: payload);
+      final response = await _dio.post(
+        ApiConstants.visualReports,
+        data: payload,
+        options: timeout == null ? null : Options(receiveTimeout: timeout),
+      );
       if (response.statusCode == 201 || response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>?;
         final insightsList = data?['insights'] as List?;

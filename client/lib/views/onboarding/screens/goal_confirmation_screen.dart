@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/models/onboarding_data.dart';
@@ -11,8 +10,7 @@ class GoalConfirmationScreen extends StatefulWidget {
   final OnboardingData data;
 
   @override
-  State<GoalConfirmationScreen> createState() =>
-      _GoalConfirmationScreenState();
+  State<GoalConfirmationScreen> createState() => _GoalConfirmationScreenState();
 }
 
 class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
@@ -194,7 +192,6 @@ class _GoalConfirmationScreenState extends State<GoalConfirmationScreen>
       ),
     );
   }
-
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -258,9 +255,7 @@ class _GoalCard extends StatelessWidget {
                   Text(
                     goal.label,
                     style: TextStyle(
-                      color: isSelected
-                          ? AppColors.ink
-                          : AppColors.inkMuted,
+                      color: isSelected ? AppColors.ink : AppColors.inkMuted,
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                       letterSpacing: 0.1,
@@ -270,9 +265,8 @@ class _GoalCard extends StatelessWidget {
                   Text(
                     goal.tagline,
                     style: TextStyle(
-                      color: isSelected
-                          ? AppColors.inkMuted
-                          : AppColors.inkSoft,
+                      color:
+                          isSelected ? AppColors.inkMuted : AppColors.inkSoft,
                       fontSize: 12.5,
                       height: 1.45,
                     ),

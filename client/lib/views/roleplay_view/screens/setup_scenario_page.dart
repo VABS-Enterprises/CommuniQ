@@ -18,7 +18,6 @@ import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/core/data/scenario_presets.dart';
 import 'package:communiq/models/roleplay_config.dart';
 import 'package:communiq/core/services/session_service.dart';
-import 'package:communiq/views/roleplay_view/screens/roleplay_conversation_screen.dart';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -177,6 +176,9 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
     try {
       final sessionId = await SessionService.instance.startSession(
         '',
+        // Preset key doubles as the server's scenario category (evaluation +
+        // per-type stats). Custom scenarios send none.
+        scenarioKey: _mode == _Mode.preset ? _selectedPreset!.key : null,
         scenarioPrompt: scenarioPrompt,
         scenarioTitle: scenarioTitle,
         persona: _persona,
@@ -191,6 +193,7 @@ class _SetupScenarioPageState extends State<SetupScenarioPage> {
 
       final config = RoleplayConfig(
         scenarioId: '',
+        scenarioKey: _mode == _Mode.preset ? _selectedPreset!.key : null,
         scenarioTitle: scenarioTitle,
         scenario: _mode == _Mode.preset
             ? _selectedPreset!.subtitle

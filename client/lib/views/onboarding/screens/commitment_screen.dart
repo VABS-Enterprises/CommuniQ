@@ -35,7 +35,7 @@ class _CommitmentScreenState extends State<CommitmentScreen>
       days: 3,
       label: '3 days / week',
       intensity: 'Balanced',
-      description: 'The sweet spot — most users hit their goals here.',
+      description: 'The sweet spot — enough practice to build a habit.',
       icon: Icons.local_fire_department_rounded,
       accentColor: Color(0xFF5B52F0),
       isRecommended: true,
@@ -75,7 +75,7 @@ class _CommitmentScreenState extends State<CommitmentScreen>
       case 2:
         return 'Consistent beats intense. Good choice.';
       case 3:
-        return "3 days is all it took for most of our users to see results.";
+        return "3 days a week is enough to build a real habit.";
       case 5:
         return 'Full commitment. Your results will show it.';
       default:
@@ -238,23 +238,6 @@ class _CommitmentScreenState extends State<CommitmentScreen>
       ),
     );
   }
-
-  Widget _backButton() {
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: AppColors.outline, width: 1),
-      ),
-      child: const Icon(
-        Icons.arrow_back_ios_new_rounded,
-        color: AppColors.inkMuted,
-        size: 16,
-      ),
-    );
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -307,8 +290,7 @@ class _OptionCard extends StatelessWidget {
               ),
               child: Icon(
                 option.icon,
-                color:
-                    isSelected ? AppColors.brandLight : AppColors.inkSoft,
+                color: isSelected ? AppColors.brandLight : AppColors.inkSoft,
                 size: 22,
               ),
             ),
@@ -325,9 +307,8 @@ class _OptionCard extends StatelessWidget {
                       Text(
                         option.label,
                         style: TextStyle(
-                          color: isSelected
-                              ? AppColors.ink
-                              : AppColors.inkMuted,
+                          color:
+                              isSelected ? AppColors.ink : AppColors.inkMuted,
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                         ),
@@ -369,9 +350,8 @@ class _OptionCard extends StatelessWidget {
                   Text(
                     option.description,
                     style: TextStyle(
-                      color: isSelected
-                          ? AppColors.inkMuted
-                          : AppColors.inkSoft,
+                      color:
+                          isSelected ? AppColors.inkMuted : AppColors.inkSoft,
                       fontSize: 12.5,
                       height: 1.45,
                     ),

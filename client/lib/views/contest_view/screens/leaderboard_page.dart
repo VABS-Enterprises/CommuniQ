@@ -15,8 +15,9 @@ import 'package:communiq/core/services/leaderboard_service.dart';
 
 /// App-wide XP standings (GET /leaderboard, GET /leaderboard/weekly).
 ///
-/// Ranks total XP across the whole app. The contest tab has its own separate
-/// board that ranks contest scores.
+/// "All time" ranks total XP; "This week" ranks XP earned in the current
+/// (Monday-start) week. The contest tab has its own separate board that ranks
+/// contest scores.
 class LeaderboardPage extends StatefulWidget {
   const LeaderboardPage({super.key});
 
@@ -29,6 +30,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
   bool _loading = true;
   String? _error;
   List<LeaderboardEntry> _entries = const [];
+  final RequestSequencer _requests = RequestSequencer();
 
   @override
   void initState() {
@@ -37,6 +39,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
   }
 
   Future<void> _load() async {
+    final ticket = _requests.next();
     setState(() {
       _loading = true;
       _error = null;
@@ -45,14 +48,15 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
       final entries = _weekly
           ? await LeaderboardService.fetchWeekly()
           : await LeaderboardService.fetchAllTime();
-      if (!mounted) return;
+      // A newer load (the user toggled again) owns the screen now.
+      if (!mounted || !_requests.isCurrent(ticket)) return;
       setState(() {
         _entries = entries;
         _loading = false;
       });
     } catch (e) {
       debugPrint('[LeaderboardPage] load failed: $e');
-      if (!mounted) return;
+      if (!mounted || !_requests.isCurrent(ticket)) return;
       setState(() {
         _error = 'Could not load the leaderboard.';
         _loading = false;
@@ -106,6 +110,20 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.page,
+                0,
+                AppSpacing.page,
+                AppSpacing.s4,
+              ),
+              child: Text(
+                _weekly
+                    ? "Ranked by this week's XP · resets every Monday"
+                    : 'Ranked by total XP',
+                style: AppTextStyles.bodySmall,
+              ),
+            ),
             Expanded(child: _body()),
           ],
         ),
@@ -121,7 +139,10 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
     if (_entries.isEmpty) {
       return EmptyState(
         title: _weekly ? 'Nothing this week' : 'No rankings yet',
-        message: 'Finish a session to get on the board.',
+        message: _weekly
+            ? 'Nobody has earned XP yet this week. Finish a session to '
+                'lead the board.'
+            : 'Finish a session to get on the board.',
         mood: MascotMood.encouraging,
         actionLabel: 'Refresh',
         onAction: _load,
@@ -152,7 +173,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
               child: LeaderboardRow(
                 rank: i + 1,
                 name: e.name,
-                trailing: '${e.xp} XP',
+                trailing: _weekly ? '${e.xp} XP this week' : '${e.xp} XP',
                 isMe: myUid != null && myUid == e.uid,
               ),
             ),

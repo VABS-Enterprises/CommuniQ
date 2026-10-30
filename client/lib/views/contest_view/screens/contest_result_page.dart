@@ -30,7 +30,7 @@ class ContestResultPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ConfettiOverlay(
-      play: _strong,
+      play: _strong || result.leveledUp,
       child: PlayfulBackground(
         seed: 9,
         child: Scaffold(
@@ -157,11 +157,32 @@ class _ScoreHero extends StatelessWidget {
             ),
           ),
           Text('out of 100', style: AppTextStyles.bodySmall),
-          if (result.xpAwarded > 0) ...[
+          if (result.xpAwarded > 0 ||
+              result.leveledUp ||
+              (result.newStreak ?? 0) > 0) ...[
             const SizedBox(height: AppSpacing.s12),
-            StatPill(
-              icon: Icons.bolt_rounded,
-              value: '+${result.xpAwarded} XP',
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: AppSpacing.s8,
+              runSpacing: AppSpacing.s8,
+              children: [
+                if (result.xpAwarded > 0)
+                  StatPill(
+                    icon: Icons.bolt_rounded,
+                    value: '+${result.xpAwarded} XP',
+                  ),
+                if (result.leveledUp && result.newLevel != null)
+                  StatPill(
+                    icon: Icons.arrow_upward_rounded,
+                    value: 'Level up · ${result.newLevel}',
+                    color: AppColors.brand,
+                  ),
+                if ((result.newStreak ?? 0) > 0)
+                  StatPill(
+                    icon: Icons.local_fire_department_rounded,
+                    value: '${result.newStreak}-day streak',
+                  ),
+              ],
             ),
           ],
         ],

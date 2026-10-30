@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:communiq/core/constants/app_colors.dart';
@@ -27,31 +26,31 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
       label: 'Calm & Quiet',
       tagline: 'You choose words carefully, speak softly',
       icon: Icons.air_rounded,
-      accent: Color(0xFF38BDF8),   // sky blue
+      accent: Color(0xFF38BDF8), // sky blue
     ),
     _Style(
       label: 'Fast & Energetic',
       tagline: 'Your mind races and the words keep up',
       icon: Icons.bolt_rounded,
-      accent: Color(0xFFF59E0B),   // amber
+      accent: Color(0xFFF59E0B), // amber
     ),
     _Style(
       label: 'Confident & Direct',
       tagline: 'You say what you mean, no filler words',
       icon: Icons.arrow_forward_rounded,
-      accent: Color(0xFF5B52F0),   // indigo
+      accent: Color(0xFF5B52F0), // indigo
     ),
     _Style(
       label: 'Hesitant & Unsure',
       tagline: 'You second-guess yourself before speaking',
       icon: Icons.help_outline_rounded,
-      accent: Color(0xFFA78BFA),   // violet
+      accent: Color(0xFFA78BFA), // violet
     ),
     _Style(
       label: 'Friendly & Casual',
       tagline: 'Easy-going, warm and approachable tone',
       icon: Icons.tag_faces_rounded,
-      accent: Color(0xFF10B981),   // emerald
+      accent: Color(0xFF10B981), // emerald
     ),
   ];
 
@@ -93,11 +92,8 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 12),
-
                 buildOnboardingHeader(context, 3),
-
                 const SizedBox(height: 28),
-
                 const Text(
                   'How do you naturally\nspeak?',
                   style: TextStyle(
@@ -117,9 +113,7 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
                     height: 1.5,
                   ),
                 ),
-
                 const SizedBox(height: 22),
-
                 Expanded(
                   child: ListView(
                     physics: const BouncingScrollPhysics(),
@@ -157,8 +151,7 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
 
                       // Optional note field
                       Focus(
-                        onFocusChange: (f) =>
-                            setState(() => _noteFocused = f),
+                        onFocusChange: (f) => setState(() => _noteFocused = f),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 250),
                           decoration: BoxDecoration(
@@ -195,16 +188,13 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 OnboardingButton(
                   label: 'Continue',
                   enabled: _selected != null,
                   onPressed: () {
                     final note = _noteController.text.trim();
-                    debugPrint(
-                        '[Onboarding] Step 3/6 — Style: "$_selected"'
+                    debugPrint('[Onboarding] Step 3/6 — Style: "$_selected"'
                         '${note.isNotEmpty ? ', note: "$note"' : ''}');
                     Navigator.push(
                       context,
@@ -217,7 +207,6 @@ class _SpeakingStyleScreenState extends State<SpeakingStyleScreen>
                     );
                   },
                 ),
-
                 const SizedBox(height: 28),
               ],
             ),
@@ -292,9 +281,7 @@ class _StyleCard extends StatelessWidget {
                   Text(
                     style.label,
                     style: TextStyle(
-                      color: isSelected
-                          ? AppColors.ink
-                          : AppColors.inkMuted,
+                      color: isSelected ? AppColors.ink : AppColors.inkMuted,
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                       letterSpacing: 0.1,
@@ -304,9 +291,8 @@ class _StyleCard extends StatelessWidget {
                   Text(
                     style.tagline,
                     style: TextStyle(
-                      color: isSelected
-                          ? AppColors.inkMuted
-                          : AppColors.inkSoft,
+                      color:
+                          isSelected ? AppColors.inkMuted : AppColors.inkSoft,
                       fontSize: 12.5,
                       height: 1.45,
                     ),

@@ -16,6 +16,7 @@ import 'package:communiq/core/constants/motion.dart';
 import 'package:communiq/core/constants/radius.dart';
 import 'package:communiq/core/constants/shadows.dart';
 import 'package:communiq/core/constants/spacing.dart';
+import 'package:communiq/core/services/activity_bus.dart';
 import 'package:communiq/core/services/learning_progress_store.dart';
 import 'package:communiq/core/services/learning_service.dart';
 import 'package:communiq/core/services/onboarding_service.dart';
@@ -69,11 +70,27 @@ class LearningSessionScreen extends StatefulWidget {
   /// before the first graded answer of this session lands.
   final int initialCoins;
 
+  /// Test seams. Default to [LearningService.evaluateLearningResponse] and
+  /// [LearningService.completeLevel].
+  @visibleForTesting
+  final Future<DemoEvaluationResult> Function(String response)?
+      evaluateOverride;
+  @visibleForTesting
+  final Future<LevelCompletionResult> Function(int levelId)? completeOverride;
+
+  /// Test seam for [ActivityBus.record], which refreshes the profile over the
+  /// network.
+  @visibleForTesting
+  final void Function(ActivityKind kind)? recordActivityOverride;
+
   const LearningSessionScreen({
     super.key,
     required this.level,
     this.isAlreadyCompleted = false,
     this.initialCoins = 0,
+    this.evaluateOverride,
+    this.completeOverride,
+    this.recordActivityOverride,
   });
 
   @override
@@ -116,6 +133,14 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
   DemoEvaluationResult? _evalResult;
   bool _isEvaluating = false;
   String? _evalError;
+
+  /// The server's confirmation that the level is complete. Null until
+  /// `POST /learning/levels/:id/complete` succeeds — the only thing that
+  /// unlocks the next level, so the only thing that may be reported as
+  /// "completed" to the journey map.
+  LevelCompletionResult? _completionResult;
+  bool _completing = false;
+  String? _completeError;
 
   LearningProgressStore get _store => LearningProgressStore.instance;
 
@@ -331,8 +356,17 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
   // ── Written response ───────────────────────────────────────────────────────
 
   Future<void> _submitResponse() async {
+    if (_isEvaluating || _completing) return;
+
+    // Already scored — only the completion call failed. Retry just that, so
+    // the user isn't charged another evaluation for the same answer.
+    if (_evalResult != null) {
+      await _completeLevel();
+      return;
+    }
+
     final text = _textController.text.trim();
-    if (text.isEmpty || _isEvaluating) return;
+    if (text.isEmpty) return;
 
     setState(() {
       _isEvaluating = true;
@@ -340,56 +374,81 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
     });
 
     try {
-      final result = await LearningService.evaluateLearningResponse(
-        question: widget.level.responsePrompt.isNotEmpty
-            ? widget.level.responsePrompt
-            : widget.level.scenario,
-        userResponse: text,
-        topic: widget.level.journeyTitle.isNotEmpty
-            ? widget.level.journeyTitle
-            : widget.level.title,
-        difficulty: widget.level.difficulty,
-      );
+      final evaluate = widget.evaluateOverride ??
+          (String response) => LearningService.evaluateLearningResponse(
+                question: widget.level.responsePrompt.isNotEmpty
+                    ? widget.level.responsePrompt
+                    : widget.level.scenario,
+                userResponse: response,
+                topic: widget.level.journeyTitle.isNotEmpty
+                    ? widget.level.journeyTitle
+                    : widget.level.title,
+                difficulty: widget.level.difficulty,
+                // The server stores the score against this level and pays the
+                // response coins from it on completion.
+                levelId: widget.level.id,
+              );
+      final result = await evaluate(text);
       if (!mounted) return;
       setState(() {
         _evalResult = result;
         _isEvaluating = false;
       });
-
-      // The server verifies every MCQ step independently, then awards the
-      // response coins and the completion bonus. The response coins used to
-      // be added client-side and never persisted, so the server total could
-      // never reach what the UI had already shown.
-      try {
-        final completion = await LearningService.completeLevel(
-          widget.level.id,
-          responseScore: result.overallScore,
-        );
-        if (!mounted) return;
-        setState(() {
-          _coins = completion.totalCoins;
-          _sessionCoins += completion.coinsAwarded;
-        });
-        _store.applyCompletion(
-          levelId: widget.level.id,
-          result: completion,
-          responseScore: result.overallScore,
-        );
-      } catch (e) {
-        // Non-fatal: the evaluation still stands and the MCQ coins are
-        // already banked. Only the completion bonus is missed, and a later
-        // refresh will reconcile if the server did record it.
-        debugPrint('[LearningSession] completeLevel failed: $e');
-      }
-
-      if (!mounted) return;
-      setState(() => _celebrate = true);
-      _goTo(_summaryPage);
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isEvaluating = false;
         _evalError = _clean(e);
+      });
+      return;
+    }
+
+    await _completeLevel();
+  }
+
+  /// Asks the server to complete the level. The server verifies every MCQ
+  /// step, then awards the response coins, the completion bonus and XP.
+  ///
+  /// A failure is surfaced with a retry rather than swallowed: the next level
+  /// only unlocks once the server records this one, so celebrating a
+  /// completion it never confirmed left the user staring at a locked level.
+  Future<void> _completeLevel() async {
+    if (_completing) return;
+    setState(() {
+      _completing = true;
+      _completeError = null;
+    });
+
+    try {
+      final complete = widget.completeOverride ?? LearningService.completeLevel;
+      final completion = await complete(widget.level.id);
+      if (!mounted) return;
+      setState(() {
+        _completing = false;
+        _completionResult = completion;
+        _coins = completion.totalCoins;
+        _sessionCoins += completion.coinsAwarded;
+        _celebrate = true;
+      });
+      _store.applyCompletion(
+        levelId: widget.level.id,
+        result: completion,
+        responseScore: _evalResult?.overallScore,
+      );
+      // XP, level and streak changed server-side — refresh the profile that
+      // Home and Profile show. Fire-and-forget; it never throws.
+      (widget.recordActivityOverride ?? ActivityBus.instance.record)(
+        ActivityKind.learning,
+      );
+      _goTo(_summaryPage);
+    } catch (e) {
+      debugPrint('[LearningSession] completeLevel failed: $e');
+      if (!mounted) return;
+      setState(() {
+        _completing = false;
+        _completeError =
+            "Your answer was scored, but this level couldn't be saved yet: "
+            '${_clean(e)}';
       });
     }
   }
@@ -488,12 +547,15 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
   /// Fraction of the level finished — every MCQ plus the written response.
   double get _completion {
     final done = _steps.where((s) => s.status == _StepStatus.solved).length +
-        (_evalResult != null ? 1 : 0);
+        (_completionResult != null ? 1 : 0);
     return (done / widget.level.totalSteps).clamp(0.0, 1.0);
   }
 
   Future<void> _confirmExit() async {
-    final unfinished = _steps.any((s) => s.status != _StepStatus.solved);
+    // Scored but not saved counts as unfinished: leaving now forfeits the
+    // completion until the level is played again.
+    final unfinished = _steps.any((s) => s.status != _StepStatus.solved) ||
+        (_evalResult != null && _completionResult == null);
     if (!unfinished || _page == _summaryPage) {
       _close();
       return;
@@ -533,7 +595,10 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
     Navigator.of(context).pop({
       'coins': _sessionCoins,
       'score': _evalResult?.overallScore,
-      'completed': _evalResult != null,
+      // Only what the server confirmed: an evaluated answer whose completion
+      // call failed has not unlocked anything.
+      'completed': _completionResult != null,
+      'xp': _completionResult?.xpAwarded ?? 0,
     });
   }
 
@@ -901,7 +966,9 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
                 controller: _textController,
                 maxLines: 6,
                 minLines: 4,
-                enabled: !_isEvaluating,
+                // Locked once scored: a retry re-sends the completion, not
+                // the text, so edits after scoring would be silently ignored.
+                enabled: !_isEvaluating && _evalResult == null,
                 textCapitalization: TextCapitalization.sentences,
                 style: AppTextStyles.bodyLarge,
                 onChanged: (_) => setState(() {}),
@@ -920,7 +987,9 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
                     isRecording: _isRecording,
                     isTranscribing: _isTranscribing,
                     pulse: _micPulse,
-                    onTap: _isEvaluating ? null : _toggleRecording,
+                    onTap: _isEvaluating || _evalResult != null
+                        ? null
+                        : _toggleRecording,
                   ),
                   const SizedBox(width: AppSpacing.s12),
                   Expanded(
@@ -951,9 +1020,17 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
           const SizedBox(height: AppSpacing.s12),
           _InlineNotice(message: _evalError!, color: AppColors.error),
         ],
+        if (_completeError != null) ...[
+          const SizedBox(height: AppSpacing.s12),
+          _InlineNotice(message: _completeError!, color: AppColors.error),
+        ],
         if (_isEvaluating) ...[
           const SizedBox(height: AppSpacing.s24),
           const LoadingStateView(label: 'Reading your answer…'),
+        ],
+        if (_completing) ...[
+          const SizedBox(height: AppSpacing.s24),
+          const LoadingStateView(label: 'Saving your progress…'),
         ],
       ],
     );
@@ -1012,6 +1089,27 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
             ),
           ],
         ),
+        if ((_completionResult?.xpAwarded ?? 0) > 0) ...[
+          const SizedBox(height: AppSpacing.s12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
+            children: [
+              StatPill(
+                icon: Icons.bolt_rounded,
+                value: '+${_completionResult!.xpAwarded} XP',
+              ),
+              if (_completionResult!.leveledUp &&
+                  _completionResult!.newLevel != null)
+                StatPill(
+                  icon: Icons.arrow_upward_rounded,
+                  value: 'Level up · ${_completionResult!.newLevel}',
+                  color: AppColors.brand,
+                ),
+            ],
+          ),
+        ],
         if (result != null) ...[
           if (result.feedback.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.s16),
@@ -1099,14 +1197,27 @@ class _LearningSessionScreenState extends State<LearningSessionScreen>
     }
 
     if (_page == _responsePage) {
+      final busy = _isEvaluating || _completing;
+      // Scored but not saved: the only way forward is to retry the save.
+      if (_evalResult != null) {
+        return _footerShell(
+          ChunkyButton(
+            label: 'Retry',
+            icon: Icons.refresh_rounded,
+            expand: true,
+            loading: _completing,
+            onPressed: busy ? null : _advance,
+          ),
+        );
+      }
       final ready = _textController.text.trim().length >= 5;
       return _footerShell(
         ChunkyButton(
           label: 'Submit answer',
           icon: Icons.send_rounded,
           expand: true,
-          loading: _isEvaluating,
-          onPressed: ready && !_isEvaluating ? _advance : null,
+          loading: busy,
+          onPressed: ready && !busy ? _advance : null,
         ),
       );
     }

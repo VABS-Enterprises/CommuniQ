@@ -5,13 +5,13 @@ import 'dart:convert';
 /// Serialised to SharedPreferences so it survives app restarts between
 /// onboarding completion and account creation.
 class OnboardingData {
-  final List<String> contexts;       // Screen 1 — where they want to improve
-  final List<String> challenges;     // Screen 2 — what they struggle with
-  final String? speakingStyle;       // Screen 3 — self-described speaking style
-  final String? speakingNote;        // Screen 3 — optional free-text note
-  final String? level;               // Screen 4 — Beginner / Intermediate / Advanced
-  final String? primaryGoal;         // Screen 6 — the #1 thing to work on
-  final int? commitmentDays;         // Commitment screen — 2, 3, or 5 days/week
+  final List<String> contexts; // Screen 1 — where they want to improve
+  final List<String> challenges; // Screen 2 — what they struggle with
+  final String? speakingStyle; // Screen 3 — self-described speaking style
+  final String? speakingNote; // Screen 3 — optional free-text note
+  final String? level; // Screen 4 — Beginner / Intermediate / Advanced
+  final String? primaryGoal; // Screen 6 — the #1 thing to work on
+  final int? commitmentDays; // Commitment screen — 2, 3, or 5 days/week
 
   const OnboardingData({
     this.contexts = const [],
@@ -58,7 +58,9 @@ class OnboardingData {
         challenges: List<String>.from(json['challenges'] as List? ?? []),
         speakingStyle: json['speakingStyle'] as String?,
         speakingNote: json['speakingNote'] as String?,
-        level: json['level'] as String?,
+        // The server stores the self-assessed level as `selfAssessedLevel`
+        // (users.level is the XP level); `level` is what the client sends.
+        level: (json['selfAssessedLevel'] ?? json['level']) as String?,
         primaryGoal: json['primaryGoal'] as String?,
         commitmentDays: json['commitmentDays'] as int?,
       );

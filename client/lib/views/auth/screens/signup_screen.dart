@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/core/services/onboarding_service.dart';
@@ -82,6 +83,21 @@ class _SignupScreenState extends State<SignupScreen>
     if (data != null) await OnboardingService.syncToServer(data);
   }
 
+  Future<void> _handleAppleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.signInWithApple();
+      await _syncOnboarding();
+      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+    } on CancelledException {
+      // dismissed
+    } catch (e) {
+      _showError(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _handleGoogleSignup() async {
     setState(() => _isLoading = true);
     try {
@@ -148,8 +164,8 @@ class _SignupScreenState extends State<SignupScreen>
                         decoration: BoxDecoration(
                           color: AppColors.surface,
                           borderRadius: BorderRadius.circular(11),
-                          border: Border.all(
-                              color: AppColors.outline, width: 1),
+                          border:
+                              Border.all(color: AppColors.outline, width: 1),
                         ),
                         child: const Icon(
                           Icons.arrow_back_rounded,
@@ -183,14 +199,12 @@ class _SignupScreenState extends State<SignupScreen>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.brand
-                                    .withValues(alpha: 0.45),
+                                color: AppColors.brand.withValues(alpha: 0.45),
                                 blurRadius: 36,
                                 spreadRadius: 4,
                               ),
                               BoxShadow(
-                                color: AppColors.brand
-                                    .withValues(alpha: 0.25),
+                                color: AppColors.brand.withValues(alpha: 0.25),
                                 blurRadius: 60,
                                 spreadRadius: 2,
                               ),
@@ -252,15 +266,13 @@ class _SignupScreenState extends State<SignupScreen>
                         child: Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: AppColors.surface
-                                .withValues(alpha: 0.85),
+                            color: AppColors.surface.withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                                color: AppColors.outline, width: 1),
+                            border:
+                                Border.all(color: AppColors.outline, width: 1),
                           ),
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.stretch,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _buildField(
                                 controller: _nameController,
@@ -273,8 +285,7 @@ class _SignupScreenState extends State<SignupScreen>
                                 controller: _emailController,
                                 label: 'Email Address',
                                 icon: Icons.email_outlined,
-                                keyboardType:
-                                    TextInputType.emailAddress,
+                                keyboardType: TextInputType.emailAddress,
                               ),
                               const SizedBox(height: 18),
                               _buildField(
@@ -308,14 +319,24 @@ class _SignupScreenState extends State<SignupScreen>
                               label: 'Create Account',
                               onPressed: _handleEmailSignup,
                             ),
-
                       if (!_isLoading) ...[
                         const SizedBox(height: 28),
                         _buildDivider(),
                         const SizedBox(height: 28),
                         _buildGoogleButton(),
+                        if (AuthService.appleSignInAvailable) ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 54,
+                            child: SignInWithAppleButton(
+                              onPressed: _handleAppleSignIn,
+                              style: SignInWithAppleButtonStyle.black,
+                              borderRadius:
+                                  const BorderRadius.all(Radius.circular(16)),
+                            ),
+                          ),
+                        ],
                       ],
-
                       const SizedBox(height: 32),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -323,8 +344,7 @@ class _SignupScreenState extends State<SignupScreen>
                           const Text(
                             'Already have an account?  ',
                             style: TextStyle(
-                                color: AppColors.inkMuted,
-                                fontSize: 14),
+                                color: AppColors.inkMuted, fontSize: 14),
                           ),
                           GestureDetector(
                             onTap: () => Navigator.pushReplacement(
@@ -332,11 +352,8 @@ class _SignupScreenState extends State<SignupScreen>
                               PageRouteBuilder(
                                 pageBuilder: (_, __, ___) =>
                                     const LoginScreen(),
-                                transitionsBuilder:
-                                    (_, anim, __, child) =>
-                                        FadeTransition(
-                                            opacity: anim,
-                                            child: child),
+                                transitionsBuilder: (_, anim, __, child) =>
+                                    FadeTransition(opacity: anim, child: child),
                               ),
                             ),
                             child: const Text(
@@ -394,8 +411,7 @@ class _SignupScreenState extends State<SignupScreen>
           decoration: InputDecoration(
             hintText: 'Enter your ${label.toLowerCase()}',
             hintStyle: TextStyle(
-                color: AppColors.inkSoft.withValues(alpha: 0.5),
-                fontSize: 14),
+                color: AppColors.inkSoft.withValues(alpha: 0.5), fontSize: 14),
             prefixIcon: Icon(icon, color: AppColors.inkSoft, size: 19),
             suffixIcon: isPassword
                 ? IconButton(
@@ -414,21 +430,18 @@ class _SignupScreenState extends State<SignupScreen>
             fillColor: AppColors.surface,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                  color: AppColors.outline, width: 1),
+              borderSide: BorderSide(color: AppColors.outline, width: 1),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                  color: AppColors.outline, width: 1),
+              borderSide: BorderSide(color: AppColors.outline, width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                  color: AppColors.brand, width: 1.5),
+              borderSide: BorderSide(color: AppColors.brand, width: 1.5),
             ),
-            contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 15),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
           ),
         ),
       ],
@@ -438,9 +451,7 @@ class _SignupScreenState extends State<SignupScreen>
   Widget _buildDivider() {
     return Row(
       children: [
-        Expanded(
-            child: Divider(
-                color: AppColors.outline, thickness: 1)),
+        Expanded(child: Divider(color: AppColors.outline, thickness: 1)),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -448,9 +459,7 @@ class _SignupScreenState extends State<SignupScreen>
             style: TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
           ),
         ),
-        Expanded(
-            child: Divider(
-                color: AppColors.outline, thickness: 1)),
+        Expanded(child: Divider(color: AppColors.outline, thickness: 1)),
       ],
     );
   }
@@ -476,8 +485,8 @@ class _SignupScreenState extends State<SignupScreen>
         style: OutlinedButton.styleFrom(
           backgroundColor: AppColors.surfaceAlt,
           side: BorderSide(color: AppColors.outline, width: 1),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );

@@ -86,10 +86,6 @@ class LevelService {
     }
   }
 
-  /// Convenience for callers that only need the level list.
-  Future<List<CommuniqLevel>> fetchLevels() async =>
-      (await fetchCurriculum()).levels;
-
   void clearCache() => _cached = null;
 
   /// Clears all learning progress held on this device.

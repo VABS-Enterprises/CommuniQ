@@ -48,18 +48,16 @@ class ContestService {
     }
   }
 
-  Future<List<ContestAttempt>> history({int limit = 20}) async {
+  Future<ContestHistory> history({int limit = 20}) async {
     try {
       final res = await _dio.get(
         '/contest/history',
         queryParameters: {'limit': limit},
       );
-      final raw = (res.data as Map?)?['attempts'];
-      if (raw is! List) return const [];
-      return raw
-          .whereType<Map>()
-          .map((m) => ContestAttempt.fromJson(m.cast<String, dynamic>()))
-          .toList();
+      final data = res.data;
+      return ContestHistory.fromJson(
+        data is Map ? data.cast<String, dynamic>() : const {},
+      );
     } on DioException catch (e) {
       throw Exception(_message(e, 'Could not load your contest history.'));
     }

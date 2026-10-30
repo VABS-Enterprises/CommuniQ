@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/models/onboarding_data.dart';
@@ -94,11 +93,8 @@ class _PersonalChallengesScreenState extends State<PersonalChallengesScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 12),
-
                 buildOnboardingHeader(context, 2),
-
                 const SizedBox(height: 28),
-
                 const Text(
                   'What holds you\nback the most?',
                   style: TextStyle(
@@ -118,9 +114,7 @@ class _PersonalChallengesScreenState extends State<PersonalChallengesScreen>
                     height: 1.5,
                   ),
                 ),
-
                 const SizedBox(height: 22),
-
                 Expanded(
                   child: ListView.separated(
                     physics: const BouncingScrollPhysics(),
@@ -158,9 +152,7 @@ class _PersonalChallengesScreenState extends State<PersonalChallengesScreen>
                     },
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
                 if (_selected.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 10),
@@ -175,7 +167,6 @@ class _PersonalChallengesScreenState extends State<PersonalChallengesScreen>
                       ),
                     ),
                   ),
-
                 OnboardingButton(
                   label: 'Continue',
                   enabled: _selected.isNotEmpty,
@@ -191,7 +182,6 @@ class _PersonalChallengesScreenState extends State<PersonalChallengesScreen>
                     );
                   },
                 ),
-
                 const SizedBox(height: 28),
               ],
             ),

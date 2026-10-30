@@ -179,8 +179,13 @@ class _LearningViewState extends State<LearningView> {
     await _store.refresh();
     if (!mounted) return;
 
-    final justFinished =
-        result is Map && result['completed'] == true && !wasDone;
+    // Celebrate only a completion the server confirmed — the session reports
+    // `completed` solely after POST /complete succeeded, and the store holds
+    // what the server returned.
+    final justFinished = !wasDone &&
+        result is Map &&
+        result['completed'] == true &&
+        _store.isComplete(level.id);
     if (justFinished) {
       setState(() => _celebrate = true);
       Future.delayed(const Duration(milliseconds: 2500), () {

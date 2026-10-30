@@ -9,7 +9,6 @@ import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/services/auth_service.dart';
 import 'package:communiq/models/communiq_level.dart';
 import 'package:communiq/models/contest_models.dart';
-import 'package:communiq/models/onboarding_data.dart';
 
 import 'package:communiq/views/auth/screens/login_screen.dart';
 import 'package:communiq/views/auth/screens/signup_screen.dart';
@@ -24,22 +23,8 @@ import 'package:communiq/views/home_view/screens/home_view.dart';
 import 'package:communiq/views/learning_view/screens/learning_session_screen.dart';
 import 'package:communiq/views/learning_view/screens/learning_view.dart';
 import 'package:communiq/views/main_navigation_view/screens/app_shell.dart';
-import 'package:communiq/views/onboarding/screens/commitment_screen.dart';
-import 'package:communiq/views/onboarding/screens/communication_context_screen.dart';
-import 'package:communiq/views/onboarding/screens/first_roleplay_screen.dart';
-import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
-import 'package:communiq/views/onboarding/screens/goal_selection_screen.dart';
-import 'package:communiq/views/onboarding/screens/level_selection_screen.dart';
-import 'package:communiq/views/onboarding/screens/personal_challenges_screen.dart';
-import 'package:communiq/views/onboarding/screens/plan_ready_screen.dart';
-import 'package:communiq/views/onboarding/screens/roleplay_intro_screen.dart';
-import 'package:communiq/views/onboarding/screens/skill_level_screen.dart';
-import 'package:communiq/views/onboarding/screens/speaking_style_screen.dart';
 import 'package:communiq/views/onboarding/screens/splash_screen.dart';
-import 'package:communiq/views/onboarding/screens/transformation_screen.dart';
-import 'package:communiq/views/onboarding/screens/validation_screen.dart';
 import 'package:communiq/views/onboarding/screens/welcome_screen.dart';
-import 'package:communiq/views/premium_view/screens/premium_screen.dart';
 import 'package:communiq/views/profile_view/screens/profile_view.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/roleplay_config.dart';
@@ -49,6 +34,7 @@ import 'package:communiq/views/roleplay_view/screens/all_scenarios_page.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_conversation_screen.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_feedback_screen.dart';
 import 'package:communiq/views/roleplay_view/screens/roleplay_view.dart';
+import 'package:communiq/views/roleplay_view/screens/session_report_page.dart';
 import 'package:communiq/views/roleplay_view/screens/setup_scenario_page.dart';
 
 final _rootKey = GlobalKey<NavigatorState>();
@@ -118,17 +104,15 @@ GoRouter createRouter({bool gallery = false}) {
       }
 
       final signedIn = authNotifier.signedIn;
+      // The onboarding funnel is pushed imperatively on top of /welcome, so
+      // these four locations cover it too.
       final inAuthFlow = loc == AppRoutes.splash ||
           loc == AppRoutes.welcome ||
           loc == AppRoutes.login ||
-          loc == AppRoutes.signup ||
-          loc.startsWith('/onboarding');
+          loc == AppRoutes.signup;
 
       // Signed in but still sitting on a pre-auth screen → into the app.
-      // Onboarding is exempt: a new account finishes the funnel first.
-      if (signedIn && inAuthFlow && !loc.startsWith('/onboarding')) {
-        return AppRoutes.home;
-      }
+      if (signedIn && inAuthFlow) return AppRoutes.home;
 
       // Signed out anywhere inside the app → back to welcome.
       if (!signedIn && !inAuthFlow) return AppRoutes.welcome;
@@ -155,69 +139,6 @@ GoRouter createRouter({bool gallery = false}) {
       GoRoute(
         path: AppRoutes.devGallery,
         builder: (_, __) => const ComponentGallery(),
-      ),
-
-      // ── Onboarding funnel ─────────────────────────────────────────────
-      GoRoute(
-        path: AppRoutes.onboardingContext,
-        builder: (_, __) => const CommunicationContextScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingGoal,
-        builder: (_, __) => const GoalSelectionScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingChallenges,
-        builder: (_, state) =>
-            PersonalChallengesScreen(data: state.extra! as OnboardingData),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingSkill,
-        builder: (_, __) => const SkillLevelScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingStyle,
-        builder: (_, state) =>
-            SpeakingStyleScreen(data: state.extra! as OnboardingData),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingLevel,
-        builder: (_, state) =>
-            LevelSelectionScreen(data: state.extra! as OnboardingData),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingConfirm,
-        builder: (_, state) =>
-            GoalConfirmationScreen(data: state.extra! as OnboardingData),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingCommitment,
-        builder: (_, state) =>
-            CommitmentScreen(data: state.extra! as OnboardingData),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingValidation,
-        builder: (_, state) =>
-            ValidationScreen(data: state.extra! as OnboardingData),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingTransformation,
-        builder: (_, state) =>
-            TransformationScreen(data: state.extra! as OnboardingData),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingFirstRoleplay,
-        builder: (_, __) => const FirstRoleplayScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingRoleplayIntro,
-        builder: (_, state) =>
-            RoleplayIntroScreen(data: state.extra! as OnboardingData),
-      ),
-      GoRoute(
-        path: AppRoutes.onboardingPlanReady,
-        builder: (_, state) =>
-            PlanReadyScreen(data: state.extra! as OnboardingData),
       ),
 
       // ── Main tabs ─────────────────────────────────────────────────────
@@ -273,6 +194,7 @@ GoRouter createRouter({bool gallery = false}) {
       GoRoute(
         path: AppRoutes.learningSession,
         parentNavigatorKey: _rootKey,
+        redirect: _requireExtra<LearningSessionArgs>(AppRoutes.learning),
         builder: (_, state) {
           final args = state.extra! as LearningSessionArgs;
           return LearningSessionScreen(
@@ -304,6 +226,7 @@ GoRouter createRouter({bool gallery = false}) {
       GoRoute(
         path: AppRoutes.roleplayConversation,
         parentNavigatorKey: _rootKey,
+        redirect: _requireExtra<ConversationArgs>(AppRoutes.roleplay),
         builder: (_, state) {
           final args = state.extra! as ConversationArgs;
           return RoleplayConversationScreen(
@@ -317,6 +240,7 @@ GoRouter createRouter({bool gallery = false}) {
       GoRoute(
         path: AppRoutes.roleplayFeedback,
         parentNavigatorKey: _rootKey,
+        redirect: _requireExtra<FeedbackArgs>(AppRoutes.roleplay),
         builder: (_, state) {
           final args = state.extra! as FeedbackArgs;
           return RoleplayFeedbackScreen(
@@ -330,6 +254,20 @@ GoRouter createRouter({bool gallery = false}) {
             leveledUp: args.leveledUp,
             newBadges: args.newBadges,
             newStreak: args.newStreak,
+            sessionId: args.sessionId,
+            readOnly: args.readOnly,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.sessionReport,
+        parentNavigatorKey: _rootKey,
+        redirect: _requireExtra<SessionReportArgs>(AppRoutes.roleplay),
+        builder: (_, state) {
+          final args = state.extra! as SessionReportArgs;
+          return SessionReportPage(
+            sessionId: args.sessionId,
+            scenarioTitle: args.scenarioTitle,
           );
         },
       ),
@@ -337,12 +275,14 @@ GoRouter createRouter({bool gallery = false}) {
       GoRoute(
         path: AppRoutes.contestPlay,
         parentNavigatorKey: _rootKey,
+        redirect: _requireExtra<ContestType>(AppRoutes.contest),
         builder: (_, state) =>
             ContestPlayPage(type: state.extra! as ContestType),
       ),
       GoRoute(
         path: AppRoutes.contestResult,
         parentNavigatorKey: _rootKey,
+        redirect: _requireExtra<ContestResult>(AppRoutes.contest),
         builder: (_, state) =>
             ContestResultPage(result: state.extra! as ContestResult),
       ),
@@ -361,14 +301,15 @@ GoRouter createRouter({bool gallery = false}) {
         parentNavigatorKey: _rootKey,
         builder: (_, __) => const LeaderboardPage(),
       ),
-      GoRoute(
-        path: AppRoutes.premium,
-        parentNavigatorKey: _rootKey,
-        builder: (_, __) => const PremiumScreen(),
-      ),
     ],
   );
 }
+
+/// Routes that carry objects in `extra` can't be rebuilt from a URL alone —
+/// a deep link, a restored process or a stray `context.go` would otherwise
+/// crash on `state.extra!`. Send those to [fallback] instead.
+GoRouterRedirect _requireExtra<T>(String fallback) =>
+    (_, state) => state.extra is T ? null : fallback;
 
 /// Splash → welcome should cross-fade rather than slide; the old code used a
 /// hand-built PageRouteBuilder for exactly this.
@@ -426,6 +367,8 @@ class FeedbackArgs {
     this.leveledUp = false,
     this.newBadges = const [],
     this.newStreak = 0,
+    this.sessionId,
+    this.readOnly = false,
   });
 
   final FeedbackConfig config;
@@ -442,4 +385,19 @@ class FeedbackArgs {
   final bool leveledUp;
   final List<String> newBadges;
   final int newStreak;
+
+  /// The session the report belongs to, when known.
+  final String? sessionId;
+
+  /// Re-opened from history: no XP/level-up celebration, no "practice again"
+  /// flow, and nothing is saved again.
+  final bool readOnly;
+}
+
+/// Arguments for [AppRoutes.sessionReport] — a past session's stored report.
+class SessionReportArgs {
+  const SessionReportArgs({required this.sessionId, this.scenarioTitle});
+
+  final String sessionId;
+  final String? scenarioTitle;
 }

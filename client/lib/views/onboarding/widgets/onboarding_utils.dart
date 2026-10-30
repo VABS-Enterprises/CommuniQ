@@ -43,10 +43,10 @@ Route slideRoute(Widget page) {
     transitionsBuilder: (_, anim, __, child) {
       final slide = Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
           .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic));
-      final fade = Tween<double>(begin: 0.0, end: 1.0)
-          .animate(CurvedAnimation(
-              parent: anim, curve: const Interval(0.0, 0.5)));
-      return FadeTransition(opacity: fade, child: SlideTransition(position: slide, child: child));
+      final fade = Tween<double>(begin: 0.0, end: 1.0).animate(
+          CurvedAnimation(parent: anim, curve: const Interval(0.0, 0.5)));
+      return FadeTransition(
+          opacity: fade, child: SlideTransition(position: slide, child: child));
     },
     transitionDuration: const Duration(milliseconds: 380),
   );
@@ -166,9 +166,7 @@ class OnboardingSelectCard extends StatelessWidget {
                 ),
                 child: Icon(
                   icon,
-                  color: isSelected
-                      ? AppColors.brandLight
-                      : AppColors.inkSoft,
+                  color: isSelected ? AppColors.brandLight : AppColors.inkSoft,
                   size: 20,
                 ),
               ),
@@ -181,9 +179,7 @@ class OnboardingSelectCard extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      color: isSelected
-                          ? AppColors.ink
-                          : AppColors.inkMuted,
+                      color: isSelected ? AppColors.ink : AppColors.inkMuted,
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
                       letterSpacing: 0.1,
@@ -194,9 +190,8 @@ class OnboardingSelectCard extends StatelessWidget {
                     Text(
                       subtitle!,
                       style: TextStyle(
-                        color: isSelected
-                            ? AppColors.inkMuted
-                            : AppColors.inkSoft,
+                        color:
+                            isSelected ? AppColors.inkMuted : AppColors.inkSoft,
                         fontSize: 13,
                         height: 1.4,
                       ),
@@ -214,9 +209,7 @@ class OnboardingSelectCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: isSelected ? AppColors.brand : Colors.transparent,
                 border: Border.all(
-                  color: isSelected
-                      ? AppColors.brand
-                      : AppColors.outline,
+                  color: isSelected ? AppColors.brand : AppColors.outline,
                   width: 1.5,
                 ),
               ),
@@ -260,9 +253,7 @@ class _OnboardingButtonState extends State<OnboardingButton> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: widget.enabled
-          ? (_) => setState(() => _pressed = true)
-          : null,
+      onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
       onTapUp: widget.enabled
           ? (_) {
               setState(() => _pressed = false);

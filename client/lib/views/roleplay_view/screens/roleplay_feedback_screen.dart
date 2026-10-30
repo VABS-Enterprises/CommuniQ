@@ -7,11 +7,8 @@ import 'package:communiq/core/routes/app_routes.dart';
 import 'package:communiq/core/constants/spacing.dart';
 import 'package:communiq/models/feedback_config.dart';
 import 'package:communiq/models/session_result_model.dart';
-import 'package:communiq/models/onboarding_data.dart';
 import 'package:communiq/models/visual_analysis_models.dart';
 import 'package:communiq/core/data/scenario_presets.dart';
-import 'package:communiq/views/onboarding/screens/goal_confirmation_screen.dart';
-import 'package:communiq/views/roleplay_view/screens/setup_scenario_page.dart';
 import 'package:communiq/views/visual_analysis/widgets/gaze_radar_widget.dart';
 import 'package:communiq/views/visual_analysis/widgets/gaze_distribution_chart.dart';
 import 'package:communiq/views/visual_analysis/widgets/head_orientation_chart.dart';
@@ -37,12 +34,20 @@ class RoleplayFeedbackScreen extends StatefulWidget {
   /// Turn-by-turn history — [{role: 'user'|'ai', transcript: '...'}]
   final List<Map<String, String>> conversationHistory;
 
+  /// Legacy route arg — the onboarding first-roleplay flow was removed.
   final bool isOnboarding;
   final int xpAwarded;
   final int newLevel;
   final bool leveledUp;
   final List<String> newBadges;
   final int newStreak;
+
+  /// Server session id this report belongs to (null for none).
+  final String? sessionId;
+
+  /// Viewing a stored report from history: no XP / level / badge celebration,
+  /// no actions that re-run a flow, and nothing is saved.
+  final bool readOnly;
 
   const RoleplayFeedbackScreen({
     super.key,
@@ -56,6 +61,8 @@ class RoleplayFeedbackScreen extends StatefulWidget {
     this.leveledUp = false,
     this.newBadges = const [],
     this.newStreak = 0,
+    this.sessionId,
+    this.readOnly = false,
   });
 
   @override
@@ -110,22 +117,6 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
     if (s >= 60) return 'Good Start';
     if (s >= 45) return 'Keep Practicing';
     return 'Room to Grow';
-  }
-
-  /// Best-effort match of a free-form scenario name (the evaluator's
-  /// `recommendedNextType`, or this session's own title) back to a real
-  /// [ScenarioPreset] key, so "Recommended next" / "Practice again" can
-  /// prefill [SetupScenarioPage] instead of opening it blank. Returns null
-  /// — which [SetupScenarioPage] already treats as "open in custom mode" —
-  /// when nothing matches, rather than guessing wrong.
-  String? _matchPresetKey(String candidate) {
-    final exact = presetForKey(candidate);
-    if (exact != null) return exact.key;
-    final needle = candidate.trim().toLowerCase();
-    for (final p in kScenarioPresets) {
-      if (p.title.toLowerCase() == needle) return p.key;
-    }
-    return null;
   }
 
   // ─── Build ───────────────────────────────────────────────────────────────────
@@ -196,7 +187,10 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                     ],
 
                     const SizedBox(height: AppSpacing.s32),
-                    _bottomActions(context),
+                    if (widget.readOnly)
+                      _closeAction(context)
+                    else
+                      _bottomActions(context),
                     const SizedBox(height: AppSpacing.s24),
                   ],
                 ),
@@ -226,14 +220,14 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               child: const Icon(Icons.arrow_back_ios_new_rounded,
                   color: AppColors.ink, size: 16),
             ),
-            onPressed: () => context.go(AppRoutes.roleplay),
+            onPressed: () => _close(context),
             padding: EdgeInsets.zero,
           ),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Session Complete',
+              widget.readOnly ? 'Session Report' : 'Session Complete',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.ink,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
@@ -345,10 +339,12 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                // XP + streak chips
-                if (widget.xpAwarded > 0 ||
+                // XP + streak chips — a celebration of *this* run, so never
+                // shown when re-reading a stored report.
+                if (!widget.readOnly &&
+                    (widget.xpAwarded > 0 ||
                     widget.newStreak > 0 ||
-                    widget.newBadges.isNotEmpty) ...[
+                    widget.newBadges.isNotEmpty)) ...[
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 6,
@@ -849,7 +845,12 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => VisualAnalysisResultsScreen(sessionResult: res),
+                  // The conversation already evaluated and stored this
+                  // report (with its insights) — don't save it again.
+                  builder: (_) => VisualAnalysisResultsScreen(
+                    sessionResult: res,
+                    alreadySaved: true,
+                  ),
                 ),
               );
             },
@@ -1259,11 +1260,16 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
 
   Widget _recommendedCard(BuildContext context) {
     final nextType = widget.report!.recommendedNextType!;
+    // The evaluator sends `<presetKey>_<level>` (job_interview_intermediate);
+    // the setup page wants the bare preset key. No match → open it blank.
+    final presetKey = presetKeyForRecommendation(nextType);
+    final preset = presetForKey(presetKey);
+    final level = recommendationLevel(nextType);
+    final label = preset != null
+        ? '${preset.title}${level != null ? ' · ${level[0].toUpperCase()}${level.substring(1)}' : ''}'
+        : 'Choose your next scenario';
     return GestureDetector(
-      // Routes to the same setup page every other entry point uses, prefilled
-      // with the recommended scenario. This used to push a second, legacy
-      // setup screen that the router does not know about.
-      onTap: () => context.push(AppRoutes.roleplaySetup, extra: nextType),
+      onTap: () => context.push(AppRoutes.roleplaySetup, extra: presetKey),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.s16),
         decoration: BoxDecoration(
@@ -1296,7 +1302,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
                         fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
-                  Text(nextType,
+                  Text(label,
                       style: const TextStyle(
                           color: AppColors.ink,
                           fontSize: 14,
@@ -1314,6 +1320,43 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
 
   // ─── Bottom actions ───────────────────────────────────────────────────────────
 
+  /// Read-only reports are opened on top of the Practise tab, so go back to
+  /// it; a fresh session's report has nothing meaningful underneath it.
+  void _close(BuildContext context) {
+    if (widget.readOnly && context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppRoutes.roleplay);
+    }
+  }
+
+  Widget _closeAction(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _close(context);
+      },
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          color: _kCardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kDivider, width: 1.5),
+        ),
+        child: const Center(
+          child: Text(
+            'Close',
+            style: TextStyle(
+              color: AppColors.inkMuted,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _bottomActions(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1321,11 +1364,7 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
         GestureDetector(
           onTap: () {
             HapticFeedback.lightImpact();
-            if (widget.isOnboarding) {
-              context.go(AppRoutes.onboardingConfirm);
-            } else {
-              context.pushReplacement(AppRoutes.roleplaySetup);
-            }
+            context.pushReplacement(AppRoutes.roleplaySetup);
           },
           child: Container(
             height: 54,
@@ -1334,9 +1373,9 @@ class _RoleplayFeedbackScreenState extends State<RoleplayFeedbackScreen>
               borderRadius: BorderRadius.circular(16),
             ),
             child: Center(
-              child: Text(
-                widget.isOnboarding ? 'Continue' : 'Practice Again',
-                style: const TextStyle(
+              child: const Text(
+                'Practice Again',
+                style: TextStyle(
                   color: AppColors.inkOnDark,
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
