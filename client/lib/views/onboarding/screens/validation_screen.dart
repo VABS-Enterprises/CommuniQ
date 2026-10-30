@@ -110,7 +110,7 @@ class _ValidationScreenState extends State<ValidationScreen>
                             ),
                             const TextSpan(
                               text:
-                                  ' is one of the most common things we hear — and one of the fastest to fix.',
+                                  ' is one of the most common things people want to work on — and practice really helps.',
                             ),
                           ],
                         ),
@@ -224,7 +224,7 @@ class _HeroStat extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "You're not alone.",
+                  "It's a skill, not a trait.",
                   style: TextStyle(
                     color: AppColors.ink,
                     fontSize: 34,
@@ -235,7 +235,7 @@ class _HeroStat extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Holding back what you really want to say is common.\nIt is a skill — and skills get better with practice.',
+                  'Speaking up clearly can be learned like anything else.\nShort, regular practice is what builds it.',
                   style: TextStyle(
                     color: AppColors.inkMuted,
                     fontSize: 13,
