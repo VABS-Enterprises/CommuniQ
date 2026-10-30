@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { randomUUID } = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { verifyToken } = require('../middleware/auth');
+const { db } = require('../config/firebase');
 const { evaluateLearningAnswer } = require('../services/fastApiService');
 const levelsStore = require('../data/levelsStore');
 
@@ -38,11 +39,15 @@ router.get('/', verifyToken, async (req, res) => {
  * Evaluates a user's personal response to a learning module scenario.
  * Proxies to the AI server's /evaluate/learning endpoint.
  *
- * Body: { question, userResponse, topic, difficulty?, expectedKeyPoints? }
+ * Body: { question, userResponse, topic, difficulty?, expectedKeyPoints?, levelId? }
  * Returns: { scores, overallScore, strengths, improvements, feedback }
+ *
+ * When levelId is given, the score is recorded server-side as that level's
+ * evaluated response. POST /learning/levels/:id/complete pays response coins
+ * from this stored score — never from a score the client sends.
  */
 router.post('/evaluate', verifyToken, evaluateRateLimit, async (req, res) => {
-  const { question, userResponse, topic, difficulty, expectedKeyPoints } = req.body;
+  const { question, userResponse, topic, difficulty, expectedKeyPoints, levelId } = req.body;
 
   if (typeof userResponse !== 'string' || userResponse.trim().length < 5) {
     return res.status(400).json({ error: 'Response is too short.' });
@@ -65,11 +70,25 @@ router.post('/evaluate', verifyToken, evaluateRateLimit, async (req, res) => {
       resolvedKeyPoints,
     );
     console.log(`[LevelsEvaluate] ✅ session=${sessionId} overall=${result.overallScore}`);
+
+    const level = Number.isInteger(levelId) ? levelsStore.findLevel(levelId) : null;
+    const score = Number(result.overallScore);
+    if (level && Number.isFinite(score)) {
+      await db.collection('users').doc(req.uid).set(
+        {
+          learningProgress: {
+            evaluatedResponses: { [String(levelId)]: Math.max(0, Math.min(100, Math.round(score))) },
+          },
+        },
+        { merge: true }
+      );
+    }
+
     return res.status(200).json(result);
   } catch (err) {
     const status = err.statusCode || 502;
     console.error(`[LevelsEvaluate] ❌ session=${sessionId}: ${err.message}`);
-    return res.status(status).json({ error: err.message || 'Evaluation failed. Please try again.' });
+    return res.status(status).json({ error: 'Evaluation failed. Please try again.' });
   }
 });
 

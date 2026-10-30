@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { FieldValue } = require('firebase-admin/firestore');
+const { db } = require('../config/firebase');
 const { createTurnDoc } = require('../models/sessionModel');
 const {
   createSession,
@@ -25,7 +26,8 @@ const {
   sendOpeningToFastApi,
   evaluateSession,
 } = require('../services/fastApiService');
-const { computeXpAward, computeLevel, computeStreak, computeNewBadges } = require('../services/xpService');
+const { computeXpAward } = require('../services/xpService');
+const { applyActivityInTx } = require('../services/progressService');
 const { personalizeEvaluation } = require('../services/evaluationModelService');
 const { triggerRetrainIfDue } = require('../services/evaluationModelJob');
 const livekit = require('../services/livekitService');
@@ -49,6 +51,21 @@ async function getOrRecoverUser(req) {
 }
 
 const MAX_TURNS_PER_SESSION = 50;
+
+/**
+ * Scenario keys the app ships with (client/lib/core/data/scenario_presets.dart).
+ * A custom session tagged with one of these is evaluated and counted under
+ * that category instead of the catch-all 'custom'.
+ */
+const KNOWN_SCENARIO_KEYS = new Set([
+  'job_interview',
+  'negotiation',
+  'assertiveness',
+  'small_talk',
+  'leadership',
+  'feedback',
+  'conflict',
+]);
 
 /**
  * Resolve the base system prompt for a session.
@@ -160,7 +177,7 @@ function buildFinalPrompt(basePrompt, session) {
 // POST /sessions/start
 // Accepts either a Firestore-backed scenarioId OR a scenarioPrompt (custom session).
 async function startSession(req, res) {
-  const { scenarioId, scenarioPrompt, scenarioTitle: clientTitle, persona, tone, languageLevel, role, traits, backstory } = req.body;
+  const { scenarioId, scenarioKey, scenarioPrompt, scenarioTitle: clientTitle, persona, tone, languageLevel, role, traits, backstory } = req.body;
   const userId = req.uid;
 
   if (!scenarioId && !scenarioPrompt) {
@@ -178,7 +195,7 @@ async function startSession(req, res) {
       // ── Firestore-backed scenario ──────────────────────────────────────────
       const scenario = await getScenarioById(scenarioId);
       if (!scenario) return res.status(404).json({ error: 'Scenario not found' });
-      if (user.level < scenario.requiredLevel) {
+      if ((user.level || 1) < (scenario.requiredLevel || 1)) {
         return res.status(403).json({ error: `Scenario requires level ${scenario.requiredLevel}` });
       }
       resolvedTitle = resolvedTitle || scenario.title || null;
@@ -194,6 +211,7 @@ async function startSession(req, res) {
     await createSession(sessionId, {
       userId,
       scenarioId: scenarioId || null,
+      scenarioKey: KNOWN_SCENARIO_KEYS.has(scenarioKey) ? scenarioKey : null,
       scenarioTitle: resolvedTitle,
       persona: persona || null,
       tone: tone || null,
@@ -500,7 +518,7 @@ async function endSession(req, res) {
     }
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const scenarioType = scenario?.type || 'custom';
+    const scenarioType = scenario?.type || session.scenarioKey || 'custom';
 
     // Bug3 fix: run evaluation BEFORE marking the session complete.
     const evaluation = await evaluateSession(sessionId, rawTranscript, scenarioType);
@@ -535,48 +553,42 @@ async function endSession(req, res) {
       adaptive: personalization.adaptiveBlock,
     });
 
-    // XP + gamification
+    // XP + gamification — level, streak, weekly XP and badges are applied
+    // together with the skill averages in one transaction (progressService).
     const xpAwarded = computeXpAward(evaluation.scores);
-    const oldLevel = user.level || 1;
-    const newLevel = computeLevel((user.xp || 0) + xpAwarded);
-    const leveledUp = newLevel > oldLevel;
-    const newStreak = computeStreak(user.lastActiveDate, user.streak || 0);
     const completedCount = await countCompletedSessions(userId);
-    const newBadges = computeNewBadges({
-      existingBadges: user.badges || [],
-      completedSessionCount: completedCount,
-      newStreak,
-      scores: evaluation.scores,
-      leveledUp,
+    const userRef = db.collection('users').doc(userId);
+
+    const progress = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(userRef);
+      const fresh = snap.exists ? snap.data() : user;
+
+      // Rolling per-skill averages — used by the progress/improvement cards on Home.
+      // Formula: newAvg = (prevAvg * prevSessions + newScore) / (prevSessions + 1)
+      const prevProgress = fresh.skillProgress || {};
+      const updatedSkillProgress = {};
+      for (const [skill, score] of Object.entries(evaluation.scores || {})) {
+        const prev = prevProgress[skill] || { avg: 0, sessions: 0 };
+        const newSessions = prev.sessions + 1;
+        updatedSkillProgress[skill] = {
+          avg: Math.round((prev.avg * prev.sessions + score) / newSessions),
+          sessions: newSessions,
+        };
+      }
+
+      return applyActivityInTx(
+        tx,
+        userRef,
+        fresh,
+        { xpAwarded, scores: evaluation.scores, completedSessionCount: completedCount },
+        {
+          skillProgress: { ...prevProgress, ...updatedSkillProgress },
+          skillHistory: personalization.updatedSkillHistory,
+          [`scenarioCategoryCounts.${scenarioType}`]: FieldValue.increment(1),
+        }
+      );
     });
-
-    // Rolling per-skill averages — used by the progress/improvement cards on Home.
-    // Formula: newAvg = (prevAvg * prevSessions + newScore) / (prevSessions + 1)
-    const prevProgress = user.skillProgress || {};
-    const updatedSkillProgress = {};
-    for (const [skill, score] of Object.entries(evaluation.scores || {})) {
-      const prev = prevProgress[skill] || { avg: 0, sessions: 0 };
-      const newSessions = prev.sessions + 1;
-      updatedSkillProgress[skill] = {
-        avg: Math.round((prev.avg * prev.sessions + score) / newSessions),
-        sessions: newSessions,
-      };
-    }
-
-    // Robustness2: use FieldValue.increment for atomic XP update (prevents race conditions)
-    const userUpdates = {
-      xp: FieldValue.increment(xpAwarded),
-      level: newLevel,
-      streak: newStreak,
-      lastActiveDate: FieldValue.serverTimestamp(),
-      skillProgress: updatedSkillProgress,
-      skillHistory: personalization.updatedSkillHistory,
-      [`scenarioCategoryCounts.${scenarioType}`]: FieldValue.increment(1),
-    };
-    if (newBadges.length > 0) {
-      userUpdates.badges = FieldValue.arrayUnion(...newBadges);
-    }
-    await updateUser(userId, userUpdates);
+    const { newLevel, leveledUp, newBadges, newStreak } = progress;
 
     // Return a clean report object — do NOT forward the Firestore document directly
     // because it contains FieldValue.serverTimestamp() which serialises as a raw

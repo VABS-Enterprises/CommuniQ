@@ -1,5 +1,6 @@
 const firestoreService = require('../services/firestoreService');
-const { updateUser, getUserById } = firestoreService;
+const { updateUser, getUserById, countCompletedSessions } = firestoreService;
+const { serializeUser } = require('../models/userModel');
 const { FieldValue } = require('firebase-admin/firestore');
 const fastApiService = require('../services/fastApiService');
 
@@ -8,9 +9,12 @@ const MAX_NAME_LENGTH = 100;
 // GET /user/profile
 async function getProfile(req, res) {
   try {
-    const user = await getUserById(req.uid);
+    const [user, completedSessionCount] = await Promise.all([
+      getUserById(req.uid),
+      countCompletedSessions(req.uid),
+    ]);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    return res.status(200).json({ user });
+    return res.status(200).json({ user: serializeUser(user, { completedSessionCount }) });
   } catch (err) {
     console.error('getProfile error:', err.message);
     return res.status(500).json({ error: 'Could not fetch profile' });
@@ -40,8 +44,11 @@ async function updateProfile(req, res) {
 
   try {
     await updateUser(userId, updates);
-    const user = await getUserById(userId);
-    return res.status(200).json({ user });
+    const [user, completedSessionCount] = await Promise.all([
+      getUserById(userId),
+      countCompletedSessions(userId),
+    ]);
+    return res.status(200).json({ user: serializeUser(user, { completedSessionCount }) });
   } catch (err) {
     console.error('updateProfile error:', err.message);
     return res.status(500).json({ error: 'Could not update profile' });
@@ -88,7 +95,7 @@ async function getEvaluationProfile(req, res) {
 async function saveVisualReport(req, res) {
   try {
     const userId = req.uid;
-    const reportData = req.body;
+    const reportData = req.body && typeof req.body === 'object' ? req.body : {};
 
     // Call fastApiService to query Python ai-server Groq LLM model
     try {
@@ -110,8 +117,19 @@ async function saveVisualReport(req, res) {
       console.warn('[saveVisualReport] AI evaluation fallback used:', aiErr.message);
     }
 
+    // Demo-mode runs use synthetic camera data: return insights so the demo
+    // works end to end, but never store them as if they were the user's.
+    if (reportData.isDemo === true) {
+      return res.status(200).json({ success: true, saved: false, insights: reportData.insights || [] });
+    }
+
     const saved = await firestoreService.saveVisualReport(userId, reportData);
-    return res.status(201).json({ success: true, report: saved, insights: reportData.insights });
+    return res.status(201).json({
+      success: true,
+      saved: true,
+      report: { ...saved, createdAt: new Date().toISOString() },
+      insights: reportData.insights,
+    });
   } catch (err) {
     console.error('saveVisualReport error:', err.message);
     return res.status(500).json({ error: 'Could not save visual report to Firestore' });

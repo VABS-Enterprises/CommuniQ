@@ -6,6 +6,7 @@ const { FieldValue } = require('firebase-admin/firestore');
  * sessionId          string
  * userId             string    ref → users/{uid}
  * scenarioId         string    ref → scenarios/{scenarioId}  (null for custom sessions)
+ * scenarioKey        string    app preset key (e.g. "job_interview"), null if unknown
  * customSystemPrompt string    used when no scenarioId is provided
  * scenarioTitle      string
  * persona            string    AI persona chosen by user
@@ -29,6 +30,7 @@ const { FieldValue } = require('firebase-admin/firestore');
 function createSessionDoc(sessionId, {
   userId,
   scenarioId,
+  scenarioKey,
   scenarioTitle,
   persona,
   tone,
@@ -42,6 +44,7 @@ function createSessionDoc(sessionId, {
     sessionId,
     userId,
     scenarioId: scenarioId || null,
+    scenarioKey: scenarioKey || null,
     scenarioTitle: scenarioTitle || null,
     persona: persona || null,
     tone: tone || null,

@@ -1,12 +1,12 @@
 const { v4: uuidv4 } = require('uuid');
-const { FieldValue } = require('firebase-admin/firestore');
+const { db } = require('../config/firebase');
 const { evaluateContestAnswer } = require('../services/fastApiService');
+const { createContestAttemptDoc } = require('../models/contestModel');
+const { applyActivityInTx } = require('../services/progressService');
 const {
-  createContestAttempt,
   getUserContestAttempts,
   getContestLeaderboard,
   getUserById,
-  updateUser,
 } = require('../services/firestoreService');
 
 const CONTEST_TYPES = new Set(['debate', 'gd', 'extempore', 'quiz']);
@@ -53,31 +53,67 @@ async function submitContestAnswer(req, res) {
     );
 
     const xpAwarded = computeContestXp(evaluation.overallScore || 0);
-    const user = await getUserById(userId);
-    const name = user?.name || (req.email ? req.email.split('@')[0] : 'User');
+    const overallScore = evaluation.overallScore || 0;
+    const userRef = db.collection('users').doc(userId);
+    const attemptRef = db.collection('contestAttempts').doc(attemptId);
 
-    await createContestAttempt(attemptId, {
-      userId,
-      name,
-      contestType,
-      motion: motion || null,
-      position: position || null,
-      userAnswer: userAnswer.trim(),
-      scores: evaluation.scores,
-      overallScore: evaluation.overallScore,
-      strengths: evaluation.strengths,
-      improvements: evaluation.improvements,
-      feedback: evaluation.feedback,
-      xpAwarded,
+    // The attempt, the XP/level/streak update and the per-user contest stats
+    // commit together, so a failure can never leave a scored attempt without
+    // its XP (or XP without an attempt) and invite a double-scored retry.
+    const progress = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(userRef);
+      if (!snap.exists) {
+        const err = new Error('User not found');
+        err.statusCode = 404;
+        throw err;
+      }
+      const user = snap.data();
+      const name = user.name || (req.email ? req.email.split('@')[0] : 'User');
+
+      tx.set(attemptRef, createContestAttemptDoc(attemptId, {
+        userId,
+        name,
+        contestType,
+        motion: motion || null,
+        position: position || null,
+        userAnswer: userAnswer.trim(),
+        scores: evaluation.scores,
+        overallScore,
+        strengths: evaluation.strengths,
+        improvements: evaluation.improvements,
+        feedback: evaluation.feedback,
+        xpAwarded,
+      }));
+
+      const stats = user.contestStats || {};
+      const bestByType = stats.bestByType || {};
+      return applyActivityInTx(tx, userRef, user, { xpAwarded }, {
+        contestStats: {
+          attempts: (stats.attempts || 0) + 1,
+          bestScore: Math.max(stats.bestScore || 0, overallScore),
+          bestByType: {
+            ...bestByType,
+            [contestType]: Math.max(bestByType[contestType] || 0, overallScore),
+          },
+        },
+      });
     });
 
-    await updateUser(userId, { xp: FieldValue.increment(xpAwarded) });
-
-    return res.status(200).json({ attemptId, ...evaluation, xpAwarded });
+    return res.status(200).json({
+      attemptId,
+      ...evaluation,
+      xpAwarded,
+      newLevel: progress.newLevel,
+      leveledUp: progress.leveledUp,
+      newStreak: progress.newStreak,
+      newBadges: progress.newBadges,
+    });
   } catch (err) {
     console.error('submitContestAnswer error:', err.message);
     const status = err.statusCode || 500;
-    return res.status(status).json({ error: err.message || 'Contest evaluation failed' });
+    return res.status(status).json({
+      error: status >= 500 ? 'Contest evaluation failed — please try again' : err.message,
+    });
   }
 }
 
@@ -87,8 +123,19 @@ async function getContestHistory(req, res) {
   const limit = Math.min(parseInt(req.query.limit, 10) || 20, 50);
 
   try {
-    const attempts = await getUserContestAttempts(userId, limit);
-    return res.status(200).json({ attempts });
+    const [attempts, user] = await Promise.all([
+      getUserContestAttempts(userId, limit),
+      getUserById(userId),
+    ]);
+    const stats = (user && user.contestStats) || {};
+    return res.status(200).json({
+      attempts,
+      stats: {
+        attempts: stats.attempts || 0,
+        bestScore: stats.bestScore || 0,
+        bestByType: stats.bestByType || {},
+      },
+    });
   } catch (err) {
     console.error('getContestHistory error:', err.message);
     return res.status(500).json({ error: 'Could not fetch contest history' });

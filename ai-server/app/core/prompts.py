@@ -15,7 +15,22 @@ SCENARIO_TYPE_DESCRIPTIONS: dict[str, str] = {
     "technical":    "a technical panel interview covering projects and system design",
     "gd":           "a structured group discussion with a professional moderator",
     "sales":        "a B2B sales call with a skeptical Indian client",
+    # Scenario keys the mobile app ships with (client scenario_presets.dart).
+    "job_interview": "a job interview with a hiring manager",
+    "negotiation":   "a negotiation over salary, price or terms",
+    "assertiveness": "a conversation where the user had to stand their ground politely",
+    "small_talk":    "casual small talk and networking with a colleague or stranger",
+    "leadership":    "a leadership conversation such as running a meeting or motivating a team",
+    "feedback":      "giving or receiving workplace feedback",
+    "conflict":      "resolving a disagreement or conflict at work",
 }
+
+# What recommended_next may name — the app can only open these scenarios.
+RECOMMENDABLE_SCENARIO_TYPES = (
+    "job_interview", "negotiation", "assertiveness", "small_talk",
+    "leadership", "feedback", "conflict",
+)
+_RECOMMENDABLE_LIST = ", ".join(RECOMMENDABLE_SCENARIO_TYPES)
 
 _DEFAULT_SCENARIO_DESCRIPTION = "a professional spoken English practice session"
 
@@ -110,7 +125,7 @@ _EVALUATION_JSON_SCHEMA = """{
     "<one specific, actionable improvement — name the exact habit, show a before/after example>",
     "<one specific, actionable improvement — name the exact habit, show a before/after example>"
   ],
-  "recommended_next": "<scenarioType_level e.g. hr_interview_intermediate, sales_advanced>"
+  "recommended_next": "<scenarioType_level e.g. job_interview_intermediate, negotiation_advanced>"
 }"""
 
 
@@ -172,7 +187,10 @@ CRITICAL OUTPUT RULES:
 3. ALL score values must be integers (not floats) between 0 and 100.
 4. strengths array must have EXACTLY 2 string items — not 1, not 3.
 5. improvements array must have EXACTLY 2 string items — not 1, not 3.
-6. recommended_next must follow the pattern: scenarioType_level (e.g. hr_interview_intermediate, sales_advanced, technical_beginner, gd_advanced).
+6. recommended_next must follow the pattern: scenarioType_level, where scenarioType is one of
+   {_RECOMMENDABLE_LIST} and level is beginner, intermediate or advanced
+   (e.g. job_interview_intermediate, negotiation_advanced, small_talk_beginner).
+   Pick the scenario that best targets the user's weakest skill in this session.
 
 Output this exact JSON schema:
 {_EVALUATION_JSON_SCHEMA}""".strip()

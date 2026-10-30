@@ -1,6 +1,8 @@
 const { db } = require('../config/firebase');
 const { FieldValue } = require('firebase-admin/firestore');
 const levelsStore = require('../data/levelsStore');
+const { LEARNING_LEVEL_XP } = require('../services/xpService');
+const { applyActivityInTx } = require('../services/progressService');
 
 /*
  * Server-authoritative grading and progress for the learning module.
@@ -14,6 +16,10 @@ const levelsStore = require('../data/levelsStore');
  *   - MCQ step:        10 / 7 / 4 / 1 by attempt number
  *   - Written response: 15 / 10 / 6 / 3 by AI score band
  *   - Level completion: a flat 20 bonus
+ *
+ * Finishing a level for the first time also awards XP (LEARNING_LEVEL_XP)
+ * through progressService, so lessons move the same XP, level and streak the
+ * rest of the app shows.
  *
  * The written-response coins used to be added on the client only and never
  * persisted, which meant the server's coin total could never reach the value
@@ -47,6 +53,7 @@ function readProgress(data) {
     attempts: lp.attempts || {},
     levelCoins: lp.levelCoins || {},
     responses: lp.responses || {},
+    evaluatedResponses: lp.evaluatedResponses || {},
   };
 }
 
@@ -213,11 +220,14 @@ async function submitAnswer(req, res) {
 
 /*
  * POST /learning/levels/:levelId/complete
- * Body: { responseScore?: number }
  *
  * Verifies every MCQ step was answered correctly, then awards the written
  * response coins and the completion bonus. Both are awarded once — replaying
  * a finished level re-shows the content but pays nothing.
+ *
+ * The response score comes from the evaluation POST /levels/evaluate stored
+ * for this level. A `responseScore` in the body is ignored: trusting it let a
+ * modified client claim the top coin band without writing anything.
  */
 async function completeLevel(req, res) {
   const levelId = Number(req.params.levelId);
@@ -229,12 +239,6 @@ async function completeLevel(req, res) {
   if (!level) {
     return res.status(404).json({ error: `Level ${levelId} not found` });
   }
-
-  const rawScore = req.body ? req.body.responseScore : undefined;
-  const responseScore =
-    typeof rawScore === 'number' && Number.isFinite(rawScore)
-      ? Math.max(0, Math.min(100, Math.round(rawScore)))
-      : null;
 
   const requiredSteps = Array.isArray(level.mcqs) ? level.mcqs.map((m) => m.step) : [];
   const levelKey = String(levelId);
@@ -253,6 +257,8 @@ async function completeLevel(req, res) {
 
       const alreadyComplete = lp.completedLevelIds.includes(levelId);
       const priorResponse = lp.responses[levelKey];
+      const storedScore = lp.evaluatedResponses[levelKey];
+      const responseScore = typeof storedScore === 'number' ? storedScore : null;
 
       let earned = 0;
       const payload = { completedLevelIds: FieldValue.arrayUnion(levelId) };
@@ -276,6 +282,11 @@ async function completeLevel(req, res) {
 
       tx.set(userRef, { learningProgress: payload }, { merge: true });
 
+      // XP, level and streak — first completion only, like the bonus.
+      const progress = alreadyComplete
+        ? null
+        : applyActivityInTx(tx, userRef, snap.data(), { xpAwarded: LEARNING_LEVEL_XP });
+
       const completedLevelIds = alreadyComplete
         ? lp.completedLevelIds
         : [...lp.completedLevelIds, levelId];
@@ -286,6 +297,10 @@ async function completeLevel(req, res) {
         totalCoins,
         levelCoins: (lp.levelCoins[levelKey] || 0) + earned,
         alreadyComplete,
+        xpAwarded: progress ? progress.xpAwarded : 0,
+        newLevel: progress ? progress.newLevel : null,
+        leveledUp: progress ? progress.leveledUp : false,
+        newStreak: progress ? progress.newStreak : null,
       };
     });
 

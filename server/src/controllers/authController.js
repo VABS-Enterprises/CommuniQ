@@ -1,5 +1,13 @@
 const { deleteFirebaseUser } = require('../services/authService');
-const { createUser, getUserById, deleteUserData, upsertGoogleUser } = require('../services/firestoreService');
+const {
+  createUser,
+  createOrCompleteUser,
+  getUserById,
+  deleteUserData,
+  countCompletedSessions,
+  upsertGoogleUser,
+} = require('../services/firestoreService');
+const { serializeUser } = require('../models/userModel');
 
 const MAX_NAME_LENGTH = 100;
 
@@ -30,14 +38,10 @@ async function register(req, res) {
   }
 
   try {
-    // Robustness3: prevent silently overwriting an existing user document on network retries
-    const existing = await getUserById(uid);
-    if (existing) {
-      return res.status(409).json({ error: 'User already registered' });
-    }
-
-    const user = await createUser(uid, { email, name: name.trim() });
-    return res.status(201).json({ user });
+    // Never overwrites an existing document (network retries, or an onboarding
+    // sync that created it first) — only fills in fields it is missing.
+    const { user, created } = await createOrCompleteUser(uid, { email, name: name.trim() });
+    return res.status(created ? 201 : 200).json({ user: serializeUser(user) });
   } catch (err) {
     console.error('register error:', err.message);
     return res.status(500).json({ error: 'Registration failed' });
@@ -63,15 +67,20 @@ async function register(req, res) {
 async function googleSignIn(req, res) {
   const uid = req.uid;
   const email = req.email;
-  const name = req.name;
+  // Apple only reveals the user's name to the app, once, on first sign-in —
+  // it is never in the ID token — so the client may pass it in the body.
+  const bodyName =
+    req.body && typeof req.body.name === 'string' ? req.body.name.trim().slice(0, MAX_NAME_LENGTH) : '';
+  const name = req.name || bodyName || null;
   const photoURL = req.picture;
+  const provider = req.signInProvider === 'apple.com' ? 'apple' : 'google';
 
   try {
-    const user = await upsertGoogleUser(uid, { email, name, photoURL });
-    return res.status(200).json({ user });
+    const user = await upsertGoogleUser(uid, { email, name, photoURL, provider });
+    return res.status(200).json({ user: serializeUser(user) });
   } catch (err) {
-    console.error('googleSignIn error:', err.message);
-    return res.status(500).json({ error: 'Google sign-in failed' });
+    console.error('socialSignIn error:', err.message);
+    return res.status(500).json({ error: 'Sign-in failed' });
   }
 }
 
@@ -107,7 +116,8 @@ async function getMe(req, res) {
       }
     }
 
-    return res.status(200).json({ user });
+    const completedSessionCount = await countCompletedSessions(uid);
+    return res.status(200).json({ user: serializeUser(user, { completedSessionCount }) });
   } catch (err) {
     console.error('getMe error:', err.message);
     return res.status(500).json({ error: 'Could not fetch user profile' });

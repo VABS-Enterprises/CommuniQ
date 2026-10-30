@@ -45,6 +45,9 @@ function docRef(uid) {
       if (!opts || !opts.merge) { store[uid] = patch; return; }
       store[uid] = deepMerge(store[uid] || {}, patch);
     },
+    async update(patch) {
+      store[uid] = { ...(store[uid] || {}), ...patch };
+    },
   };
 }
 
@@ -54,6 +57,7 @@ const db = {
     const tx = {
       get: (ref) => ref.get(),
       set: (ref, patch, opts) => { ref.set(patch, opts); },
+      update: (ref, patch) => { ref.update(patch); },
     };
     return fn(tx);
   },
@@ -86,9 +90,16 @@ const answer = async (levelId, step, selectedOption) => {
   await controller.submitAnswer({ uid: UID, body: { levelId, step, selectedOption } }, r);
   return r;
 };
+// The response score is recorded server-side by POST /levels/evaluate; a
+// score in the completion body is ignored. Simulate the stored evaluation.
 const complete = async (levelId, responseScore) => {
+  if (typeof responseScore === 'number') {
+    store[UID] = deepMerge(store[UID] || {}, {
+      learningProgress: { evaluatedResponses: { [String(levelId)]: responseScore } },
+    });
+  }
   const r = res();
-  await controller.completeLevel({ uid: UID, params: { levelId: String(levelId) }, body: { responseScore } }, r);
+  await controller.completeLevel({ uid: UID, params: { levelId: String(levelId) }, body: {} }, r);
   return r;
 };
 const progress = async () => {
@@ -256,4 +267,28 @@ check('bad input is rejected', async () => {
   }
   const missing = await answer(9999, 1, 'x');
   assert.strictEqual(missing.statusCode, 404);
+});
+
+check('a responseScore sent by the client is ignored', async () => {
+  reset();
+  for (const m of level.mcqs) await answer(1, m.step, m.correct_option);
+  const r = res();
+  await controller.completeLevel(
+    { uid: UID, params: { levelId: '1' }, body: { responseScore: 100 } },
+    r
+  );
+  assert.strictEqual(r.statusCode, 200);
+  // Only the completion bonus — no response coins without a stored evaluation.
+  assert.strictEqual(r.body.coinsAwarded, 20);
+});
+
+check('first completion awards XP once; a replay awards none', async () => {
+  reset();
+  for (const m of level.mcqs) await answer(1, m.step, m.correct_option);
+  const first = await complete(1);
+  assert.ok(first.body.xpAwarded > 0);
+  assert.strictEqual(store[UID].xp, first.body.xpAwarded);
+  const again = await complete(1);
+  assert.strictEqual(again.body.xpAwarded, 0);
+  assert.strictEqual(store[UID].xp, first.body.xpAwarded);
 });

@@ -5,6 +5,7 @@ const { createSessionDoc } = require('../models/sessionModel');
 const { createEvaluationDoc } = require('../models/evaluationModel');
 const { stripSystemPrompt } = require('../models/scenarioModel');
 const { createContestAttemptDoc } = require('../models/contestModel');
+const { computeLevel, isoWeekKey } = require('./xpService');
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
@@ -15,26 +16,69 @@ async function createUser(uid, data) {
 }
 
 /**
- * Used for Google Sign-In.
- * If the user exists → only update lastLoginAt.
+ * Fields from `defaults` that `existing` is missing (undefined or null for
+ * identity fields). A user document can be created by POST /onboarding before
+ * registration finishes, so sign-in paths fill gaps instead of assuming a
+ * document that exists is complete.
+ */
+function missingDefaults(existing, defaults) {
+  const identity = new Set(['name', 'email', 'provider']);
+  const patch = {};
+  for (const [key, value] of Object.entries(defaults)) {
+    if (key === 'createdAt' || key === 'lastLoginAt') continue;
+    const current = existing[key];
+    if (current === undefined || (identity.has(key) && !current)) patch[key] = value;
+  }
+  return patch;
+}
+
+/**
+ * Used for email registration. Creates the user document, or completes one
+ * that already exists (e.g. created by an onboarding sync that won the race).
+ * Returns { user, created }.
+ */
+async function createOrCompleteUser(uid, { email, name }) {
+  const ref = db.collection('users').doc(uid);
+  const defaults = createUserDoc(uid, { email, name });
+  const created = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      tx.set(ref, defaults);
+      return true;
+    }
+    const patch = missingDefaults(snap.data(), defaults);
+    if (Object.keys(patch).length > 0) tx.set(ref, patch, { merge: true });
+    return false;
+  });
+  const fresh = await ref.get();
+  return { user: fresh.data(), created };
+}
+
+/**
+ * Used for Google and Apple sign-in.
+ * If the user exists → refresh lastLoginAt and fill any missing defaults.
  * If new → create a full Firestore doc with defaults.
  * Returns the full user document in both cases.
  */
-async function upsertGoogleUser(uid, { email, name, photoURL }) {
+async function upsertGoogleUser(uid, { email, name, photoURL, provider = 'google' }) {
   const ref = db.collection('users').doc(uid);
-  const snap = await ref.get();
+  const defaults = { ...createGoogleUserDoc(uid, { email, name, photoURL }), provider };
 
-  if (snap.exists) {
-    // Returning user — just refresh lastLoginAt
-    await ref.update({ lastLoginAt: FieldValue.serverTimestamp() });
-    const updated = await ref.get();
-    return updated.data();
-  }
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      tx.set(ref, defaults);
+      return;
+    }
+    tx.set(
+      ref,
+      { ...missingDefaults(snap.data(), defaults), lastLoginAt: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+  });
 
-  // New Google user — create full doc
-  const userDoc = createGoogleUserDoc(uid, { email, name, photoURL });
-  await ref.set(userDoc);
-  return userDoc;
+  const fresh = await ref.get();
+  return fresh.data();
 }
 
 async function getUserById(uid) {
@@ -47,16 +91,22 @@ async function updateUser(uid, updates) {
   await db.collection('users').doc(uid).update(updates);
 }
 
+/**
+ * Deletes everything stored for a user: sessions, evaluation reports, contest
+ * attempts, and the user document with all its subcollections (visualReports).
+ * Must finish before the Firebase Auth account is removed.
+ */
 async function deleteUserData(uid) {
-  const [sessionsSnap, reportsSnap] = await Promise.all([
+  const [sessionsSnap, reportsSnap, contestSnap] = await Promise.all([
     db.collection('sessions').where('userId', '==', uid).get(),
     db.collection('evaluationReports').where('userId', '==', uid).get(),
+    db.collection('contestAttempts').where('userId', '==', uid).get(),
   ]);
 
   const refs = [
     ...sessionsSnap.docs.map((d) => d.ref),
     ...reportsSnap.docs.map((d) => d.ref),
-    db.collection('users').doc(uid),
+    ...contestSnap.docs.map((d) => d.ref),
   ];
 
   // Firestore batch limit is 500 operations per commit
@@ -66,6 +116,10 @@ async function deleteUserData(uid) {
     refs.slice(i, i + BATCH_SIZE).forEach((ref) => batch.delete(ref));
     await batch.commit();
   }
+
+  // Deleting a document does not delete its subcollections — recursiveDelete
+  // removes users/{uid}/visualReports along with the user document.
+  await db.recursiveDelete(db.collection('users').doc(uid));
 }
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
@@ -113,12 +167,15 @@ async function completeSession(sessionId, durationSeconds, overallScore) {
 }
 
 async function countCompletedSessions(userId) {
-  const snap = await db
+  // Aggregate count — billed as one read per 1000 matches instead of reading
+  // every session document.
+  const agg = await db
     .collection('sessions')
     .where('userId', '==', userId)
     .where('status', '==', 'completed')
+    .count()
     .get();
-  return snap.size;
+  return agg.data().count;
 }
 
 async function abandonSession(sessionId) {
@@ -274,30 +331,83 @@ function _serializeContestAttempt(data) {
   return result;
 }
 
+/** Firestore's error code when a query needs a composite index that isn't deployed yet. */
+const FAILED_PRECONDITION = 9;
+
+function _isMissingIndex(err) {
+  return err && (err.code === FAILED_PRECONDITION || /requires an index/i.test(err.message || ''));
+}
+
+function _millis(ts) {
+  if (!ts) return 0;
+  if (typeof ts.toMillis === 'function') return ts.toMillis();
+  return new Date(ts).getTime() || 0;
+}
+
 /**
- * Sorts in memory (rather than an indexed orderBy) to avoid requiring a new
- * Firestore composite index for userId+submittedAt — matches the existing
- * getWeeklyTopUsersByXp precedent.
+ * Uses the contestAttempts(userId ASC, submittedAt DESC) index
+ * (server/firestore.indexes.json). Until that index is deployed, falls back
+ * to an unordered equality query sorted in memory.
  */
 async function getUserContestAttempts(userId, limitCount = 20) {
-  const snap = await db.collection('contestAttempts').where('userId', '==', userId).get();
-  const docs = snap.docs.map((d) => d.data());
-  docs.sort((a, b) => {
-    const at = a.submittedAt?.toMillis ? a.submittedAt.toMillis() : 0;
-    const bt = b.submittedAt?.toMillis ? b.submittedAt.toMillis() : 0;
-    return bt - at;
-  });
-  return docs.slice(0, limitCount).map(_serializeContestAttempt);
+  let docs;
+  try {
+    const snap = await db
+      .collection('contestAttempts')
+      .where('userId', '==', userId)
+      .orderBy('submittedAt', 'desc')
+      .limit(limitCount)
+      .get();
+    docs = snap.docs.map((d) => d.data());
+  } catch (err) {
+    if (!_isMissingIndex(err)) throw err;
+    console.warn('[contest] history index missing — falling back to in-memory sort');
+    const snap = await db.collection('contestAttempts').where('userId', '==', userId).get();
+    docs = snap.docs.map((d) => d.data());
+    docs.sort((a, b) => _millis(b.submittedAt) - _millis(a.submittedAt));
+    docs = docs.slice(0, limitCount);
+  }
+  return docs.map(_serializeContestAttempt);
+}
+
+/** Current display names for a set of uids — leaderboards show renames immediately. */
+async function _currentNames(uids) {
+  if (uids.length === 0) return new Map();
+  const refs = uids.map((uid) => db.collection('users').doc(uid));
+  const snaps = await db.getAll(...refs);
+  const names = new Map();
+  for (const snap of snaps) {
+    if (snap.exists && snap.data().name) names.set(snap.id, snap.data().name);
+  }
+  return names;
 }
 
 /**
  * Leaderboard = each user's single best attempt, optionally filtered to one
- * contestType. Overfetches the top 500 raw attempts by score (single-field
- * orderBy — no composite index needed) and dedupes/filters in memory, since
- * a per-user "best score" isn't expressible as a plain Firestore query.
+ * contestType. Filtering by type happens in the query (contestType ASC,
+ * overallScore DESC index) so a type's leaderboard isn't starved by attempts
+ * of other types; per-user dedupe happens in memory.
  */
 async function getContestLeaderboard(contestType, limitCount = 50) {
-  const snap = await db.collection('contestAttempts').orderBy('overallScore', 'desc').limit(500).get();
+  const SCAN = 500;
+  let snap;
+  if (contestType) {
+    try {
+      snap = await db
+        .collection('contestAttempts')
+        .where('contestType', '==', contestType)
+        .orderBy('overallScore', 'desc')
+        .limit(SCAN)
+        .get();
+    } catch (err) {
+      if (!_isMissingIndex(err)) throw err;
+      console.warn('[contest] leaderboard index missing — falling back to unfiltered scan');
+      snap = await db.collection('contestAttempts').orderBy('overallScore', 'desc').limit(SCAN).get();
+    }
+  } else {
+    snap = await db.collection('contestAttempts').orderBy('overallScore', 'desc').limit(SCAN).get();
+  }
+
   const bestByUser = new Map();
   for (const doc of snap.docs) {
     const data = doc.data();
@@ -313,9 +423,12 @@ async function getContestLeaderboard(contestType, limitCount = 50) {
       });
     }
   }
-  return Array.from(bestByUser.values())
+  const top = Array.from(bestByUser.values())
     .sort((a, b) => b.overallScore - a.overallScore)
     .slice(0, limitCount);
+
+  const names = await _currentNames(top.map((e) => e.userId));
+  return top.map((e) => ({ ...e, name: names.get(e.userId) || e.name }));
 }
 
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
@@ -327,29 +440,42 @@ async function getTopUsersByXp(limit = 50) {
     .limit(limit)
     .get();
   return snap.docs.map((doc) => {
-    const { name, xp, level, badges } = doc.data();
-    return { uid: doc.id, name, xp, level, badges };
+    const { name, xp, badges } = doc.data();
+    return { uid: doc.id, name, xp: xp || 0, level: computeLevel(xp || 0), badges };
   });
 }
 
+/**
+ * Top users by XP earned this ISO week (users.weeklyXp, written by
+ * progressService for every XP-earning activity). Uses the users(weekKey ASC,
+ * weeklyXp DESC) index, with an in-memory fallback until it is deployed.
+ */
 async function getWeeklyTopUsersByXp(limit = 50) {
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const weekKey = isoWeekKey();
+  let docs;
+  try {
+    const snap = await db
+      .collection('users')
+      .where('weekKey', '==', weekKey)
+      .orderBy('weeklyXp', 'desc')
+      .limit(limit)
+      .get();
+    docs = snap.docs;
+  } catch (err) {
+    if (!_isMissingIndex(err)) throw err;
+    console.warn('[leaderboard] weekly index missing — falling back to in-memory sort');
+    const snap = await db.collection('users').where('weekKey', '==', weekKey).get();
+    docs = snap.docs
+      .sort((a, b) => (b.data().weeklyXp || 0) - (a.data().weeklyXp || 0))
+      .slice(0, limit);
+  }
 
-  // Firestore inequality filter requires the same field to be ordered first,
-  // so we sort by xp in memory after filtering by lastActiveDate.
-  const snap = await db
-    .collection('users')
-    .where('lastActiveDate', '>=', sevenDaysAgo)
-    .get();
-
-  return snap.docs
-    .map((doc) => {
-      const { name, xp, level, badges } = doc.data();
-      return { uid: doc.id, name, xp, level, badges };
-    })
-    .sort((a, b) => b.xp - a.xp)
-    .slice(0, limit);
+  return docs.map((doc) => {
+    const { name, weeklyXp, xp, badges } = doc.data();
+    // `xp` carries the weekly figure so the client's existing row layout
+    // ranks and labels by what the board is sorted on.
+    return { uid: doc.id, name, xp: weeklyXp || 0, totalXp: xp || 0, level: computeLevel(xp || 0), badges };
+  });
 }
 
 async function saveVisualReport(uid, reportData) {
@@ -370,6 +496,7 @@ async function saveVisualReport(uid, reportData) {
     handMovementPercentage: reportData.handMovementPercentage || 0,
     gestureScore: reportData.gestureScore || 0,
     insights: reportData.insights || [],
+    sessionId: typeof reportData.sessionId === 'string' ? reportData.sessionId : null,
     createdAt: FieldValue.serverTimestamp(),
   };
 
@@ -379,11 +506,15 @@ async function saveVisualReport(uid, reportData) {
 
 async function getUserVisualReports(uid) {
   const snap = await db.collection('users').doc(uid).collection('visualReports').orderBy('createdAt', 'desc').limit(20).get();
-  return snap.docs.map((doc) => doc.data());
+  return snap.docs.map((doc) => {
+    const data = doc.data();
+    return { ...data, createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt };
+  });
 }
 
 module.exports = {
   createUser,
+  createOrCompleteUser,
   upsertGoogleUser,
   getUserById,
   updateUser,

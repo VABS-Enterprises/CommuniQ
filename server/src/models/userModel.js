@@ -1,4 +1,5 @@
 const { FieldValue } = require('firebase-admin/firestore');
+const { effectiveStreak, computeLevel, isoWeekKey } = require('../services/xpService');
 
 /*
  * Firestore shape — users/{uid}
@@ -7,11 +8,14 @@ const { FieldValue } = require('firebase-admin/firestore');
  * email            string
  * name             string
  * photoURL         string      profile picture (from Google or null)
- * provider         string      "google" | "email"
+ * provider         string      "google" | "apple" | "email"
  * createdAt        timestamp
  * lastLoginAt      timestamp   updated on every sign-in
  * xp               number      starts at 0
- * level            number      1–5, unlocked by XP thresholds
+ * level            number      1–5, derived from xp (xpService.computeLevel)
+ * weekKey          string      ISO week of weeklyXp, e.g. "2026-W44"
+ * weeklyXp         number      XP earned during weekKey — weekly leaderboard
+ * contestStats     object      { attempts, bestScore, bestByType: { [type]: number } }
  * streak           number      consecutive days practiced
  * lastActiveDate   timestamp   updated on every completed session
  * badges           string[]    e.g. ["first_session", "7_day_streak"]
@@ -96,8 +100,8 @@ function createUserDoc(uid, { email, name }) {
 function createGoogleUserDoc(uid, { email, name, photoURL }) {
   return {
     uid,
-    email,
-    name: name || email.split('@')[0],
+    email: email || '',
+    name: name || (email ? email.split('@')[0] : 'User'),
     photoURL: photoURL || null,
     provider: 'google',
     createdAt: FieldValue.serverTimestamp(),
@@ -112,4 +116,39 @@ function createGoogleUserDoc(uid, { email, name, photoURL }) {
   };
 }
 
-module.exports = { createUserDoc, createGoogleUserDoc };
+function toIso(value) {
+  if (value == null) return value;
+  if (typeof value.toDate === 'function') return value.toDate().toISOString();
+  if (typeof value._seconds === 'number') return new Date(value._seconds * 1000).toISOString();
+  if (value instanceof Date) return value.toISOString();
+  return value;
+}
+
+/**
+ * The user document as the client should see it:
+ *   - Firestore Timestamps become ISO strings (raw ones serialise as
+ *     { _seconds, _nanoseconds } maps, which the client cannot parse).
+ *   - streak is the effective streak — the stored one only changes when the
+ *     user practises, so it is zeroed here once a day has been missed.
+ *   - level is derived from xp, so a value written by older code can't show.
+ *   - weeklyXp is zeroed once its week has passed.
+ */
+function serializeUser(user, extras = {}) {
+  if (!user) return user;
+  const out = { ...user };
+  for (const key of ['createdAt', 'lastLoginAt', 'lastActiveDate']) {
+    if (key in out) out[key] = toIso(out[key]);
+  }
+  if (out.onboarding && typeof out.onboarding === 'object') {
+    out.onboarding = { ...out.onboarding, completedAt: toIso(out.onboarding.completedAt) };
+  }
+  if (out.trainingConsent && typeof out.trainingConsent === 'object') {
+    out.trainingConsent = { ...out.trainingConsent, updatedAt: toIso(out.trainingConsent.updatedAt) };
+  }
+  out.streak = effectiveStreak(user.lastActiveDate, user.streak || 0);
+  out.level = computeLevel(user.xp || 0);
+  out.weeklyXp = user.weekKey === isoWeekKey() ? user.weeklyXp || 0 : 0;
+  return { ...out, ...extras };
+}
+
+module.exports = { createUserDoc, createGoogleUserDoc, serializeUser };

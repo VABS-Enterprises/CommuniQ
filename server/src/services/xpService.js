@@ -1,8 +1,11 @@
 /**
  * XP, levelling, streak, and badge logic.
- * All Firestore writes are done by the caller (sessionController)
- * after receiving the computed delta from these pure functions.
+ * All pure — Firestore writes are done by progressService, which applies the
+ * update computed by computeActivityUpdate inside a transaction.
  */
+
+/** XP for finishing a learning level for the first time. */
+const LEARNING_LEVEL_XP = 30;
 
 const LEVEL_THRESHOLDS = [
   { level: 1, xpRequired: 0 },
@@ -42,20 +45,45 @@ function computeLevel(totalXp) {
  * @param {number} currentStreak
  * @returns {number}
  */
-function computeStreak(lastActiveDate, currentStreak) {
-  if (!lastActiveDate) return 1;
+function computeStreak(lastActiveDate, currentStreak, now = new Date()) {
+  const diffDays = daysSince(lastActiveDate, now);
+  if (diffDays === null) return 1;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  if (diffDays === 0) return Math.max(currentStreak, 1); // already practiced today
+  if (diffDays === 1) return currentStreak + 1;          // consecutive day
+  return 1;                                               // streak broken
+}
 
+/** Whole calendar days between lastActiveDate and now, or null if never active. */
+function daysSince(lastActiveDate, now = new Date()) {
+  if (!lastActiveDate) return null;
   const last = lastActiveDate.toDate ? lastActiveDate.toDate() : new Date(lastActiveDate);
+  if (isNaN(last.getTime())) return null;
+
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
   last.setHours(0, 0, 0, 0);
+  return Math.round((today - last) / (1000 * 60 * 60 * 24));
+}
 
-  const diffDays = Math.round((today - last) / (1000 * 60 * 60 * 24));
+/**
+ * The streak to show the user. The stored value only changes when they
+ * practise, so a streak broken by inactivity has to be zeroed on read.
+ */
+function effectiveStreak(lastActiveDate, storedStreak, now = new Date()) {
+  const diffDays = daysSince(lastActiveDate, now);
+  if (diffDays === null || diffDays > 1) return 0;
+  return storedStreak || 0;
+}
 
-  if (diffDays === 0) return currentStreak;        // already practiced today
-  if (diffDays === 1) return currentStreak + 1;    // consecutive day
-  return 1;                                         // streak broken
+/** ISO-8601 week key, e.g. "2026-W44". Used to bucket weekly XP. */
+function isoWeekKey(now = new Date()) {
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
 /**
@@ -76,13 +104,73 @@ function computeNewBadges({ existingBadges, completedSessionCount, newStreak, sc
     if (!earned.has(badge)) toAward.push(badge);
   }
 
-  if (completedSessionCount === 1) maybeAward('first_session');
+  if (completedSessionCount != null && completedSessionCount >= 1) maybeAward('first_session');
   if (newStreak >= 7) maybeAward('7_day_streak');
   if (newStreak >= 30) maybeAward('30_day_streak');
-  if (Object.values(scores).some((v) => v === 100)) maybeAward('perfect_score');
+  if (Object.values(scores || {}).some((v) => v === 100)) maybeAward('perfect_score');
   if (leveledUp) maybeAward('level_up');
 
   return toAward;
 }
 
-module.exports = { computeXpAward, computeLevel, computeStreak, computeNewBadges };
+/**
+ * Everything an XP-earning activity (roleplay, contest, learning level)
+ * changes on the user document, computed from the user's current data.
+ *
+ * Returns plain values (no FieldValue sentinels) so it can be unit-tested and
+ * applied inside a transaction that read `user`.
+ *
+ * @param {object} user                       current users/{uid} data
+ * @param {object} activity
+ * @param {number} activity.xpAwarded
+ * @param {object} [activity.scores]          roleplay dimension scores, for badges
+ * @param {number} [activity.completedSessionCount] roleplay sessions incl. this one
+ * @param {Date}   [activity.now]
+ */
+function computeActivityUpdate(user, { xpAwarded, scores = {}, completedSessionCount = null, now = new Date() }) {
+  const prevXp = user.xp || 0;
+  const totalXp = prevXp + xpAwarded;
+  // Derive the old level from XP rather than trusting the stored field, which
+  // older onboarding code overwrote with a self-assessed level.
+  const oldLevel = computeLevel(prevXp);
+  const newLevel = computeLevel(totalXp);
+  const leveledUp = newLevel > oldLevel;
+  const newStreak = computeStreak(user.lastActiveDate, user.streak || 0, now);
+
+  const existingBadges = Array.isArray(user.badges) ? user.badges : [];
+  const newBadges = computeNewBadges({
+    existingBadges,
+    completedSessionCount,
+    newStreak,
+    scores,
+    leveledUp,
+  });
+
+  const weekKey = isoWeekKey(now);
+  const weeklyXp = (user.weekKey === weekKey ? user.weeklyXp || 0 : 0) + xpAwarded;
+
+  return {
+    updates: {
+      xp: totalXp,
+      level: newLevel,
+      streak: newStreak,
+      lastActiveDate: now,
+      weekKey,
+      weeklyXp,
+      ...(newBadges.length > 0 && { badges: [...existingBadges, ...newBadges] }),
+    },
+    summary: { xpAwarded, totalXp, newLevel, leveledUp, newStreak, newBadges },
+  };
+}
+
+module.exports = {
+  LEARNING_LEVEL_XP,
+  computeXpAward,
+  computeLevel,
+  computeStreak,
+  computeNewBadges,
+  daysSince,
+  effectiveStreak,
+  isoWeekKey,
+  computeActivityUpdate,
+};

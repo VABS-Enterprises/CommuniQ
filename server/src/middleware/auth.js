@@ -41,6 +41,8 @@ async function verifyToken(req, res, next) {
     req.email = decodedToken.email;
     req.name = decodedToken.name || null;       // populated by Google Sign-In
     req.picture = decodedToken.picture || null; // populated by Google Sign-In
+    // "password" | "google.com" | "apple.com" — used to tag the user's provider.
+    req.signInProvider = decodedToken.firebase?.sign_in_provider || null;
     next();
   } catch (err) {
     console.error('Token verification failed:', err.message);
