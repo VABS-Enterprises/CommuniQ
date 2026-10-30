@@ -1,8 +1,11 @@
+import logging
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from groq import AsyncGroq
 
 from app.dependencies import get_groq_client, verify_internal_api_key
 from app.services import stt
+
+logger = logging.getLogger("communiq.transcribe")
 
 router = APIRouter(dependencies=[Depends(verify_internal_api_key)])
 
@@ -26,6 +29,8 @@ async def transcribe_audio(
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except RuntimeError as e:
-        raise HTTPException(status_code=502, detail=str(e))
+        # Upstream (speech provider) failure — log the detail, return a generic one.
+        logger.error("Transcription failed: %s", e)
+        raise HTTPException(status_code=502, detail="Transcription failed — please try again.") from e
 
     return {"text": text}

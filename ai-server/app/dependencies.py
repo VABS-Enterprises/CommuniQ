@@ -1,3 +1,4 @@
+import hmac
 from typing import Optional
 
 from fastapi import Header, HTTPException, Request
@@ -35,5 +36,5 @@ def verify_internal_api_key(x_ai_server_key: Optional[str] = Header(default=None
             # Should never happen — settings.validate() fails startup first.
             raise HTTPException(status_code=401, detail="Unauthorized")
         return  # no key configured — skip auth (dev mode)
-    if x_ai_server_key != expected:
+    if not hmac.compare_digest((x_ai_server_key or "").encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="Unauthorized")

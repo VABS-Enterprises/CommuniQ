@@ -196,6 +196,7 @@ async function getStaleInProgressSessions(maxAgeMs = 2 * 60 * 60 * 1000) {
   const snap = await db
     .collection('sessions')
     .where('status', '==', 'in_progress')
+    .limit(500)
     .get();
 
   const cutoff = Date.now() - maxAgeMs;
@@ -362,7 +363,7 @@ async function getUserContestAttempts(userId, limitCount = 20) {
   } catch (err) {
     if (!_isMissingIndex(err)) throw err;
     console.warn('[contest] history index missing — falling back to in-memory sort');
-    const snap = await db.collection('contestAttempts').where('userId', '==', userId).get();
+    const snap = await db.collection('contestAttempts').where('userId', '==', userId).limit(500).get();
     docs = snap.docs.map((d) => d.data());
     docs.sort((a, b) => _millis(b.submittedAt) - _millis(a.submittedAt));
     docs = docs.slice(0, limitCount);
@@ -464,7 +465,7 @@ async function getWeeklyTopUsersByXp(limit = 50) {
   } catch (err) {
     if (!_isMissingIndex(err)) throw err;
     console.warn('[leaderboard] weekly index missing — falling back to in-memory sort');
-    const snap = await db.collection('users').where('weekKey', '==', weekKey).get();
+    const snap = await db.collection('users').where('weekKey', '==', weekKey).limit(1000).get();
     docs = snap.docs
       .sort((a, b) => (b.data().weeklyXp || 0) - (a.data().weeklyXp || 0))
       .slice(0, limit);

@@ -23,21 +23,23 @@ service cloud.firestore {
     }
 
     // users/{uid} — server/src/models/userModel.js
-    // Document ID is the Firebase Auth uid itself. A signed-in user may only
-    // read/write their own profile document.
+    // Document ID is the Firebase Auth uid itself. A signed-in user may read
+    // their own profile. Writes are server-only: the document holds xp,
+    // level, streak, badges and coins, which a client must never set itself.
+    // (Subcollections such as visualReports fall under the default deny.)
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
     }
 
     // sessions/{sessionId} — server/src/models/sessionModel.js
     // Ownership is tracked via the `userId` field (session IDs are
-    // server-generated UUIDs, not the uid). A user may only access sessions
-    // that belong to them.
+    // server-generated UUIDs, not the uid). Owners may read; sessions are
+    // created, scored and completed only by the backend.
     match /sessions/{sessionId} {
-      allow read, update, delete: if request.auth != null
+      allow read: if request.auth != null
         && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null
-        && request.auth.uid == request.resource.data.userId;
+      allow write: if false;
     }
 
     // evaluationReports/{sessionId} — server/src/models/evaluationModel.js

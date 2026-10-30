@@ -110,7 +110,7 @@ async def evaluate_roleplay(
             req.sessionId, e, raw[:100],
         )
         raise HTTPException(
-            status_code=500, detail=f"Evaluation parsing failed: {e}"
+            status_code=500, detail="Evaluation failed — please try again."
         ) from e
 
     logger.info("Roleplay evaluation complete — session=%s", req.sessionId)
@@ -186,7 +186,7 @@ async def evaluate_learning(
             req.sessionId, e, raw[:100],
         )
         raise HTTPException(
-            status_code=500, detail=f"Evaluation parsing failed: {e}"
+            status_code=500, detail="Evaluation failed — please try again."
         ) from e
 
     logger.info("Learning evaluation complete — session=%s", req.sessionId)
@@ -262,7 +262,7 @@ async def evaluate_contest(
             req.sessionId, e, raw[:100],
         )
         raise HTTPException(
-            status_code=500, detail=f"Evaluation parsing failed: {e}"
+            status_code=500, detail="Evaluation failed — please try again."
         ) from e
 
     logger.info("Contest evaluation complete — session=%s", req.sessionId)

@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { FieldValue } = require('firebase-admin/firestore');
 const { db } = require('../config/firebase');
+const { publicError } = require('../utils/publicError');
 const { createTurnDoc } = require('../models/sessionModel');
 const {
   createSession,
@@ -282,7 +283,7 @@ async function sessionOpening(req, res) {
   } catch (err) {
     console.error('sessionOpening error:', err.message);
     const status = err.statusCode || 500;
-    return res.status(status).json({ error: err.message || 'Failed to generate opening' });
+    return res.status(status).json({ error: publicError(err, 'Failed to generate opening') });
   }
 }
 
@@ -346,7 +347,7 @@ async function processTurn(req, res) {
   } catch (err) {
     console.error('processTurn error:', err.message);
     const status = err.statusCode || 500;
-    return res.status(status).json({ error: err.message || 'Failed to process turn' });
+    return res.status(status).json({ error: publicError(err, 'Failed to process turn') });
   }
 }
 
@@ -470,7 +471,7 @@ async function processTurnStream(req, res) {
       return res.end();
     }
     const status = err.statusCode || 500;
-    return res.status(status).json({ error: err.message || 'Failed to process turn' });
+    return res.status(status).json({ error: publicError(err, 'Failed to process turn') });
   }
 }
 
@@ -621,7 +622,7 @@ async function endSession(req, res) {
   } catch (err) {
     console.error('endSession error:', err.message);
     const status = err.statusCode || 500;
-    return res.status(status).json({ error: err.message || 'Failed to end session' });
+    return res.status(status).json({ error: publicError(err, 'Failed to end session') });
   }
 }
 

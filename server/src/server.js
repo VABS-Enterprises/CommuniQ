@@ -27,22 +27,32 @@ const adminRoutes = require('./routes/admin');
 
 const app = express();
 
+// Render (and most hosts) sit behind one reverse proxy. Without this every
+// request appears to come from the proxy's IP, so the per-IP rate limits
+// would throttle all users together.
+app.set('trust proxy', 1);
+
 app.use(helmet());
 
 // Request logging: compact in dev, Apache combined format in production
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// CORS — open in development, restrict to ALLOWED_ORIGINS in production
+// CORS. The mobile apps send no Origin header and are unaffected. Browsers
+// are limited to ALLOWED_ORIGINS; in production with none configured, no
+// browser origin is allowed (development stays open).
 const rawOrigins = process.env.ALLOWED_ORIGINS;
-const allowedOrigins = rawOrigins ? rawOrigins.split(',').map((o) => o.trim()) : null;
+const allowedOrigins = rawOrigins
+  ? rawOrigins.split(',').map((o) => o.trim()).filter(Boolean)
+  : null;
+const isProduction = process.env.NODE_ENV === 'production';
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow server-to-server calls and dev tools (no origin header)
-      if (!allowedOrigins || !origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error(`CORS: origin ${origin} not allowed`));
+      // Server-to-server calls, mobile apps and dev tools send no Origin.
+      if (!origin) return callback(null, true);
+      if (!allowedOrigins) return callback(null, !isProduction);
+      callback(null, allowedOrigins.includes(origin));
     },
   })
 );

@@ -55,6 +55,7 @@ function handleAxiosError(err, context) {
     if (!isJson) {
       const e = new Error('AI service is currently unavailable — please try again');
       e.statusCode = 503;
+      e.expose = true; // written for the user — see utils/publicError
       throw e;
     }
 
@@ -68,6 +69,7 @@ function handleAxiosError(err, context) {
   }
   // Network error or timeout
   const e = new Error('AI service is currently unavailable — please try again');
+  e.expose = true;
   e.statusCode = 503;
   throw e;
 }

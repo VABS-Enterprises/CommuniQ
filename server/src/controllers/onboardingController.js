@@ -1,5 +1,6 @@
 const { randomUUID } = require('crypto');
 const { db } = require('../config/firebase');
+const { publicError } = require('../utils/publicError');
 const { FieldValue } = require('firebase-admin/firestore');
 const { evaluateLearningAnswer, transcribeAudio } = require('../services/fastApiService');
 const { createUserDoc, createGoogleUserDoc } = require('../models/userModel');
@@ -141,7 +142,7 @@ async function evaluateIntroDemo(req, res) {
   } catch (err) {
     const status = err.statusCode || 502;
     console.error(`[OnboardingDemo] ❌ Evaluation failed — session=${sessionId}: ${err.message}`);
-    return res.status(status).json({ error: err.message || 'Evaluation failed. Please try again.' });
+    return res.status(status).json({ error: publicError(err, 'Evaluation failed. Please try again.') });
   }
 }
 
@@ -166,12 +167,12 @@ async function transcribeDemo(req, res) {
 
   try {
     const text = await transcribeAudio(buffer, filename);
-    console.log(`[OnboardingTranscribe] ✅ Transcript: "${text.slice(0, 80)}…"`);
+    console.log(`[OnboardingTranscribe] ✅ Transcribed ${text.length} chars`);
     return res.status(200).json({ text });
   } catch (err) {
     const status = err.statusCode || 502;
     console.error(`[OnboardingTranscribe] ❌ ${err.message}`);
-    return res.status(status).json({ error: err.message || 'Transcription failed.' });
+    return res.status(status).json({ error: publicError(err, 'Transcription failed.') });
   }
 }
 

@@ -382,7 +382,7 @@ async def session_evaluate(
             req.sessionId, e, raw[:100],
         )
         raise HTTPException(
-            status_code=500, detail=f"Evaluation parsing failed: {e}"
+            status_code=500, detail="Evaluation failed — please try again."
         ) from e
 
     logger.info("Evaluation complete — session=%s", req.sessionId)
