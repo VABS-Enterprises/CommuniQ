@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -9,8 +10,17 @@ import 'package:communiq/core/constants/app_colors.dart';
 import 'package:communiq/core/routes/app_router.dart';
 
 void main() async {
+  // Diagnostic logging is for development. In release builds it would write
+  // emails, uids and server responses to the device log, which any app with
+  // log access (or a connected computer) can read.
+  if (kReleaseMode) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
+
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  // Every screen is designed for portrait; matches the iOS Info.plist.
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   bool firebaseOk = false;
   String? firebaseError;
@@ -82,22 +92,20 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
                   'There was a problem connecting to our services. '
                   'Please check your internet connection and try again.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: AppColors.inkMuted, fontSize: 14),
+                  style: TextStyle(color: AppColors.inkMuted, fontSize: 14),
                 ),
                 if (kDebugMode) ...[
                   const SizedBox(height: 16),
                   Text(
                     widget.error,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        color: AppColors.inkSoft, fontSize: 11),
+                    style:
+                        const TextStyle(color: AppColors.inkSoft, fontSize: 11),
                   ),
                 ],
                 const SizedBox(height: 28),
                 _retrying
-                    ? const CircularProgressIndicator(
-                        color: AppColors.brand)
+                    ? const CircularProgressIndicator(color: AppColors.brand)
                     : TextButton(
                         onPressed: _retry,
                         child: const Text(
@@ -120,7 +128,7 @@ class _FirebaseErrorAppState extends State<_FirebaseErrorApp> {
 /// Launches straight into the design-system gallery instead of the app:
 ///   flutter run --dart-define=GALLERY=true
 /// Debug affordance only — no user-facing route reaches it.
-const _kGallery = bool.fromEnvironment('GALLERY');
+const _kGallery = bool.fromEnvironment('GALLERY') && !kReleaseMode;
 
 class MyApp extends StatelessWidget {
   MyApp({super.key});

@@ -3,15 +3,36 @@
 <plist version="1.0">
 	<dict>
 		<key>NSMicrophoneUsageDescription</key>
-		<string>CommuniQ needs microphone access to record your voice during conversation practice sessions.</string>
+		<string>CommuniQ records your voice during practice sessions so your AI partner can reply and give you feedback.</string>
 		<key>NSCameraUsageDescription</key>
-		<string>CommuniQ needs camera access for real-time visual communication, gaze, and eye-contact analysis.</string>
+		<string>CommuniQ uses the camera to give you feedback on eye contact and posture while you practise. Video is analysed on your device and never uploaded.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>CommuniQ shows live captions of what you say during practice sessions.</string>
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>audio</string>
+		</array>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<!-- Google Sign-In: replace with REVERSED_CLIENT_ID from
+					     GoogleService-Info.plist (docs/RELEASE.md). -->
+					<string>com.googleusercontent.apps.REPLACE_WITH_REVERSED_CLIENT_ID</string>
+				</array>
+			</dict>
+		</array>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>Communiq</string>
+		<string>CommuniQ</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -19,7 +40,7 @@
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>communiq</string>
+		<string>CommuniQ</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
@@ -60,9 +81,9 @@
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
+		<key>UIRequiresFullScreen</key>
+		<true/>
 		<key>UISupportedInterfaceOrientations~ipad</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>

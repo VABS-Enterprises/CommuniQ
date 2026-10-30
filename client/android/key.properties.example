@@ -1,0 +1,7 @@
+# Copy to android/key.properties (gitignored) and fill in. See docs/RELEASE.md.
+# Create an upload keystore with:
+#   keytool -genkey -v -keystore ~/communiq-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=upload
+storeFile=/absolute/path/to/communiq-upload.jks
