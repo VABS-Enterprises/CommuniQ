@@ -41,6 +41,10 @@ services:
         value: production
       - key: GROQ_API_KEY
         sync: false
+      # Grading model. qwen/qwen3.8-27b runs out of tokens mid-JSON on the
+      # evaluator prompts, which surfaces in the app as a 503 on "Submit".
+      - key: EVAL_LLM_MODEL
+        value: openai/gpt-oss-120b
       - key: AI_SERVER_INTERNAL_KEY
         sync: false   # EXACT same value as on communiq-server
       - key: ALLOWED_ORIGINS
