@@ -213,7 +213,7 @@ async function evaluateLearningAnswer(sessionId, question, userAnswer, topic, di
     const response = await axios.post(
       `${FASTAPI_URL}/evaluate/learning`,
       { sessionId, question, userAnswer, topic, difficulty, expectedKeyPoints },
-      { headers: _aiHeaders(), timeout: 50000 }
+      { headers: _aiHeaders(), timeout: 75000 }
     );
     return response.data;
   } catch (err) {
@@ -236,7 +236,7 @@ async function evaluateContestAnswer(sessionId, userAnswer, contestType, motion,
     const response = await axios.post(
       `${FASTAPI_URL}/evaluate/contest`,
       { sessionId, userAnswer, contestType, motion, position },
-      { headers: _aiHeaders(), timeout: 50000 }
+      { headers: _aiHeaders(), timeout: 75000 }
     );
     return response.data;
   } catch (err) {
@@ -259,7 +259,7 @@ async function transcribeAudio(audioBuffer, filename) {
     const response = await axios.post(
       `${FASTAPI_URL}/transcribe`,
       form,
-      { headers: _aiHeaders(form.getHeaders()), timeout: 30000 }
+      { headers: _aiHeaders(form.getHeaders()), timeout: 75000 }
     );
     return response.data.text;
   } catch (err) {

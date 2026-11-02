@@ -35,7 +35,7 @@ async def tts(req: TTSRequest):
     return Response(content=audio_bytes, media_type="audio/mpeg")
 
 
-@router.get("/health")
+@router.api_route("/health", methods=["GET", "HEAD"])
 async def health(request: Request):
     """
     Returns server status, active backend configuration, and infrastructure readiness.
