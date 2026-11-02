@@ -141,7 +141,6 @@ You also need:
 ```bash
 git clone https://github.com/VABS-Enterprises/CommuniQ.git
 cd CommuniQ
-git checkout version-one
 ```
 
 ### 2. Firebase

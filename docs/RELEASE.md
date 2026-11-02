@@ -34,9 +34,8 @@ generates it.
    | Node | `PIPECAT_WEBHOOK_SECRET` | long random string (≥16 chars) — **required to boot** |
    | Node | `LIVEKIT_ENABLED` | `false` |
 
-2. **[YOU]** Deploy the branch you are releasing (Render deploys the repo's
-   default branch unless the service says otherwise; this work is on
-   `version-one`).
+2. **[YOU]** Deploy `main` (check each Render service's Settings → Build &
+   Deploy → Branch is `main`).
 3. Check:
    ```bash
    curl https://communiq.onrender.com/health          # {"status":"ok",...}
