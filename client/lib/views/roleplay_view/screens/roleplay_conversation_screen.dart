@@ -41,8 +41,9 @@ import 'package:communiq/models/visual_analysis_models.dart';
 //
 enum _ConvState { user_turn, processing, ai_speaking, ending }
 
-/// Colab parity: opening plays once; after each turn the AI clip plays twice before mic.
-enum _AiPlaybackStage { none, afterOpening, afterTurnFirstPlay, afterTurnReplay }
+/// What to do when the current AI clip finishes. Every clip plays exactly once;
+/// the opening additionally connects live voice (when enabled) before the mic.
+enum _AiPlaybackStage { none, afterOpening, afterTurn }
 
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
@@ -81,8 +82,6 @@ class _RoleplayConversationScreenState
   _ConvState _state = _ConvState.processing;
   final List<Map<String, String>> _conversationHistory = [];
   _AiPlaybackStage _aiPlaybackStage = _AiPlaybackStage.none;
-  /// Last turn’s AI audio bytes (base64) — replayed once before the next mic (Colab).
-  String? _lastAiAudioForReplay;
 
   // The text shown in the large conversation card and who is speaking.
   // Updated on every meaningful state change.
@@ -852,8 +851,7 @@ class _RoleplayConversationScreenState
         _karaokeWordCount = 0;
       });
 
-      _lastAiAudioForReplay = result.aiAudioBase64;
-      _aiPlaybackStage = _AiPlaybackStage.afterTurnFirstPlay;
+      _aiPlaybackStage = _AiPlaybackStage.afterTurn;
       // Stream karaoke concurrent with audio so text appears in sync.
       await Future.wait([
         _playBase64Audio(result.aiAudioBase64),
@@ -931,17 +929,7 @@ class _RoleplayConversationScreenState
         }
         await _startMic();
         return;
-      case _AiPlaybackStage.afterTurnFirstPlay:
-        final b64 = _lastAiAudioForReplay;
-        if (b64 == null || b64.isEmpty || _isMuted) {
-          _aiPlaybackStage = _AiPlaybackStage.none;
-          await _startMic();
-          return;
-        }
-        _aiPlaybackStage = _AiPlaybackStage.afterTurnReplay;
-        await _playBase64Audio(b64);
-        return;
-      case _AiPlaybackStage.afterTurnReplay:
+      case _AiPlaybackStage.afterTurn:
         _aiPlaybackStage = _AiPlaybackStage.none;
         await _startMic();
         return;

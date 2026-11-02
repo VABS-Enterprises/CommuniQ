@@ -125,10 +125,16 @@ function buildFinalPrompt(basePrompt, session) {
   const sections = [`=== CHARACTER & SCENARIO ===\n${basePrompt}`];
 
   const embodiment = [];
-  if (session.persona) embodiment.push(`- You are: ${session.persona}.`);
+  // The scenario above defines WHO the character is. Persona is a demeanour
+  // label from the setup screen (e.g. "Strict Manager" on the Sales Pitch
+  // preset, whose character is a client) — stating it as "You are: X" gave
+  // the model two conflicting identities and garbled the opening.
+  if (session.persona) embodiment.push(`- Demeanour: carry yourself like a ${session.persona}, while remaining the character described above.`);
   if (session.tone) embodiment.push(`- Tone: ${session.tone} — let this colour every line, not just your word choice but your patience and warmth.`);
   if (session.traits) embodiment.push(`- Personality traits: ${session.traits} — show these through how you react, not by stating them.`);
-  if (session.role) embodiment.push(`- The person you are speaking with is playing: ${session.role}. Treat them accordingly — react to who they are in this scenario.`);
+  // Setup sends labels like "You as Candidate"; the model needs "Candidate".
+  const userRole = session.role ? String(session.role).replace(/^you as\s+/i, '').trim() : '';
+  if (userRole) embodiment.push(`- The person you are speaking with is the ${userRole} in this scenario. Treat them accordingly.`);
   if (embodiment.length > 0) {
     sections.push(`=== HOW TO PLAY THIS CHARACTER ===\n${embodiment.join('\n')}`);
   }

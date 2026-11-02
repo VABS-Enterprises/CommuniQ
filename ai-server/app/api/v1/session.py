@@ -28,15 +28,26 @@ LLM_MODEL = settings.llm_model
 router = APIRouter(dependencies=[Depends(verify_internal_api_key)])
 
 # Opening nudge sent as the first user message so the LLM starts the scene.
-_OPENING_USER_MESSAGE = "Start the interview now."
+# Must stay scenario-neutral: this used to say "Start the interview now.",
+# which made every scenario (negotiation, sales pitch, ...) open like a job
+# interview.
+_OPENING_USER_MESSAGE = (
+    "(The user has just joined. Open the conversation now, in character.)"
+)
 
 # Appended to the system prompt for the opening turn only.
 # Keeps the first line short — it is TTS-synthesised and the user hears it
 # before they can speak, so a long monologue wastes several seconds.
 _OPENING_VOICE_SUFFIX = (
-    "\n\nVoice mode — opening line only: Deliver ONE short, natural spoken "
-    "sentence (max 20 words) to open the conversation. "
-    "No lists, no asterisks, no markdown. Speak as if you just picked up the phone."
+    "\n\n=== YOUR OPENING LINE ===\n"
+    "You speak first. Open exactly the way your character would at the very "
+    "start of THIS scenario: a brief, natural greeting that makes the situation "
+    "clear, then one specific question or prompt that invites the user to begin "
+    "their part (for example, an interviewer asks the first interview question; "
+    "a client invites the pitch; a manager asks why they wanted to meet). "
+    "At most two short spoken sentences, under 35 words in total. "
+    "Do not mention being an AI, a roleplay, or practice. "
+    "No lists, no asterisks, no markdown, no stage directions."
 )
 
 
@@ -80,7 +91,7 @@ async def session_opening(
                 {"role": "system", "content": req.systemPrompt + _OPENING_VOICE_SUFFIX},
                 {"role": "user", "content": _OPENING_USER_MESSAGE},
             ],
-            max_tokens=80,
+            max_tokens=120,
             temperature=0.75,
             timeout=20,
         )
