@@ -1,8 +1,20 @@
+# Native launch screen (Android + iOS), shown before Flutter draws its first
+# frame. Must match AppColors.bg (#FFF9F0) — the Flutter splash that follows
+# is cream, and the old navy (#060918) flashed dark-to-light on every launch.
+#
+# Regenerate after editing:  dart run flutter_native_splash:create
 flutter_native_splash:
-  color: "#060918"
-  color_dark: "#060918"
+  color: "#FFF9F0"
+  # The app is light-only (ThemeMode.light), so dark mode gets the same cream.
+  color_dark: "#FFF9F0"
   android: true
   ios: true
+  fullscreen: false
+
+  # Android 12+ always shows the launcher icon on its system splash; give it
+  # the app background so the icon sits on cream rather than on a dark disc.
   android_12:
-    color: "#060918"
-    color_dark: "#060918"
+    color: "#FFF9F0"
+    color_dark: "#FFF9F0"
+    icon_background_color: "#FFF9F0"
+    icon_background_color_dark: "#FFF9F0"

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communiq/core/services/offline_cache_service.dart';
 import 'package:communiq/common_widgets/chunky_button.dart';
 import 'package:communiq/common_widgets/chunky_card.dart';
 import 'package:communiq/common_widgets/chunky_progress_bar.dart';
@@ -82,6 +83,7 @@ class _HomeViewState extends State<HomeView> {
 
   /// First load reads cache; pull-to-refresh forces the network.
   Future<void> _loadAll({bool forceRefresh = false}) async {
+    if (forceRefresh) OfflineCacheService.invalidateFresh();
     setState(() {
       _profileError = false;
       if (_profile == null) _isLoading = true;

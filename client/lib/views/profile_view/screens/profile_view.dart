@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:communiq/core/services/offline_cache_service.dart';
 import 'package:communiq/common_widgets/chunky_button.dart';
 import 'package:communiq/common_widgets/chunky_card.dart';
 import 'package:communiq/common_widgets/icon_tile.dart';
@@ -69,6 +70,7 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
+    if (forceRefresh) OfflineCacheService.invalidateFresh();
     if (mounted) {
       setState(() {
         // Only show spinner on first load when there's no cached data.

@@ -111,6 +111,10 @@ GoRouter createRouter({bool gallery = false}) {
           loc == AppRoutes.login ||
           loc == AppRoutes.signup;
 
+      // The splash leaves on its own once the user's data is loaded (see
+      // SplashScreen). Redirecting here would cut that load short.
+      if (loc == AppRoutes.splash) return null;
+
       // Signed in but still sitting on a pre-auth screen → into the app.
       if (signedIn && inAuthFlow) return AppRoutes.home;
 
