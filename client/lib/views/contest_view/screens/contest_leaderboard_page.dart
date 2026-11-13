@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communiq/core/services/offline_cache_service.dart';
 import 'package:communiq/common_widgets/chunky_card.dart';
 import 'package:communiq/common_widgets/mascot/mascot.dart';
 import 'package:communiq/common_widgets/playful_background.dart';
@@ -136,7 +137,11 @@ class _ContestLeaderboardPageState extends State<ContestLeaderboardPage> {
     final myUid = AuthService.currentUser?.uid;
 
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: () {
+        // Pull-to-refresh must reach the server, not reuse the last minute.
+        OfflineCacheService.invalidateFresh();
+        return _load();
+      },
       color: AppColors.brand,
       backgroundColor: AppColors.surface,
       child: ListView.builder(

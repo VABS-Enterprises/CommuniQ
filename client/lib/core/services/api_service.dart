@@ -90,7 +90,12 @@ class _FirebaseAuthInterceptor extends Interceptor {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
-        final token = await user.getIdToken();
+        // The token is cached for an hour; past that, getIdToken() has to
+        // reach Google, and on a weak network it can stall long enough to
+        // block every request (and the cache fallback behind it). Give up
+        // after 10 s — an offline request gets served from cache anyway.
+        final token =
+            await user.getIdToken().timeout(const Duration(seconds: 10));
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -148,15 +153,61 @@ class _ErrorInterceptor extends Interceptor {
   }
 }
 
-/// Keeps the last successful body of every GET on disk and replays it when
-/// the device can't reach the server, so the app opens with real data offline
-/// instead of empty states.
+/// Keeps the last successful body of every GET and replays it so the app shows
+/// real data on a weak or missing connection instead of spinners and errors.
 ///
-/// Only connection failures are served from cache. A 4xx/5xx is the server
-/// answering, and hiding that behind stale data would turn a real error into
-/// a silent one.
+///  * A GET answered in the last minute is served from memory without a
+///    request (see [OfflineCacheService.freshFor]); any write clears that.
+///  * A GET with a saved copy on disk gets short timeouts, so a crawling
+///    network falls back to the saved copy in seconds rather than after the
+///    90 s cold-start allowance. A GET with no saved copy keeps the long
+///    timeouts — there is nothing to fall back to, so it may as well wait.
+///  * Only connection failures are served from disk. A 4xx/5xx is the server
+///    answering, and hiding that behind stale data would turn a real error
+///    into a silent one.
 class _OfflineCacheInterceptor extends Interceptor {
+  static const _cachedConnectTimeout = Duration(seconds: 8);
+  static const _cachedReceiveTimeout = Duration(seconds: 12);
+
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+
+  @override
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    final uid = _uid;
+    if (options.method != 'GET') {
+      // A write can change what any GET returns.
+      OfflineCacheService.invalidateFresh();
+      handler.next(options);
+      return;
+    }
+    if (uid == null) {
+      handler.next(options);
+      return;
+    }
+
+    // Pull-to-refresh calls OfflineCacheService.invalidateFresh() first, so a
+    // deliberate refresh always reaches the server.
+    final url = options.uri.toString();
+    final fresh = OfflineCacheService.fresh(uid, url);
+    if (fresh != null) {
+      handler.resolve(Response(
+        requestOptions: options,
+        data: fresh,
+        statusCode: 200,
+        extra: const {'fromFreshCache': true},
+      ));
+      return;
+    }
+
+    if (await OfflineCacheService.has(uid, url)) {
+      options.connectTimeout = _cachedConnectTimeout;
+      options.receiveTimeout = _cachedReceiveTimeout;
+    }
+    handler.next(options);
+  }
 
   bool _isOffline(DioException err) {
     if (err.response != null) return false;
@@ -172,7 +223,8 @@ class _OfflineCacheInterceptor extends Interceptor {
     final uid = _uid;
     if (uid != null &&
         response.requestOptions.method == 'GET' &&
-        response.statusCode == 200) {
+        response.statusCode == 200 &&
+        response.extra['fromFreshCache'] != true) {
       // Fire-and-forget: persisting must never delay the response.
       OfflineCacheService.write(
         uid,

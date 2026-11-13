@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:communiq/core/constants/app_colors.dart';
 import 'package:go_router/go_router.dart';
+import 'package:communiq/core/routes/app_router.dart' show authNotifier;
 import 'package:communiq/core/routes/app_routes.dart';
+import 'package:communiq/core/services/app_bootstrap.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -71,18 +75,58 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _fadeController, curve: Curves.easeOutBack),
     );
 
-    _startSequence();
+    // After the first frame: precaching images reads MediaQuery from
+    // context, which isn't allowed during initState.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _startSequence();
+    });
   }
 
+  /// Shown under the branding while a signed-in user's data loads.
+  bool _loadingData = false;
+
+  /// Plays the intro and, for a signed-in user, loads their data in the
+  /// meantime, then opens the app. The router no longer redirects away from
+  /// the splash (see app_router.dart), so this is the only way out of it.
   Future<void> _startSequence() async {
-    await _fadeController.forward();
-    await Future.delayed(const Duration(milliseconds: 200));
-    _textController.forward();
-    await Future.delayed(const Duration(milliseconds: 2600));
+    // Long enough for the intro to read as intentional, short enough that a
+    // fast network isn't held back by it.
+    final minimumShow = Future<void>.delayed(const Duration(milliseconds: 1800));
+    final images = AppBootstrap.precacheImages(context);
+
+    _fadeController.forward().then((_) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted) _textController.forward();
+      });
+    });
+
+    final signedIn = await _waitForAuthState();
     if (!mounted) return;
-    // Head for welcome; the router's redirect sends an already-signed-in user
-    // straight to /home instead.
-    context.go(AppRoutes.welcome);
+
+    if (signedIn) {
+      setState(() => _loadingData = true);
+      await Future.wait([minimumShow, images, AppBootstrap.warmUp()]);
+    } else {
+      await Future.wait([minimumShow, images]);
+    }
+    if (!mounted) return;
+    context.go(signedIn ? AppRoutes.home : AppRoutes.welcome);
+  }
+
+  /// Firebase restores a saved sign-in from the device (no network needed)
+  /// and reports it on its first auth event; wait for that before deciding.
+  Future<bool> _waitForAuthState() async {
+    if (!authNotifier.ready) {
+      final ready = Completer<void>();
+      void listener() {
+        if (authNotifier.ready && !ready.isCompleted) ready.complete();
+      }
+
+      authNotifier.addListener(listener);
+      await ready.future;
+      authNotifier.removeListener(listener);
+    }
+    return authNotifier.signedIn;
   }
 
   @override
@@ -122,6 +166,16 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
               ],
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: MediaQuery.paddingOf(context).bottom + 56,
+              child: AnimatedOpacity(
+                opacity: _loadingData ? 1 : 0,
+                duration: const Duration(milliseconds: 400),
+                child: const _LoadingHint(),
+              ),
             ),
           ],
         ),
@@ -429,6 +483,41 @@ class _MicLottieSection extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ── Loading hint ───────────────────────────────────────────────────────────
+
+class _LoadingHint extends StatelessWidget {
+  const _LoadingHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 120,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              minHeight: 3,
+              color: AppColors.brand,
+              backgroundColor: AppColors.brand.withOpacity(0.12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Getting your progress ready…',
+          style: TextStyle(
+            color: AppColors.inkSoft,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

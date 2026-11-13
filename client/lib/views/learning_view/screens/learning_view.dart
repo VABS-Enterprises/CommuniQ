@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:communiq/core/services/offline_cache_service.dart';
 import 'package:communiq/common_widgets/chunky_button.dart';
 import 'package:communiq/common_widgets/chunky_card.dart';
 import 'package:communiq/common_widgets/chunky_progress_bar.dart';
@@ -255,6 +256,7 @@ class _LearningViewState extends State<LearningView> {
             color: AppColors.brand,
             onRefresh: () async {
               LevelService.instance.clearCache();
+              OfflineCacheService.invalidateFresh();
               await _load();
             },
             child: ListView.builder(
