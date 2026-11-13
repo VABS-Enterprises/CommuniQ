@@ -1,5 +1,7 @@
 # CommuniQ — AI-Based Conversation Simulator
 
+BlackBook - https://docs.google.com/document/d/1U6nNnFt_VSGd5Gw3z-uhDO6SbssElbZw/edit?usp=sharing&ouid=114009513230738672917&rtpof=true&sd=true
+
 CommuniQ is an AI-powered, voice-first communication practice app built for Indian students and professionals. You hold real, pressure-tested conversations with AI characters — interviewers, clients, GD moderators — and get a detailed evaluation of how you spoke, so you can sharpen your skills before the conversation that counts.
 
 > **You speak. An AI character responds. You get evaluated. You improve.**
