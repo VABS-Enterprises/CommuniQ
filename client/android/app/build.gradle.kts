@@ -34,13 +34,10 @@ android {
 
     defaultConfig {
         applicationId = "com.vabs.communiq"
-        // 23, not Flutter's default 21: the `record` plugin's Android
-        // implementation (record_android) requires API 23+ for audio capture,
-        // which the practice-session mic flow depends on.
-        // record_android (microphone capture) declares minSdk 23, so the
-        // Flutter default of 21 fails the manifest merge and nothing builds.
-        // The merge reverted this; it was pinned deliberately.
-        minSdk = 23
+        // 24: Google Play's automatic protection requires minSdk 24+, and
+        // record_android (microphone capture) needs at least 23. Flutter's
+        // default of 21 fails the manifest merge, so this is pinned.
+        minSdk = 24
         // Pinned rather than following the Flutter default so a Flutter
         // upgrade can't silently drop below Google Play's target-API floor.
         targetSdk = 36
